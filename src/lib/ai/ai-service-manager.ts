@@ -110,7 +110,7 @@ export class AIServiceManager {
     if (primaryAttempt.success) {
       return {
         success: true,
-        content: (primaryAttempt as any).content,
+        content: primaryAttempt.content,
         attempts,
         totalCost: primaryAttempt.cost || 0,
         totalTokens: primaryAttempt.tokensUsed || 0,
@@ -133,7 +133,7 @@ export class AIServiceManager {
         if (fallbackAttempt.success) {
           return {
             success: true,
-            content: (fallbackAttempt as any).content,
+            content: fallbackAttempt.content,
             attempts,
             totalCost,
             totalTokens,
@@ -283,7 +283,7 @@ export class AIServiceManager {
     return fallbacks;
   }
 
-  private async attemptGeneration(providerName: AIProviderName, request: AIGenerationRequest): Promise<GenerationAttempt> {
+  private async attemptGeneration(providerName: AIProviderName, request: AIGenerationRequest): Promise<GenerationAttempt & { content?: string }> {
     const startTime = Date.now();
     const provider = this.providers.get(providerName);
     
@@ -304,7 +304,7 @@ export class AIServiceManager {
         tokensUsed: response.tokensUsed,
         cost: response.cost,
         responseTime: response.responseTime,
-        ...(response as any) // Include full response for successful attempts
+        content: response.content // Explicitly include content
       };
     } catch (error) {
       return {
