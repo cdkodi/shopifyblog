@@ -29,25 +29,17 @@ export class DataForSEOService {
    */
   async getKeywordSuggestions(topic: string, limit: number = 100): Promise<KeywordSuggestion[]> {
     try {
-      // Step 1: Create task
-      const taskResponse = await this.makeRequest('/keywords_data/google_ads/keywords_for_keywords/task_post', {
+      // Use Live API for immediate results
+      const response = await this.makeRequest('/keywords_data/google_ads/keywords_for_keywords/live', {
         keywords: [topic],
         location_code: this.config.locationId,
         language_code: this.config.languageId,
         include_adult_keywords: false,
-        limit: limit
+        limit: Math.min(limit, 50) // Live API has lower limits
       });
 
-      // Get task ID from response
-      const taskId = taskResponse.tasks?.[0]?.id;
-      if (!taskId) {
-        throw new Error('Failed to create DataForSEO task');
-      }
-
-      // Step 2: Wait and retrieve results
-      await this.waitForTaskCompletion(taskId);
-      const results = await this.getTaskResults(taskId);
-
+      // Parse response from Live API
+      const results = response.tasks?.[0]?.result?.[0];
       return this.parseKeywordSuggestions(results);
     } catch (error) {
       this.handleError(error);
@@ -162,64 +154,18 @@ export class DataForSEOService {
     return result;
   }
 
-  private async waitForTaskCompletion(taskId: string, maxWaitTime: number = 60000): Promise<void> {
-    const startTime = Date.now();
-    const pollInterval = 2000; // Poll every 2 seconds
 
-    while (Date.now() - startTime < maxWaitTime) {
-      try {
-        const response = await this.makeRequest('/keywords_data/google_ads/keywords_for_keywords/tasks_ready');
-        
-        // Check if our task is ready
-        const readyTasks = response.tasks || [];
-        const isReady = readyTasks.some((task: any) => 
-          task.result && task.result.some((r: any) => r.id === taskId)
-        );
-
-        if (isReady) {
-          return; // Task is ready
-        }
-
-        // Wait before next poll
-        await new Promise(resolve => setTimeout(resolve, pollInterval));
-      } catch (error) {
-        console.warn('Error checking task status:', error);
-        await new Promise(resolve => setTimeout(resolve, pollInterval));
-      }
-    }
-
-    throw new Error('Task timeout: DataForSEO task did not complete within expected time');
-  }
-
-  private async getTaskResults(taskId: string): Promise<any> {
-    const response = await this.makeRequest(`/keywords_data/google_ads/keywords_for_keywords/task_get/${taskId}`);
-    
-    if (!response.tasks?.[0]?.result) {
-      throw new Error('No results available for task');
-    }
-
-    return response.tasks[0].result[0]; // Return the first result
-  }
 
   private async getSearchVolume(keyword: string): Promise<{ search_volume: number; competition: number; cpc: number }> {
     try {
-      // Create task
-      const taskResponse = await this.makeRequest('/keywords_data/google_ads/search_volume/task_post', {
+      // Use Live API for immediate results
+      const response = await this.makeRequest('/keywords_data/google_ads/search_volume/live', {
         keywords: [keyword],
         location_code: this.config.locationId,
         language_code: this.config.languageId
       });
-
-      const taskId = taskResponse.tasks?.[0]?.id;
-      if (!taskId) {
-        throw new Error('Failed to create search volume task');
-      }
-
-      // Wait and get results
-      await this.waitForTaskCompletion(taskId);
-      const results = await this.makeRequest(`/keywords_data/google_ads/search_volume/task_get/${taskId}`);
       
-      const data = results.tasks?.[0]?.result?.[0]?.items?.[0] || {};
+      const data = response.tasks?.[0]?.result?.[0]?.items?.[0] || {};
       return {
         search_volume: data.search_volume || 0,
         competition: data.competition || 0,
@@ -254,10 +200,13 @@ export class DataForSEOService {
   }
 
   private parseKeywordSuggestions(response: any): KeywordSuggestion[] {
-    // Handle different response formats
-    const items = response?.items || response || [];
+    // Handle Live API response format
+    const items = response?.items || [];
     
-    if (!Array.isArray(items)) return [];
+    if (!Array.isArray(items)) {
+      console.log('DataForSEO response format:', JSON.stringify(response, null, 2));
+      return [];
+    }
 
     return items.map((item: any) => ({
       keyword: item.keyword || '',
