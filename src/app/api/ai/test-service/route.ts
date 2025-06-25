@@ -20,84 +20,94 @@ export async function GET(request: NextRequest) {
         success: true,
         message: 'Environment variables check',
         data: {
-          envVars,
-          hasAnyProvider: Object.values(envVars).slice(0, 3).some(Boolean),
-          activeProviders: Object.entries(envVars).slice(0, 3).filter(([_, value]) => value).map(([key, _]) => key)
+          environmentVariables: envVars,
+          hasAnyApiKey: envVars.ANTHROPIC_API_KEY || envVars.OPENAI_API_KEY || envVars.GOOGLE_API_KEY
         }
       });
     }
 
-    if (testType === 'basic') {
-      return NextResponse.json({
-        success: true,
-        message: 'AI test service is running',
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV || 'development'
-      });
-    }
-
-    if (testType === 'ai') {
+    if (testType === 'config') {
       try {
         // Dynamic import to handle potential missing dependencies
-        const { aiService } = await import('@/lib/ai');
+        const { getAIService } = await import('@/lib/ai');
         
-        const testPrompt = "Write a single sentence about the benefits of using AI in content creation.";
+        const aiService = getAIService();
+        const availableProviders = aiService.getAvailableProviders();
         
-        const result = await aiService.generateContent({
-          prompt: testPrompt,
-          options: {
-            maxTokens: 100,
-            temperature: 0.7
+        return NextResponse.json({
+          success: true,
+          message: 'AI service configuration test',
+          data: {
+            availableProviders,
+            environmentVariables: envVars
           }
         });
-
-        if (result.success) {
-          return NextResponse.json({
-            success: true,
-            message: 'AI generation test successful',
-            data: {
-              result: {
-                content: result.content ? result.content.substring(0, 200) + '...' : 'No content generated',
-                provider: result.finalProvider || 'unknown',
-                tokensUsed: result.totalTokens || 0,
-                cost: result.totalCost || 0,
-                responseTime: result.attempts[0]?.responseTime || 0
-              }
-            }
-          });
-        } else {
-          return NextResponse.json({
-            success: false,
-            message: 'AI generation failed',
-            error: result.error?.message || 'Unknown error',
-            data: {
-              attempts: result.attempts?.map(attempt => ({
-                provider: attempt.provider,
-                success: attempt.success,
-                error: attempt.error
-              })) || []
-            }
-          }, { status: 500 });
-        }
-      } catch (error) {
+      } catch (configError: any) {
         return NextResponse.json({
           success: false,
-          message: 'AI service initialization failed',
-          error: error instanceof Error ? error.message : 'Unknown error'
+          message: 'AI service configuration failed',
+          error: configError.message,
+          data: {
+            environmentVariables: envVars
+          }
         }, { status: 500 });
       }
     }
 
-    return NextResponse.json({
-      success: false,
-      message: 'Invalid test type. Use ?test=basic, ?test=env, or ?test=ai'
-    }, { status: 400 });
+    if (testType === 'generation') {
+      try {
+        // Dynamic import to handle potential missing dependencies
+        const { getAIService } = await import('@/lib/ai');
+        
+        const aiService = getAIService();
+        const testPrompt = "Write a single sentence about the benefits of using AI in content creation.";
+        
+        const result = await aiService.generateContent({
+          prompt: testPrompt,
+          template: 'blog-intro'
+        });
 
-  } catch (error) {
+        return NextResponse.json({
+          success: true,
+          message: 'AI generation test completed',
+          data: {
+            result: {
+              content: result.content ? result.content.substring(0, 200) + '...' : 'No content generated',
+              provider: result.finalProvider,
+              tokensUsed: result.totalTokens,
+              cost: result.totalCost,
+              responseTime: result.responseTimeMs
+            },
+            environmentVariables: envVars
+          }
+        });
+      } catch (generationError: any) {
+        return NextResponse.json({
+          success: false,
+          message: 'AI generation test failed',
+          error: generationError.message,
+          data: {
+            environmentVariables: envVars
+          }
+        }, { status: 500 });
+      }
+    }
+
+    // Default basic test
+    return NextResponse.json({
+      success: true,
+      message: 'AI test service is running',
+      data: {
+        availableTests: ['basic', 'env', 'config', 'generation'],
+        environmentVariables: envVars
+      }
+    });
+
+  } catch (error: any) {
     return NextResponse.json({
       success: false,
-      message: 'Test service error',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: 'AI test service error',
+      error: error.message
     }, { status: 500 });
   }
 }
