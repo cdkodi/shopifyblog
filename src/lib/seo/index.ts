@@ -50,9 +50,7 @@ export class SEOServiceManager {
 
   public async getKeywordSuggestions(
     keyword: string,
-    limit: number = 50,
-    locationId: number = 2356, // India
-    languageId: string = 'en'
+    limit: number = 50
   ): Promise<KeywordSuggestion[]> {
     if (!this.isInitialized()) {
       throw new Error('SEO service not initialized');

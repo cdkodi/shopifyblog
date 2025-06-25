@@ -29,15 +29,26 @@ export class DataForSEOService {
    */
   async getKeywordSuggestions(topic: string, limit: number = 100): Promise<KeywordSuggestion[]> {
     try {
-      const response = await this.makeRequest('/keywords_data/google_ads/keywords_for_keywords/task_post', {
+      // Step 1: Create task
+      const taskResponse = await this.makeRequest('/keywords_data/google_ads/keywords_for_keywords/task_post', {
         keywords: [topic],
-        location_code: this.config.locationId || 2840, // USA
-        language_code: this.config.languageId || 'en',
+        location_code: this.config.locationId,
+        language_code: this.config.languageId,
         include_adult_keywords: false,
         limit: limit
       });
 
-      return this.parseKeywordSuggestions(response);
+      // Get task ID from response
+      const taskId = taskResponse.tasks?.[0]?.id;
+      if (!taskId) {
+        throw new Error('Failed to create DataForSEO task');
+      }
+
+      // Step 2: Wait and retrieve results
+      await this.waitForTaskCompletion(taskId);
+      const results = await this.getTaskResults(taskId);
+
+      return this.parseKeywordSuggestions(results);
     } catch (error) {
       this.handleError(error);
       throw error;
@@ -99,9 +110,14 @@ export class DataForSEOService {
     try {
       const response = await this.makeRequest('/appendix/user_data');
       
+      // Get credits from tasks array
+      const tasks = response.tasks || [];
+      const userTask = tasks.find((task: any) => task.result);
+      const credits = userTask?.result?.money?.balance || 0;
+      
       this.healthStatus = {
         status: 'healthy',
-        apiCreditsRemaining: response.price_list?.total_count || 0,
+        apiCreditsRemaining: credits,
         lastChecked: new Date(),
         errors: []
       };
@@ -143,22 +159,80 @@ export class DataForSEOService {
       throw new Error(`DataForSEO API error: ${result.status_message}`);
     }
 
-    return result.tasks?.[0]?.result || result;
+    return result;
+  }
+
+  private async waitForTaskCompletion(taskId: string, maxWaitTime: number = 60000): Promise<void> {
+    const startTime = Date.now();
+    const pollInterval = 2000; // Poll every 2 seconds
+
+    while (Date.now() - startTime < maxWaitTime) {
+      try {
+        const response = await this.makeRequest('/keywords_data/google_ads/keywords_for_keywords/tasks_ready');
+        
+        // Check if our task is ready
+        const readyTasks = response.tasks || [];
+        const isReady = readyTasks.some((task: any) => 
+          task.result && task.result.some((r: any) => r.id === taskId)
+        );
+
+        if (isReady) {
+          return; // Task is ready
+        }
+
+        // Wait before next poll
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+      } catch (error) {
+        console.warn('Error checking task status:', error);
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+      }
+    }
+
+    throw new Error('Task timeout: DataForSEO task did not complete within expected time');
+  }
+
+  private async getTaskResults(taskId: string): Promise<any> {
+    const response = await this.makeRequest(`/keywords_data/google_ads/keywords_for_keywords/task_get/${taskId}`);
+    
+    if (!response.tasks?.[0]?.result) {
+      throw new Error('No results available for task');
+    }
+
+    return response.tasks[0].result[0]; // Return the first result
   }
 
   private async getSearchVolume(keyword: string): Promise<{ search_volume: number; competition: number; cpc: number }> {
-    const response = await this.makeRequest('/keywords_data/google_ads/search_volume/task_post', {
-      keywords: [keyword],
-      location_code: this.config.locationId || 2840,
-      language_code: this.config.languageId || 'en'
-    });
+    try {
+      // Create task
+      const taskResponse = await this.makeRequest('/keywords_data/google_ads/search_volume/task_post', {
+        keywords: [keyword],
+        location_code: this.config.locationId,
+        language_code: this.config.languageId
+      });
 
-    const data = response[0] || {};
-    return {
-      search_volume: data.search_volume || 0,
-      competition: data.competition || 0,
-      cpc: data.cpc || 0
-    };
+      const taskId = taskResponse.tasks?.[0]?.id;
+      if (!taskId) {
+        throw new Error('Failed to create search volume task');
+      }
+
+      // Wait and get results
+      await this.waitForTaskCompletion(taskId);
+      const results = await this.makeRequest(`/keywords_data/google_ads/search_volume/task_get/${taskId}`);
+      
+      const data = results.tasks?.[0]?.result?.[0]?.items?.[0] || {};
+      return {
+        search_volume: data.search_volume || 0,
+        competition: data.competition || 0,
+        cpc: data.cpc || 0
+      };
+    } catch (error) {
+      // Return default values if API fails
+      return {
+        search_volume: 0,
+        competition: 0,
+        cpc: 0
+      };
+    }
   }
 
   private async getKeywordDifficulty(keyword: string): Promise<{ difficulty: number }> {
@@ -180,9 +254,12 @@ export class DataForSEOService {
   }
 
   private parseKeywordSuggestions(response: any): KeywordSuggestion[] {
-    if (!response || !Array.isArray(response)) return [];
+    // Handle different response formats
+    const items = response?.items || response || [];
+    
+    if (!Array.isArray(items)) return [];
 
-    return response.map((item: any) => ({
+    return items.map((item: any) => ({
       keyword: item.keyword || '',
       search_volume: item.search_volume || 0,
       competition_level: this.mapCompetitionLevel(item.competition || 0),

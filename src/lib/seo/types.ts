@@ -67,4 +67,56 @@ export const SEO_ERROR_CODES = {
   NETWORK_ERROR: 'NETWORK_ERROR'
 } as const;
 
-export type SEOErrorCode = typeof SEO_ERROR_CODES[keyof typeof SEO_ERROR_CODES]; 
+export type SEOErrorCode = typeof SEO_ERROR_CODES[keyof typeof SEO_ERROR_CODES];
+
+export interface LocationConfig {
+  id: string;
+  name: string;
+  locationCode: number;
+  languageCode: string;
+  flag: string;
+  currency: string;
+}
+
+export const SUPPORTED_LOCATIONS: LocationConfig[] = [
+  {
+    id: 'india',
+    name: 'India',
+    locationCode: 2356,
+    languageCode: 'en',
+    flag: '🇮🇳',
+    currency: 'INR'
+  },
+  {
+    id: 'usa',
+    name: 'United States',
+    locationCode: 2840,
+    languageCode: 'en',
+    flag: '🇺🇸',
+    currency: 'USD'
+  },
+  {
+    id: 'uk',
+    name: 'United Kingdom',
+    locationCode: 2826,
+    languageCode: 'en',
+    flag: '🇬🇧',
+    currency: 'GBP'
+  },
+  {
+    id: 'canada',
+    name: 'Canada',
+    locationCode: 2124,
+    languageCode: 'en',
+    flag: '🇨🇦',
+    currency: 'CAD'
+  },
+  {
+    id: 'australia',
+    name: 'Australia',
+    locationCode: 2036,
+    languageCode: 'en',
+    flag: '🇦🇺',
+    currency: 'AUD'
+  }
+]; 
