@@ -33,34 +33,42 @@ export async function GET(request: NextRequest) {
         const { getAIService } = await import('@/lib/ai');
         const aiService = getAIService();
 
-        // Test each provider availability
+        // Test all providers health
         const providerTests = [];
         
-        if (envVars.ANTHROPIC_API_KEY) {
-          try {
-            const health = await aiService.checkProviderHealth('anthropic');
-            providerTests.push({ provider: 'anthropic', healthy: health.isHealthy, details: health });
-          } catch (error) {
-            providerTests.push({ provider: 'anthropic', healthy: false, error: error instanceof Error ? error.message : 'Unknown error' });
+        try {
+          const providersHealth = await aiService.getProvidersHealth();
+          
+          // Check each provider that has an API key
+          if (envVars.ANTHROPIC_API_KEY && providersHealth.anthropic) {
+            providerTests.push({ 
+              provider: 'anthropic', 
+              healthy: providersHealth.anthropic.isHealthy, 
+              details: providersHealth.anthropic 
+            });
           }
-        }
-        
-        if (envVars.OPENAI_API_KEY) {
-          try {
-            const health = await aiService.checkProviderHealth('openai');
-            providerTests.push({ provider: 'openai', healthy: health.isHealthy, details: health });
-          } catch (error) {
-            providerTests.push({ provider: 'openai', healthy: false, error: error instanceof Error ? error.message : 'Unknown error' });
+
+          if (envVars.OPENAI_API_KEY && providersHealth.openai) {
+            providerTests.push({ 
+              provider: 'openai', 
+              healthy: providersHealth.openai.isHealthy, 
+              details: providersHealth.openai 
+            });
           }
-        }
-        
-        if (envVars.GOOGLE_API_KEY) {
-          try {
-            const health = await aiService.checkProviderHealth('google');
-            providerTests.push({ provider: 'google', healthy: health.isHealthy, details: health });
-          } catch (error) {
-            providerTests.push({ provider: 'google', healthy: false, error: error instanceof Error ? error.message : 'Unknown error' });
+
+          if (envVars.GOOGLE_API_KEY && providersHealth.google) {
+            providerTests.push({ 
+              provider: 'google', 
+              healthy: providersHealth.google.isHealthy, 
+              details: providersHealth.google 
+            });
           }
+        } catch (error) {
+          providerTests.push({ 
+            provider: 'all', 
+            healthy: false, 
+            error: error instanceof Error ? error.message : 'Failed to check provider health' 
+          });
         }
 
         return NextResponse.json({
