@@ -78,12 +78,7 @@ export async function POST(request: NextRequest) {
           success: attempt.success,
           responseTime: attempt.responseTime,
           cost: attempt.cost,
-          errorType: attempt.error?.type || 'none',
-          errorMessage: attempt.error?.message || 'none',
-          errorDetails: attempt.error?.originalError ? 
-            (typeof attempt.error.originalError === 'string' ? 
-              attempt.error.originalError : 
-              attempt.error.originalError.toString()) : 'none'
+          error: attempt.error || 'none'
         });
       });
     }
@@ -106,15 +101,12 @@ export async function POST(request: NextRequest) {
       if (result.attempts && result.attempts.length > 0) {
         const lastAttempt = result.attempts[result.attempts.length - 1];
         if (lastAttempt.error) {
-          errorMessage += `: ${lastAttempt.error.message}`;
-          if (lastAttempt.error.type) {
-            errorMessage += ` (${lastAttempt.error.type})`;
-          }
+          errorMessage += `: ${lastAttempt.error}`;
         }
       } else if (result.error) {
         errorMessage += `: ${result.error.message}`;
-        if (result.error.type) {
-          errorMessage += ` (${result.error.type})`;
+        if (result.error.code) {
+          errorMessage += ` (${result.error.code})`;
         }
       }
 
@@ -124,7 +116,7 @@ export async function POST(request: NextRequest) {
           details: {
             attempts: result.attempts?.length || 0,
             providers: result.attempts?.map(a => a.provider).join(', ') || 'none',
-            lastError: result.attempts?.[result.attempts.length - 1]?.error?.message || result.error?.message || 'unknown'
+            lastError: result.attempts?.[result.attempts.length - 1]?.error || result.error?.message || 'unknown'
           }
         },
         { status: 500 }
