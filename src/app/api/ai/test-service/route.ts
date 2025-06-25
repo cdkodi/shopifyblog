@@ -19,98 +19,85 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: true,
         message: 'Environment variables check',
-        data: envVars
+        data: {
+          envVars,
+          hasAnyProvider: Object.values(envVars).slice(0, 3).some(Boolean),
+          activeProviders: Object.entries(envVars).slice(0, 3).filter(([_, value]) => value).map(([key, _]) => key)
+        }
       });
     }
 
-    // Check if any AI provider is configured
-    const hasAnyProvider = envVars.ANTHROPIC_API_KEY || envVars.OPENAI_API_KEY || envVars.GOOGLE_API_KEY;
-
-    if (!hasAnyProvider) {
+    if (testType === 'basic') {
       return NextResponse.json({
-        success: false,
-        error: 'No AI provider API keys are configured',
-        envCheck: envVars,
-        message: 'Please configure at least one AI provider in your environment variables'
-      }, { status: 400 });
+        success: true,
+        message: 'AI test service is running',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development'
+      });
     }
 
-    // Try to initialize AI service
-    try {
-      const { getAIService } = await import('@/lib/ai');
-      const aiService = getAIService();
-      const providers = aiService.getAvailableProviders();
-
-      if (testType === 'basic') {
-        return NextResponse.json({
-          success: true,
-          message: 'AI service initialized successfully',
-          data: {
-            availableProviders: providers,
-            envCheck: envVars
-          }
-        });
-      }
-
-      if (testType === 'health') {
-        const health = await aiService.getProvidersHealth();
-        return NextResponse.json({
-          success: true,
-          message: 'Provider health check completed',
-          data: {
-            health,
-            availableProviders: providers,
-            envCheck: envVars
-          }
-        });
-      }
-
-      if (testType === 'generate') {
+    if (testType === 'ai') {
+      try {
+        // Dynamic import to handle potential missing dependencies
+        const { aiService } = await import('@/lib/ai');
+        
+        const testPrompt = "Write a single sentence about the benefits of using AI in content creation.";
+        
         const result = await aiService.generateContent({
-          prompt: 'Write a brief test message about AI content generation.',
-          template: 'blog_post',
-          tone: 'professional',
-          length: 'Short (500-800)',
-          keywords: ['AI', 'test']
-        });
-
-        return NextResponse.json({
-          success: true,
-          message: 'Content generation test completed',
-          data: {
-            result: {
-              content: result.content ? result.content.substring(0, 200) + '...' : 'No content generated',
-              provider: result.provider,
-              tokensUsed: result.tokensUsed,
-              cost: result.cost,
-              responseTime: result.responseTime
-            },
-            envCheck: envVars
+          prompt: testPrompt,
+          options: {
+            maxTokens: 100,
+            temperature: 0.7
           }
         });
+
+        if (result.success) {
+          return NextResponse.json({
+            success: true,
+            message: 'AI generation test successful',
+            data: {
+              result: {
+                content: result.content ? result.content.substring(0, 200) + '...' : 'No content generated',
+                provider: result.finalProvider || 'unknown',
+                tokensUsed: result.totalTokens || 0,
+                cost: result.totalCost || 0,
+                responseTime: result.attempts[0]?.responseTime || 0
+              }
+            }
+          });
+        } else {
+          return NextResponse.json({
+            success: false,
+            message: 'AI generation failed',
+            error: result.error?.message || 'Unknown error',
+            data: {
+              attempts: result.attempts?.map(attempt => ({
+                provider: attempt.provider,
+                success: attempt.success,
+                error: attempt.error
+              })) || []
+            }
+          }, { status: 500 });
+        }
+      } catch (error) {
+        return NextResponse.json({
+          success: false,
+          message: 'AI service initialization failed',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
       }
-
-      return NextResponse.json({
-        success: false,
-        error: 'Invalid test type',
-        availableTests: ['basic', 'env', 'health', 'generate']
-      }, { status: 400 });
-
-    } catch (aiError) {
-      return NextResponse.json({
-        success: false,
-        error: 'Failed to initialize AI service',
-        details: aiError instanceof Error ? aiError.message : String(aiError),
-        envCheck: envVars
-      }, { status: 500 });
     }
 
-  } catch (error) {
-    console.error('AI test service error:', error);
     return NextResponse.json({
       success: false,
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : String(error)
+      message: 'Invalid test type. Use ?test=basic, ?test=env, or ?test=ai'
+    }, { status: 400 });
+
+  } catch (error) {
+    return NextResponse.json({
+      success: false,
+      message: 'Test service error',
+      error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }
