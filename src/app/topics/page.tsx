@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { TopicDashboard } from '../../components/topic-dashboard'
 import { TopicForm } from '../../components/topic-form'
 import type { Database } from '../../lib/types/database'
+import { dbTopicToFormData } from '../../lib/types/database'
 
 type Topic = Database['public']['Tables']['topics']['Row']
 
@@ -59,7 +60,7 @@ export default function TopicsPage() {
             </div>
             
             <TopicForm
-              initialData={editingTopic || undefined}
+              initialData={editingTopic ? dbTopicToFormData(editingTopic) : undefined}
               topicId={editingTopic?.id}
               onSuccess={handleFormSuccess}
               onCancel={handleFormCancel}

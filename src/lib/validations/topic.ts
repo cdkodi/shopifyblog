@@ -25,15 +25,14 @@ export const topicSchema = z.object({
     .min(1, 'Priority must be between 1-10')
     .max(10, 'Priority must be between 1-10')
     .default(5),
-  search_volume: z.number()
-    .min(0, 'Search volume cannot be negative')
-    .optional()
-    .or(z.literal('')),
-  competition_score: z.number()
-    .min(0, 'Competition score must be between 0-100')
-    .max(100, 'Competition score must be between 0-100')
-    .optional()
-    .or(z.literal('')),
+  search_volume: z.preprocess(
+    (val) => val === '' ? undefined : val,
+    z.number().min(0, 'Search volume cannot be negative').optional()
+  ),
+  competition_score: z.preprocess(
+    (val) => val === '' ? undefined : val,
+    z.number().min(0, 'Competition score must be between 0-100').max(100, 'Competition score must be between 0-100').optional()
+  ),
 })
 
 export type TopicFormData = z.infer<typeof topicSchema>

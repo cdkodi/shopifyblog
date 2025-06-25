@@ -1,6 +1,7 @@
 import { supabase } from '../supabase'
 import type { Database } from '../types/database'
 import type { TopicFormData, TopicFilterData } from '../validations/topic'
+import { formDataToDbInsert, formDataToDbUpdate } from '../types/database'
 
 type Topic = Database['public']['Tables']['topics']['Row']
 type TopicInsert = Database['public']['Tables']['topics']['Insert']
@@ -10,17 +11,7 @@ export class TopicService {
   // Create a new topic
   static async createTopic(data: TopicFormData): Promise<{ data: Topic | null; error: string | null }> {
     try {
-      const topicData: TopicInsert = {
-        title: data.title,
-        keywords: data.keywords || null,
-        industry: data.industry || null,
-        market_segment: data.market_segment || null,
-        style_preferences: data.style_preferences || null,
-        priority: data.priority,
-        search_volume: data.search_volume || null,
-        competition_score: data.competition_score || null,
-        status: 'draft',
-      }
+      const topicData = formDataToDbInsert(data)
 
       const { data: topic, error } = await supabase
         .from('topics')
@@ -56,13 +47,13 @@ export class TopicService {
         query = query.eq('market_segment', filters.market_segment)
       }
       if (filters?.priority_min) {
-        query = query.gte('priority', filters.priority_min)
+        query = query.gte('priority_score', filters.priority_min)
       }
       if (filters?.priority_max) {
-        query = query.lte('priority', filters.priority_max)
+        query = query.lte('priority_score', filters.priority_max)
       }
       if (filters?.search) {
-        query = query.or(`title.ilike.%${filters.search}%,keywords.ilike.%${filters.search}%`)
+        query = query.or(`topic_title.ilike.%${filters.search}%,keywords.ilike.%${filters.search}%`)
       }
 
       const { data: topics, error } = await query
@@ -103,17 +94,7 @@ export class TopicService {
   // Update a topic
   static async updateTopic(id: string, data: Partial<TopicFormData>): Promise<{ data: Topic | null; error: string | null }> {
     try {
-      const updateData: TopicUpdate = {
-        ...(data.title && { title: data.title }),
-        ...(data.keywords !== undefined && { keywords: data.keywords || null }),
-        ...(data.industry !== undefined && { industry: data.industry || null }),
-        ...(data.market_segment !== undefined && { market_segment: data.market_segment || null }),
-        ...(data.style_preferences !== undefined && { style_preferences: data.style_preferences }),
-        ...(data.priority !== undefined && { priority: data.priority }),
-        ...(data.search_volume !== undefined && { search_volume: data.search_volume || null }),
-        ...(data.competition_score !== undefined && { competition_score: data.competition_score || null }),
-        updated_at: new Date().toISOString(),
-      }
+      const updateData = formDataToDbUpdate(data as TopicFormData)
 
       const { data: topic, error } = await supabase
         .from('topics')
@@ -169,8 +150,8 @@ export class TopicService {
     try {
       const { data: configs, error } = await supabase
         .from('app_config')
-        .select('key, value')
-        .in('key', [
+        .select('config_key, config_value')
+        .in('config_key', [
           'industries',
           'market_segments', 
           'style_tones',
@@ -185,7 +166,7 @@ export class TopicService {
       }
 
       const configData = configs.reduce((acc, config) => {
-        acc[config.key as keyof typeof acc] = config.value as string[]
+        acc[config.config_key as keyof typeof acc] = config.config_value as string[]
         return acc
       }, {} as any)
 

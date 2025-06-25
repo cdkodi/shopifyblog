@@ -208,9 +208,78 @@ export interface Database {
 
 // Style Preferences Interface
 export interface StylePreferences {
+  [key: string]: string | undefined
   tone?: string
   length?: string
   target_audience?: string
   template_type?: string
   custom_notes?: string
+}
+
+// Transformation helpers for form/database field mapping
+export function dbTopicToFormData(dbTopic: Database['public']['Tables']['topics']['Row']): {
+  title: string
+  keywords?: string
+  industry?: string
+  market_segment?: string
+  style_preferences?: StylePreferences
+  priority: number
+  search_volume?: number
+  competition_score?: number
+} {
+  return {
+    title: dbTopic.topic_title,
+    keywords: typeof dbTopic.keywords === 'string' ? dbTopic.keywords : undefined,
+    industry: dbTopic.industry || undefined,
+    market_segment: dbTopic.market_segment || undefined,
+    style_preferences: dbTopic.style_preferences as StylePreferences || undefined,
+    priority: dbTopic.priority_score || 5,
+    search_volume: dbTopic.search_volume || undefined,
+    competition_score: dbTopic.competition_score || undefined,
+  }
+}
+
+export function formDataToDbInsert(formData: {
+  title: string
+  keywords?: string
+  industry?: string
+  market_segment?: string
+  style_preferences?: StylePreferences
+  priority: number
+  search_volume?: number
+  competition_score?: number
+}): Database['public']['Tables']['topics']['Insert'] {
+  return {
+    topic_title: formData.title,
+    keywords: formData.keywords || null,
+    industry: formData.industry || null,
+    market_segment: formData.market_segment || null,
+    style_preferences: formData.style_preferences || null,
+    priority_score: formData.priority,
+    search_volume: formData.search_volume || null,
+    competition_score: formData.competition_score || null,
+    status: 'draft',
+  }
+}
+
+export function formDataToDbUpdate(formData: {
+  title: string
+  keywords?: string
+  industry?: string
+  market_segment?: string
+  style_preferences?: StylePreferences
+  priority: number
+  search_volume?: number
+  competition_score?: number
+}): Database['public']['Tables']['topics']['Update'] {
+  return {
+    topic_title: formData.title,
+    keywords: formData.keywords || null,
+    industry: formData.industry || null,
+    market_segment: formData.market_segment || null,
+    style_preferences: formData.style_preferences || null,
+    priority_score: formData.priority,
+    search_volume: formData.search_volume || null,
+    competition_score: formData.competition_score || null,
+  }
 } 

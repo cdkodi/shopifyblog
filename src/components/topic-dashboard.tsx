@@ -317,11 +317,11 @@ export function TopicDashboard({ onCreateTopic, onEditTopic }: TopicDashboardPro
                 {/* Header */}
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-2">
-                    {truncateText(topic.title, 60)}
+                    {truncateText(topic.topic_title, 60)}
                   </h3>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(topic.priority)}`}>
-                      Priority {topic.priority}
+                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(topic.priority_score || 5)}`}>
+                      Priority {topic.priority_score || 5}
                     </span>
                     {topic.industry && (
                       <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -336,7 +336,7 @@ export function TopicDashboard({ onCreateTopic, onEditTopic }: TopicDashboardPro
                   {topic.keywords && (
                     <div>
                       <span className="font-medium">Keywords:</span>{' '}
-                      {truncateText(topic.keywords, 80)}
+                      {truncateText(typeof topic.keywords === 'string' ? topic.keywords : '', 80)}
                     </div>
                   )}
                   {topic.market_segment && (
@@ -367,7 +367,7 @@ export function TopicDashboard({ onCreateTopic, onEditTopic }: TopicDashboardPro
                 {/* Footer */}
                 <div className="flex justify-between items-center pt-4 border-t">
                   <span className="text-xs text-gray-500">
-                    {formatDate(topic.created_at)}
+                    {formatDate(topic.created_at || new Date().toISOString())}
                   </span>
                   <div className="flex gap-2">
                     <Button
