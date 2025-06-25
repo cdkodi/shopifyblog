@@ -174,17 +174,25 @@ export function getAIService(): AIServiceManager | MockAIService {
       timeout: parseInt(process.env.AI_TIMEOUT_SECONDS || '30') * 1000
     };
 
-    // Check if we're in development and no API keys are available
+    // Check if we have API keys available
     const hasApiKeys = config.anthropicKey || config.openaiKey || config.googleKey;
     const isDevelopment = process.env.NODE_ENV === 'development';
+    
+    // Debug logging to understand environment state
+    console.log('🔍 AI Service Configuration Debug:');
+    console.log('- Environment:', process.env.NODE_ENV);
+    console.log('- Has Anthropic Key:', !!config.anthropicKey, config.anthropicKey ? `(length: ${config.anthropicKey.length})` : '(empty)');
+    console.log('- Has OpenAI Key:', !!config.openaiKey, config.openaiKey ? `(length: ${config.openaiKey.length})` : '(empty)');
+    console.log('- Has Google Key:', !!config.googleKey, config.googleKey ? `(length: ${config.googleKey.length})` : '(empty)');
+    console.log('- Has Any API Keys:', hasApiKeys);
 
     if (!hasApiKeys) {
-      // Use mock service in both development AND production when no API keys are configured
-      // This prevents the "[object Object]" error and allows testing without API keys
-      const environment = isDevelopment ? 'development' : 'production';
-      console.warn(`⚠️  No AI API keys found. Using mock AI service for ${environment} testing.`);
+      console.warn(`⚠️  NO AI API KEYS DETECTED! Using mock AI service.`);
+      console.warn('   This means you will get mock content instead of real AI-generated content.');
+      console.warn('   Please check your environment variables: ANTHROPIC_API_KEY, OPENAI_API_KEY, GOOGLE_API_KEY');
       aiServiceInstance = new MockAIService();
     } else {
+      console.log('✅ AI API keys detected. Initializing real AI service manager.');
       aiServiceInstance = new AIServiceManager(config);
     }
   }
