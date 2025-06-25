@@ -166,4 +166,4 @@ coverage/
 
 # Generated types
 types/database.types.ts
-types/supabase.ts 
+types/supabase.ts .env.mcp

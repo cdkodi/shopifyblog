@@ -9,7 +9,6 @@ import { Select } from '@/components/ui/select';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ContentTemplate } from '@/lib/supabase/content-templates';
-import { seoService } from '@/lib/seo';
 
 interface ContentConfigurationProps {
   selectedTemplate: ContentTemplate;
@@ -74,13 +73,16 @@ export function ContentConfiguration({ selectedTemplate, onConfigurationComplete
       setKeywordError(null);
 
       try {
-        // Initialize SEO service
-        seoService.initialize();
+        // Call the keyword research API endpoint
+        const response = await fetch(`/api/seo/keywords?topic=${encodeURIComponent(config.topic)}&limit=20`);
+        const result = await response.json();
         
-        // Get keyword suggestions
-        const keywords = await seoService.getKeywordSuggestions(config.topic, 20);
-        
-        if (keywords && keywords.length > 0) {
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to fetch keyword data');
+        }
+
+        if (result.success && result.data.keywords && result.data.keywords.length > 0) {
+          const keywords = result.data.keywords;
           setKeywordResearch(keywords);
           
           // Auto-suggest primary keyword
