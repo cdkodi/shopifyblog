@@ -40,8 +40,7 @@ class MockAIService {
         success: true,
         tokensUsed: 1000,
         cost: 0.001,
-        duration: 1000,
-        timestamp: new Date()
+        responseTime: 1000
       }],
       totalCost: 0.001,
       totalTokens: 1000,
