@@ -128,9 +128,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       content: result.content,
-      metadata: result.metadata,
       finalProvider: result.finalProvider,
       totalCost: result.totalCost,
+      totalTokens: result.totalTokens,
       attempts: result.attempts?.length || 0
     });
 
