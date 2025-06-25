@@ -91,7 +91,7 @@ export function ContentConfiguration({ selectedTemplate, onConfigurationComplete
             setConfig(prev => ({
               ...prev,
               targetKeyword: primaryKeyword.keyword,
-              relatedKeywords: keywords.slice(1, 6).map(k => k.keyword)
+              relatedKeywords: keywords.slice(1, 6).map((k: any) => k.keyword)
             }));
           }
           
