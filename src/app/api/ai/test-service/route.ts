@@ -21,94 +21,125 @@ export async function GET(request: NextRequest) {
         message: 'Environment variables check',
         data: {
           environmentVariables: envVars,
-          hasAnyApiKey: envVars.ANTHROPIC_API_KEY || envVars.OPENAI_API_KEY || envVars.GOOGLE_API_KEY
+          hasAnyProvider: envVars.ANTHROPIC_API_KEY || envVars.OPENAI_API_KEY || envVars.GOOGLE_API_KEY,
+          timestamp: new Date().toISOString()
         }
       });
     }
 
-    if (testType === 'config') {
+    if (testType === 'providers') {
       try {
         // Dynamic import to handle potential missing dependencies
         const { getAIService } = await import('@/lib/ai');
-        
         const aiService = getAIService();
-        const availableProviders = aiService.getAvailableProviders();
+
+        // Test each provider availability
+        const providerTests = [];
         
+        if (envVars.ANTHROPIC_API_KEY) {
+          try {
+            const health = await aiService.checkProviderHealth('anthropic');
+            providerTests.push({ provider: 'anthropic', healthy: health.isHealthy, details: health });
+          } catch (error) {
+            providerTests.push({ provider: 'anthropic', healthy: false, error: error instanceof Error ? error.message : 'Unknown error' });
+          }
+        }
+        
+        if (envVars.OPENAI_API_KEY) {
+          try {
+            const health = await aiService.checkProviderHealth('openai');
+            providerTests.push({ provider: 'openai', healthy: health.isHealthy, details: health });
+          } catch (error) {
+            providerTests.push({ provider: 'openai', healthy: false, error: error instanceof Error ? error.message : 'Unknown error' });
+          }
+        }
+        
+        if (envVars.GOOGLE_API_KEY) {
+          try {
+            const health = await aiService.checkProviderHealth('google');
+            providerTests.push({ provider: 'google', healthy: health.isHealthy, details: health });
+          } catch (error) {
+            providerTests.push({ provider: 'google', healthy: false, error: error instanceof Error ? error.message : 'Unknown error' });
+          }
+        }
+
         return NextResponse.json({
           success: true,
-          message: 'AI service configuration test',
+          message: 'Provider health check completed',
           data: {
-            availableProviders,
+            providers: providerTests,
             environmentVariables: envVars
           }
         });
-      } catch (configError: any) {
+      } catch (error) {
         return NextResponse.json({
           success: false,
-          message: 'AI service configuration failed',
-          error: configError.message,
-          data: {
-            environmentVariables: envVars
-          }
-        }, { status: 500 });
+          message: 'AI service initialization failed',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          data: { environmentVariables: envVars }
+        });
       }
     }
 
-    if (testType === 'generation') {
+    if (testType === 'generate') {
       try {
         // Dynamic import to handle potential missing dependencies
         const { getAIService } = await import('@/lib/ai');
-        
         const aiService = getAIService();
+
         const testPrompt = "Write a single sentence about the benefits of using AI in content creation.";
-        
-        const result = await aiService.generateContent({
+
+        const result = await aiService.generateWithFallback({
           prompt: testPrompt,
-          template: 'blog-intro'
+          options: { maxTokens: 100, temperature: 0.7 }
         });
 
         return NextResponse.json({
-          success: true,
-          message: 'AI generation test completed',
+          success: result.success,
+          message: result.success ? 'Content generation test completed' : 'Content generation failed',
           data: {
             result: {
               content: result.content ? result.content.substring(0, 200) + '...' : 'No content generated',
               provider: result.finalProvider,
               tokensUsed: result.totalTokens,
               cost: result.totalCost,
-              responseTime: result.responseTimeMs
+              attempts: result.attempts.length
             },
             environmentVariables: envVars
-          }
+          },
+          error: result.error ? {
+            code: result.error.code,
+            message: result.error.message,
+            provider: result.error.provider
+          } : undefined
         });
-      } catch (generationError: any) {
+      } catch (error) {
         return NextResponse.json({
           success: false,
-          message: 'AI generation test failed',
-          error: generationError.message,
-          data: {
-            environmentVariables: envVars
-          }
-        }, { status: 500 });
+          message: 'AI service test failed',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          data: { environmentVariables: envVars }
+        });
       }
     }
 
     // Default basic test
     return NextResponse.json({
       success: true,
-      message: 'AI test service is running',
+      message: 'AI Service test endpoint is working',
       data: {
-        availableTests: ['basic', 'env', 'config', 'generation'],
-        environmentVariables: envVars
+        availableTests: ['basic', 'env', 'providers', 'generate'],
+        environmentVariables: envVars,
+        timestamp: new Date().toISOString()
       }
     });
 
-  } catch (error: any) {
+  } catch (error) {
     return NextResponse.json({
       success: false,
-      message: 'AI test service error',
-      error: error.message
-    }, { status: 500 });
+      message: 'Test endpoint error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 }
 
