@@ -86,8 +86,10 @@ export async function POST(request: NextRequest) {
     // If there's a general error, log it
     if (result.error) {
       console.log('❌ General Error Details:', {
-        type: result.error.type,
+        code: result.error.code,
         message: result.error.message,
+        provider: result.error.provider,
+        retryable: result.error.retryable,
         originalError: typeof result.error.originalError === 'string' ? 
           result.error.originalError : 
           result.error.originalError?.toString() || 'none'
