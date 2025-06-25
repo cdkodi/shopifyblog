@@ -44,6 +44,110 @@ The Shopify Blog CMS is a comprehensive content management system designed to st
 - **Target Audience**: General Consumers, Industry Professionals, Beginners, Experts, Small Business Owners, Tech Enthusiasts
 - **Content Template**: Product Showcase, How-to Guide, Buying Guide, Industry Trends, Problem-Solution, Comparison Article, Review Article, Seasonal Content
 
+### SEO and Content Planning Metrics
+
+The topic creation form includes three important metrics for SEO strategy and content planning. These fields help you make data-driven decisions about which topics to prioritize and how to approach content creation.
+
+#### Priority (1-10)
+
+**Purpose**: Content prioritization for editorial planning and resource allocation.
+
+**How to Use**:
+- **High Priority (8-10)**: Urgent topics that should be created immediately
+  - Time-sensitive content (seasonal, trending topics)
+  - High-converting topics for your business
+  - Topics aligned with current marketing campaigns
+- **Medium Priority (4-7)**: Standard content pipeline topics
+  - Evergreen content that performs consistently
+  - Regular blog content to maintain publishing schedule
+  - Topics with moderate business impact
+- **Low Priority (1-3)**: Future content or experimental topics
+  - Nice-to-have content when resources are available
+  - Experimental topics to test new audiences
+  - Content for long-term SEO strategy
+
+**Dashboard Integration**: Priority scores are displayed as color-coded badges:
+- Red (8-10): High priority topics
+- Orange (6-7): Medium-high priority
+- Yellow (4-5): Medium priority  
+- Green (1-3): Low priority
+
+**Filtering**: Use the priority range filters on the dashboard to focus on specific priority levels.
+
+#### Search Volume
+
+**Purpose**: Estimated monthly search volume for the topic's target keywords.
+
+**How to Use**:
+- **High Volume (10,000+)**: Topics with significant traffic potential
+  - Consider these for SEO-focused content
+  - May require more comprehensive, high-quality content
+  - Higher potential ROI but possibly more competition
+- **Medium Volume (1,000-10,000)**: Sweet spot for most businesses
+  - Good balance of opportunity vs. competition
+  - Achievable ranking targets for most websites
+  - Consistent traffic potential
+- **Low Volume (0-1,000)**: Niche or long-tail topics
+  - Great for targeting specific customer questions
+  - Lower competition, easier to rank
+  - May have higher conversion rates due to specificity
+
+**Data Sources**: You can gather this data from:
+- Google Keyword Planner
+- SEMrush, Ahrefs, or similar SEO tools
+- Google Trends for trend analysis
+- Your own site analytics for existing content performance
+
+**Optional Field**: If you don't have access to keyword research tools, leave this blank and focus on Priority scoring.
+
+#### Competition (0-100)
+
+**Purpose**: SEO difficulty score indicating how challenging it would be to rank for this topic.
+
+**How to Use**:
+- **Low Competition (0-30)**: Easier ranking opportunities
+  - New websites can compete effectively
+  - Focus content creation efforts here first
+  - Good for building domain authority
+- **Medium Competition (31-70)**: Moderate difficulty
+  - Requires quality content and some SEO optimization
+  - Good targets for established websites
+  - May need supporting content and internal linking
+- **High Competition (71-100)**: Very challenging topics
+  - Requires exceptional content, strong SEO, and time
+  - Consider if you have unique expertise or angle
+  - May be better as long-term goals
+
+**Strategic Combinations**:
+- **High Volume + Low Competition**: Ideal opportunities (rare but valuable)
+- **Medium Volume + Low Competition**: Great targets for consistent growth
+- **High Volume + High Competition**: Long-term goals requiring significant investment
+- **Low Volume + Low Competition**: Good for niche authority building
+
+**Content Strategy Impact**: Use competition scores to:
+- Determine content depth and quality requirements
+- Plan supporting content and internal linking strategies
+- Set realistic ranking timeline expectations
+- Allocate appropriate resources for content creation
+
+### Using Metrics Together
+
+**Example Topic Evaluation**:
+```
+Topic: "Best Email Marketing Tools for Small Business"
+Priority: 8 (high business relevance)
+Search Volume: 5,400 (good traffic potential)
+Competition: 45 (moderate difficulty)
+
+Strategy: High priority due to business relevance, good search volume, and manageable competition. Plan comprehensive comparison article with unique insights.
+```
+
+**Content Calendar Planning**:
+1. Sort topics by Priority for immediate needs
+2. Filter by Competition level based on your site's authority
+3. Use Search Volume to estimate traffic impact
+4. Balance quick wins (low competition) with growth opportunities (higher volume)
+
 #### 2. Topic Dashboard
 
 **Purpose**: Central hub for managing all content topics with advanced filtering and search capabilities.
