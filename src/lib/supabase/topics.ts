@@ -39,19 +39,7 @@ export class TopicService {
         .select('*')
         .order('created_at', { ascending: false })
 
-      // Apply filters
-      if (filters?.industry) {
-        query = query.eq('industry', filters.industry)
-      }
-      if (filters?.market_segment) {
-        query = query.eq('market_segment', filters.market_segment)
-      }
-      if (filters?.priority_min) {
-        query = query.gte('priority_score', filters.priority_min)
-      }
-      if (filters?.priority_max) {
-        query = query.lte('priority_score', filters.priority_max)
-      }
+      // Apply search filter
       if (filters?.search) {
         query = query.or(`topic_title.ilike.%${filters.search}%,keywords.ilike.%${filters.search}%`)
       }

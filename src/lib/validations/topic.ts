@@ -18,10 +18,6 @@ export type TopicFormData = z.infer<typeof topicSchema>
 
 // Validation for filters
 export const topicFilterSchema = z.object({
-  industry: z.string().optional(),
-  market_segment: z.string().optional(),
-  priority_min: z.number().min(1).max(10).optional(),
-  priority_max: z.number().min(1).max(10).optional(),
   search: z.string().optional(),
 })
 

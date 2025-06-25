@@ -9,7 +9,7 @@ import { TopicService } from '../lib/supabase/topics'
 import { formatDate, truncateText } from '../lib/utils'
 import type { Database } from '../lib/types/database'
 import type { TopicFilterData } from '../lib/validations/topic'
-import { Edit, Trash2, Plus, Search, Filter } from 'lucide-react'
+import { Edit, Trash2, Plus, Search } from 'lucide-react'
 
 type Topic = Database['public']['Tables']['topics']['Row']
 
@@ -29,16 +29,12 @@ export function TopicDashboard({ onCreateTopic, onEditTopic }: TopicDashboardPro
   const [configValues, setConfigValues] = useState<ConfigValues | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [showFilters, setShowFilters] = useState(false)
+
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   // Filter state
   const [filters, setFilters] = useState<TopicFilterData>({
     search: '',
-    industry: '',
-    market_segment: '',
-    priority_min: undefined,
-    priority_max: undefined,
   })
 
   // Load topics and config values
@@ -74,10 +70,7 @@ export function TopicDashboard({ onCreateTopic, onEditTopic }: TopicDashboardPro
   const loadConfig = async () => {
     const { data, error } = await TopicService.getConfigValues()
     if (data && !error) {
-      setConfigValues({
-        industries: data.industries || [],
-        market_segments: data.market_segments || [],
-      })
+      setConfigValues(data)
     }
   }
 
@@ -108,18 +101,7 @@ export function TopicDashboard({ onCreateTopic, onEditTopic }: TopicDashboardPro
   const clearFilters = () => {
     setFilters({
       search: '',
-      industry: '',
-      market_segment: '',
-      priority_min: undefined,
-      priority_max: undefined,
     })
-  }
-
-  const getPriorityColor = (priority: number) => {
-    if (priority >= 8) return 'bg-red-100 text-red-800'
-    if (priority >= 6) return 'bg-yellow-100 text-yellow-800'
-    if (priority >= 4) return 'bg-blue-100 text-blue-800'
-    return 'bg-gray-100 text-gray-800'
   }
 
   const getStylePreferencesDisplay = (stylePreferences: any) => {
@@ -128,7 +110,6 @@ export function TopicDashboard({ onCreateTopic, onEditTopic }: TopicDashboardPro
     const prefs = []
     if (stylePreferences.tone) prefs.push(stylePreferences.tone)
     if (stylePreferences.length) prefs.push(stylePreferences.length)
-    if (stylePreferences.target_audience) prefs.push(stylePreferences.target_audience)
     if (stylePreferences.template) prefs.push(stylePreferences.template)
     
     return prefs.length > 0 ? prefs.join(', ') : 'Default'
@@ -150,102 +131,17 @@ export function TopicDashboard({ onCreateTopic, onEditTopic }: TopicDashboardPro
         </Button>
       </div>
 
-      {/* Search and Filters */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              placeholder="Search topics and keywords..."
-              value={filters.search || ''}
-              onChange={(e) => updateFilter('search', e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Button
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2"
-          >
-            <Filter className="w-4 h-4" />
-            Filters
-          </Button>
+      {/* Search */}
+      <div className="bg-white p-4 rounded-lg shadow-sm border">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            placeholder="Search topics and keywords..."
+            value={filters.search || ''}
+            onChange={(e) => updateFilter('search', e.target.value)}
+            className="pl-10"
+          />
         </div>
-
-        {/* Advanced Filters */}
-        {showFilters && (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
-            <div className="space-y-2">
-              <Label className="text-sm text-gray-700">Industry</Label>
-              <Select
-                value={filters.industry || 'all'}
-                onValueChange={(value) => updateFilter('industry', value === 'all' ? '' : value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All industries" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All industries</SelectItem>
-                  {configValues?.industries?.map((industry) => (
-                    <SelectItem key={industry} value={industry}>
-                      {industry}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm text-gray-700">Market Segment</Label>
-              <Select
-                value={filters.market_segment || 'all'}
-                onValueChange={(value) => updateFilter('market_segment', value === 'all' ? '' : value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All segments" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All segments</SelectItem>
-                  {configValues?.market_segments?.map((segment) => (
-                    <SelectItem key={segment} value={segment}>
-                      {segment}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm text-gray-700">Min Priority</Label>
-              <Input
-                type="number"
-                min="1"
-                max="10"
-                placeholder="1"
-                value={filters.priority_min || ''}
-                onChange={(e) => updateFilter('priority_min', e.target.value ? parseInt(e.target.value) : undefined)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm text-gray-700">Max Priority</Label>
-              <Input
-                type="number"
-                min="1"
-                max="10"
-                placeholder="10"
-                value={filters.priority_max || ''}
-                onChange={(e) => updateFilter('priority_max', e.target.value ? parseInt(e.target.value) : undefined)}
-              />
-            </div>
-
-            <div className="sm:col-span-2 lg:col-span-4">
-              <Button variant="outline" onClick={clearFilters} size="sm">
-                Clear Filters
-              </Button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Results Summary */}
@@ -321,14 +217,9 @@ export function TopicDashboard({ onCreateTopic, onEditTopic }: TopicDashboardPro
                     {truncateText(topic.topic_title, 60)}
                   </h3>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(topic.priority_score || 5)}`}>
-                      Priority {topic.priority_score || 5}
+                    <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      {topic.status || 'pending'}
                     </span>
-                    {topic.industry && (
-                      <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {topic.industry}
-                      </span>
-                    )}
                   </div>
                 </div>
 
@@ -347,29 +238,10 @@ export function TopicDashboard({ onCreateTopic, onEditTopic }: TopicDashboardPro
                       )}
                     </div>
                   )}
-                  {topic.market_segment && (
-                    <div>
-                      <span className="font-medium">Segment:</span> {topic.market_segment}
-                    </div>
-                  )}
                   <div>
                     <span className="font-medium">Style:</span>{' '}
                     {truncateText(getStylePreferencesDisplay(topic.style_preferences), 60)}
                   </div>
-                  {(topic.search_volume || topic.competition_score) && (
-                    <div className="flex gap-4">
-                      {topic.search_volume && (
-                        <span>
-                          <span className="font-medium">Volume:</span> {topic.search_volume.toLocaleString()}
-                        </span>
-                      )}
-                      {topic.competition_score && (
-                        <span>
-                          <span className="font-medium">Competition:</span> {topic.competition_score}%
-                        </span>
-                      )}
-                    </div>
-                  )}
                 </div>
 
                 {/* Footer */}
