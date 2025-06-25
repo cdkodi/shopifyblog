@@ -1,83 +1,108 @@
 import { DataForSEOService } from './dataforseo-service';
 import { SEOResearchResult, KeywordSuggestion, KeywordData, SEOServiceHealth } from './types';
 
-class SEOServiceManager {
-  private dataForSEO: DataForSEOService | null = null;
+export class SEOServiceManager {
+  private static instance: SEOServiceManager;
+  private dataForSEOService: DataForSEOService | null = null;
   private initialized = false;
 
-  /**
-   * Initialize the SEO service with environment variables
-   */
-  initialize(): void {
-    if (this.initialized) return;
+  private constructor() {}
 
-    const login = process.env.DATAFORSEO_LOGIN;
-    const password = process.env.DATAFORSEO_PASSWORD;
-
-    if (!login || !password) {
-      console.warn('DataForSEO credentials not found. SEO features will be disabled.');
-      return;
+  public static getInstance(): SEOServiceManager {
+    if (!SEOServiceManager.instance) {
+      SEOServiceManager.instance = new SEOServiceManager();
     }
-
-    this.dataForSEO = new DataForSEOService({
-      apiLogin: login,
-      apiPassword: password,
-      locationId: parseInt(process.env.DATAFORSEO_LOCATION_ID || '2840'), // USA default
-      languageId: process.env.DATAFORSEO_LANGUAGE_ID || 'en'
-    });
-
-    this.initialized = true;
+    return SEOServiceManager.instance;
   }
 
-  /**
-   * Check if SEO service is available
-   */
-  isAvailable(): boolean {
-    return this.dataForSEO !== null;
+  public initialize(): void {
+    try {
+      const login = process.env.DATAFORSEO_LOGIN;
+      const password = process.env.DATAFORSEO_PASSWORD;
+
+      if (!login || !password) {
+        console.warn('DataForSEO credentials not found. SEO features will be disabled.');
+        this.initialized = false;
+        return;
+      }
+
+      this.dataForSEOService = new DataForSEOService({
+        apiLogin: login,
+        apiPassword: password,
+        locationId: parseInt(process.env.DATAFORSEO_LOCATION_ID || '2356'), // India default
+        languageId: process.env.DATAFORSEO_LANGUAGE_ID || 'en'
+      });
+      this.initialized = true;
+      console.log('SEO service initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize SEO service:', error);
+      this.initialized = false;
+    }
+  }
+
+  public isInitialized(): boolean {
+    return this.initialized && this.dataForSEOService !== null;
+  }
+
+  public isAvailable(): boolean {
+    return this.isInitialized();
+  }
+
+  public async getKeywordSuggestions(
+    keyword: string,
+    limit: number = 50,
+    locationId: number = 2356, // India
+    languageId: string = 'en'
+  ): Promise<KeywordSuggestion[]> {
+    if (!this.isInitialized()) {
+      throw new Error('SEO service not initialized');
+    }
+    
+    return this.dataForSEOService!.getKeywordSuggestions(keyword, limit);
   }
 
   /**
    * Get keyword suggestions for a topic
    */
-  async getKeywordSuggestions(topic: string, limit?: number): Promise<KeywordSuggestion[]> {
-    if (!this.dataForSEO) {
+  async getKeywordSuggestionsForTopic(topic: string, limit?: number): Promise<KeywordSuggestion[]> {
+    if (!this.dataForSEOService) {
       throw new Error('SEO service not initialized');
     }
 
-    return this.dataForSEO.getKeywordSuggestions(topic, limit);
+    return this.dataForSEOService.getKeywordSuggestions(topic, limit);
   }
 
   /**
    * Get detailed keyword analysis
    */
   async analyzeKeyword(keyword: string): Promise<KeywordData> {
-    if (!this.dataForSEO) {
+    if (!this.dataForSEOService) {
       throw new Error('SEO service not initialized');
     }
 
-    return this.dataForSEO.getKeywordAnalysis(keyword);
+    return this.dataForSEOService.getKeywordAnalysis(keyword);
   }
 
   /**
    * Perform comprehensive SEO research for content planning
    */
   async researchTopic(topic: string): Promise<SEOResearchResult> {
-    if (!this.dataForSEO) {
+    if (!this.dataForSEOService) {
       throw new Error('SEO service not initialized');
     }
 
-    return this.dataForSEO.performSEOResearch(topic);
+    return this.dataForSEOService.performSEOResearch(topic);
   }
 
   /**
    * Get SEO service health status
    */
   async getHealthStatus(): Promise<SEOServiceHealth | null> {
-    if (!this.dataForSEO) {
+    if (!this.dataForSEOService) {
       return null;
     }
 
-    return this.dataForSEO.getHealthStatus();
+    return this.dataForSEOService.getHealthStatus();
   }
 
   /**
@@ -152,7 +177,7 @@ Please ensure the content naturally incorporates the target keywords and answers
 }
 
 // Export singleton instance
-export const seoService = new SEOServiceManager();
+export const seoService = SEOServiceManager.getInstance();
 
 // Utility functions
 export function formatSearchVolume(volume: number): string {
