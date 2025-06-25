@@ -4,303 +4,301 @@
 
 This document outlines the technical architecture for a comprehensive blog content management system designed to integrate with Shopify, optimize for SEO, and streamline content creation workflows.
 
+**Current Status: Phase 1 - Topic Input & Style Preferences**
+
 ## System Architecture
 
 ### Tech Stack
+- **Frontend**: Next.js 14+ with App Router, React 18+, TypeScript 5+
+- **UI Framework**: Shadcn UI + Tailwind CSS + Framer Motion
 - **Backend**: Supabase (PostgreSQL + Authentication + API)
-- **Frontend**: Next.js 14+ with App Router
-- **UI Framework**: React + Shadcn UI + Tailwind CSS
-- **Language**: TypeScript
-- **Animation**: Framer Motion
-- **Integration**: Shopify Admin API
+- **Forms**: React Hook Form + Zod validation
+- **State Management**: React Query (TanStack Query) + React Context
+- **Integration**: Shopify Admin API (Future)
+- **Deployment**: Vercel + Supabase
+
+### Vercel Deployment Stack
+- **Platform**: Vercel (Next.js optimized)
+- **Database**: Supabase PostgreSQL (managed)  
+- **Authentication**: Supabase Auth
+- **Storage**: Supabase Storage (for future image uploads)
+- **Environment Variables**: Vercel Environment Variables
+- **Domain**: Custom domain via Vercel
+- **Analytics**: Vercel Analytics (built-in)
+- **Monitoring**: Vercel Functions monitoring
 
 ### Core Components
-1. **Database Layer** - Supabase PostgreSQL
-2. **API Layer** - Supabase REST/GraphQL APIs
-3. **Authentication** - Supabase Auth
-4. **Frontend Application** - Next.js React App
-5. **External Integration** - Shopify Admin API
+1. **Database Layer** - Supabase PostgreSQL with enhanced schema
+2. **API Layer** - Supabase REST/GraphQL APIs + Next.js API routes
+3. **Authentication** - Supabase Auth with Row Level Security
+4. **Frontend Application** - Next.js React App with SSR/SSG
+5. **Form Management** - React Hook Form with real-time validation
+6. **External Integration** - Shopify Admin API (Future phases)
 
-## Database Schema
+## Phase 1: Foundation App Architecture
 
-### Entity Relationship Overview
+### Enhanced Database Schema
 
+#### Updated Topics Table
+**Purpose**: Enhanced content planning with user input and style preferences
+
+| Column | Type | Required | Description |
+|--------|------|----------|-------------|
+| `id` | UUID | ✅ | Primary key (auto-generated) |
+| `topic_title` | TEXT | ✅ | **REQUIRED** - Topic/subject title |
+| `keywords` | JSONB | ❌ | Optional keywords array |
+| `industry` | TEXT | ❌ | Industry classification (Fashion, Electronics, etc.) |
+| `market_segment` | TEXT | ❌ | Market segment (B2B, B2C, Luxury, etc.) |
+| `style_preferences` | JSONB | ❌ | Style configuration object |
+| `search_volume` | INTEGER | ❌ | For future API integration |
+| `competition_score` | DECIMAL(3,2) | ❌ | For future SEO analysis |
+| `priority_score` | INTEGER | ❌ | User-defined priority (0-10) |
+| `status` | TEXT | ❌ | Workflow status (pending/in_progress/completed) |
+| `created_at` | TIMESTAMPTZ | ✅ | Creation timestamp |
+| `used_at` | TIMESTAMPTZ | ❌ | When used for content generation |
+
+#### Style Preferences JSON Structure
+```json
+{
+  "tone": "Professional | Casual | Friendly | Authoritative | Conversational | Educational",
+  "length": "Short (500-800 words) | Medium (800-1500 words) | Long (1500-3000 words) | Extended (3000+ words)",
+  "target_audience": "General Consumers | Industry Professionals | Beginners | Experts | Small Business Owners | Tech Enthusiasts",
+  "template_type": "Product Showcase | How-to Guide | Buying Guide | Industry Trends | Problem-Solution | Comparison Article | Review Article | Seasonal Content",
+  "custom_notes": "Optional custom instructions for content generation"
+}
 ```
-articles (1) ←→ (M) topics (content planning)
-articles (1) ←→ (M) content_templates (template usage)
-workflow_logs (tracks all system operations)
-app_config (system-wide settings)
+
+#### Configuration Values (app_config table)
+| Config Key | Values | Purpose |
+|------------|--------|---------|
+| `style_tones` | 6 tone options | Dropdown values for article tone |
+| `article_lengths` | 4 length options | Content length specifications |
+| `target_audiences` | 6 audience types | Target demographic selection |
+| `content_templates` | 8 template types | E-commerce focused templates |
+| `industries` | 10 industry categories | Industry classification |
+| `market_segments` | 8 segment types | Market positioning |
+
+### Frontend Architecture
+
+#### Next.js App Structure (Phase 1)
+```
+src/
+├── app/                           # Next.js 14 App Router
+│   ├── globals.css               # Global Tailwind styles
+│   ├── layout.tsx                # Root layout with providers
+│   ├── page.tsx                  # Home/dashboard page
+│   ├── topics/                   # Topic management
+│   │   ├── page.tsx             # Topics list/dashboard
+│   │   ├── new/
+│   │   │   └── page.tsx         # New topic form page
+│   │   └── [id]/
+│   │       ├── page.tsx         # Topic detail view
+│   │       └── edit/
+│   │           └── page.tsx      # Edit topic form
+│   └── api/                      # API routes (if needed)
+├── components/                    # Reusable UI components
+│   ├── ui/                       # Shadcn UI base components
+│   │   ├── button.tsx           # Button component
+│   │   ├── input.tsx            # Input component
+│   │   ├── form.tsx             # Form components
+│   │   └── ...                  # Other UI primitives
+│   ├── forms/                    # Form-specific components
+│   │   ├── topic-form.tsx       # Main topic input form
+│   │   ├── style-selector.tsx   # Style preferences component
+│   │   └── topic-list.tsx       # Topics display component
+│   └── layout/                   # Layout components
+│       ├── navbar.tsx           # Navigation component
+│       └── sidebar.tsx          # Sidebar navigation
+├── lib/                          # Utility functions and configs
+│   ├── supabase.ts              # Supabase client configuration
+│   ├── utils.ts                 # General utility functions
+│   ├── validations/             # Form validation schemas
+│   │   └── topic-schema.ts      # Zod schemas for topic forms
+│   └── types/                   # TypeScript definitions
+│       ├── database.ts          # Database type definitions
+│       └── forms.ts             # Form type definitions
+└── hooks/                        # Custom React hooks
+    ├── use-topics.ts            # Topic management hooks
+    └── use-config.ts            # Configuration fetching hooks
 ```
 
-### Table Definitions
+#### Key Technologies Integration
 
-#### 1. Articles Table
-**Purpose**: Main content management with SEO optimization and Shopify integration
+**React Hook Form + Zod:**
+```typescript
+// Form validation with Zod
+const TopicFormSchema = z.object({
+  topic_title: z.string().min(5, "Title must be at least 5 characters"),
+  keywords: z.array(z.string()).optional(),
+  industry: z.string().optional(),
+  market_segment: z.string().optional(),
+  style_preferences: StylePreferencesSchema,
+})
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID | Primary key (auto-generated) |
-| `title` | TEXT | Article title (required) |
-| `content` | TEXT | Full article content (required) |
-| `meta_description` | TEXT | SEO meta description |
-| `slug` | TEXT | URL-friendly slug (unique) |
-| `status` | TEXT | Workflow status with CHECK constraint |
-| `target_keywords` | JSONB | SEO keywords array |
-| `shopify_blog_id` | BIGINT | Shopify blog reference |
-| `shopify_article_id` | BIGINT | Published article reference |
-| `scheduled_publish_date` | TIMESTAMPTZ | Future publishing date |
-| `created_at` | TIMESTAMPTZ | Creation timestamp |
-| `updated_at` | TIMESTAMPTZ | Last modification timestamp |
-| `published_at` | TIMESTAMPTZ | Actual publication timestamp |
-| `seo_score` | INTEGER | Calculated SEO score (0-100) |
-| `word_count` | INTEGER | Article word count |
-| `reading_time` | INTEGER | Estimated reading time (minutes) |
+// React Hook Form integration
+const form = useForm<TopicFormData>({
+  resolver: zodResolver(TopicFormSchema),
+  defaultValues: {...}
+})
+```
 
-**Status Workflow**: `draft` → `review` → `approved` → `published` → `rejected`
+**Supabase Integration:**
+```typescript
+// Real-time topic updates
+const { data: topics, error } = useQuery({
+  queryKey: ['topics'],
+  queryFn: () => supabase.from('topics').select('*')
+})
 
-#### 2. Topics Table
-**Purpose**: Content planning and keyword research management
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID | Primary key (auto-generated) |
-| `topic_title` | TEXT | Topic/subject title (required) |
-| `keywords` | JSONB | Related keywords array |
-| `search_volume` | INTEGER | Monthly search volume |
-| `competition_score` | DECIMAL(3,2) | SEO competition (0.00-1.00) |
-| `priority_score` | INTEGER | Content priority ranking |
-| `status` | TEXT | Topic status with CHECK constraint |
-| `created_at` | TIMESTAMPTZ | Creation timestamp |
-| `used_at` | TIMESTAMPTZ | When topic was used for content |
-
-**Status Workflow**: `pending` → `in_progress` → `completed` → `rejected`
-
-#### 3. Content Templates Table
-**Purpose**: Reusable content structures for different industries
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID | Primary key (auto-generated) |
-| `name` | TEXT | Template name (required) |
-| `template_structure` | JSONB | Template sections and format |
-| `content_type` | TEXT | Content category |
-| `industry` | TEXT | Target industry |
-| `is_active` | BOOLEAN | Template availability |
-| `created_at` | TIMESTAMPTZ | Creation timestamp |
-
-#### 4. Workflow Logs Table
-**Purpose**: System execution tracking and error monitoring
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID | Primary key (auto-generated) |
-| `workflow_name` | TEXT | Operation/workflow identifier |
-| `execution_id` | TEXT | Unique execution reference |
-| `status` | TEXT | Execution status with CHECK constraint |
-| `error_message` | TEXT | Error details (if failed) |
-| `execution_data` | JSONB | Context and parameters |
-| `created_at` | TIMESTAMPTZ | Execution timestamp |
-
-**Status Types**: `started` → `completed` → `failed` → `cancelled`
-
-#### 5. App Config Table
-**Purpose**: Application-wide configuration management
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID | Primary key (auto-generated) |
-| `config_key` | TEXT | Unique configuration key |
-| `config_value` | JSONB | Configuration value (flexible JSON) |
-| `description` | TEXT | Configuration description |
-| `updated_at` | TIMESTAMPTZ | Last update timestamp |
+// Real-time subscriptions
+useEffect(() => {
+  const subscription = supabase
+    .channel('topics_changes')
+    .on('postgres_changes', { 
+      event: '*', 
+      schema: 'public', 
+      table: 'topics' 
+    }, (payload) => {
+      queryClient.invalidateQueries(['topics'])
+    })
+    .subscribe()
+}, [])
+```
 
 ## Performance Optimizations
 
-### Database Indexes
+### Database Indexes (Updated)
 - `idx_articles_status` - Fast filtering by article status
-- `idx_articles_created_at` - Efficient date-based sorting
+- `idx_articles_created_at` - Efficient date-based sorting  
 - `idx_topics_priority` - Quick priority-based ordering
+- `idx_topics_industry` - **NEW** - Industry filtering
+- `idx_topics_market_segment` - **NEW** - Market segment filtering
+- `idx_topics_style_preferences` - **NEW** - GIN index for JSON queries
 - `idx_workflow_logs_created_at` - Fast log retrieval
 
-### Query Optimization Strategies
-1. **Status-based filtering** with indexed enum values
-2. **Date range queries** with timestamp indexes
-3. **Priority ordering** with DESC index on topics
-4. **JSONB operations** for flexible keyword and configuration storage
+### Frontend Performance
+- **Server Components** - Default to RSC for better performance
+- **Client Components** - Only for interactive forms and real-time updates
+- **React Query** - Aggressive caching with background updates
+- **Code Splitting** - Dynamic imports for heavy components
+- **Image Optimization** - Next.js Image component (future phases)
 
-## Security Architecture
+## Deployment Architecture (Vercel)
 
-### Row Level Security (RLS)
-All tables protected with Supabase RLS policies:
+### Environment Configuration
+```env
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
-| Table | Access Level | Policy |
-|-------|-------------|---------|
+# Application Configuration
+NEXTAUTH_URL=https://your-app.vercel.app
+NEXTAUTH_SECRET=your_nextauth_secret
+
+# Future: Shopify Integration
+SHOPIFY_STORE_URL=your-store.myshopify.com
+SHOPIFY_ADMIN_API_ACCESS_TOKEN=your_token
+```
+
+### Vercel Deployment Features
+- **Automatic Deployments** - Git push triggers deployment
+- **Preview Deployments** - Every PR gets a preview URL
+- **Edge Functions** - For API routes and middleware
+- **Analytics** - Built-in performance monitoring
+- **Custom Domains** - Professional domain configuration
+
+### Build Configuration (vercel.json)
+```json
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "functions": {
+    "app/api/**/*.ts": {
+      "runtime": "nodejs18.x"
+    }
+  }
+}
+```
+
+## Security Architecture (Enhanced)
+
+### Row Level Security Policies
+All existing tables plus enhanced topic security:
+
+| Table | Access Level | Policy Updates |
+|-------|-------------|----------------|
 | `articles` | Full Access | Authenticated users (CRUD) |
-| `topics` | Full Access | Authenticated users (CRUD) |
+| `topics` | **Enhanced** | Authenticated users (CRUD) + user filtering |
 | `content_templates` | Full Access | Authenticated users (CRUD) |
 | `workflow_logs` | Read-Only | Authenticated users (SELECT) |
-| `app_config` | Read-Only | Authenticated users (SELECT) |
+| `app_config` | **Enhanced** | Authenticated users (SELECT) + public config access |
 
-### Authentication Strategy
-- **Supabase Auth** for user management
-- **JWT tokens** for API authentication
-- **Role-based access** with `auth.role() = 'authenticated'`
-- **Session management** with automatic token refresh
+### Frontend Security
+- **Input Validation** - Zod schemas with sanitization
+- **XSS Protection** - React's built-in protections + CSP headers
+- **CSRF Protection** - Supabase handles token validation
+- **Environment Variables** - Secure configuration management
 
-## API Design
+## Phase 1 User Experience Flow
 
-### Supabase REST API Endpoints
-```
-GET    /rest/v1/articles          # List articles with filters
-POST   /rest/v1/articles          # Create new article
-GET    /rest/v1/articles/{id}     # Get specific article
-PATCH  /rest/v1/articles/{id}     # Update article
-DELETE /rest/v1/articles/{id}     # Delete article
+### Topic Creation Workflow
+1. **Navigate** to `/topics/new`
+2. **Fill Form**:
+   - Topic Title (required)
+   - Keywords (optional, tag input)
+   - Industry (optional, dropdown from config)
+   - Market Segment (optional, dropdown from config)
+3. **Style Preferences**:
+   - Tone selection (dropdown)
+   - Length selection (dropdown)
+   - Target Audience (dropdown)
+   - Template Type (dropdown)
+   - Custom Notes (textarea)
+4. **Validation** - Real-time feedback
+5. **Submit** - Store in Supabase
+6. **Success** - Redirect to topics list
 
-GET    /rest/v1/topics            # List topics with priority
-POST   /rest/v1/topics            # Create new topic
-PATCH  /rest/v1/topics/{id}       # Update topic status
+### Topic Management Workflow
+1. **Dashboard** at `/topics` shows:
+   - All topics with status indicators
+   - Filter by industry, segment, status
+   - Sort by priority, date created
+   - Quick actions (edit, delete, duplicate)
+2. **Edit Flow** at `/topics/[id]/edit`:
+   - Pre-populated form
+   - Track changes
+   - Update workflow
 
-GET    /rest/v1/content_templates # List active templates
-GET    /rest/v1/workflow_logs     # View execution logs
-GET    /rest/v1/app_config        # Get configuration
-```
+## Future Phases Integration
 
-### Shopify Integration API
-```
-POST   /api/shopify/publish       # Publish article to Shopify
-GET    /api/shopify/blogs         # List Shopify blogs
-POST   /api/shopify/sync          # Sync article status
-DELETE /api/shopify/unpublish     # Remove from Shopify
-```
+### Phase 2: Content Generation (Planned)
+- AI integration using stored topics and style preferences
+- Content generation workflow using the enhanced topics table
+- Quality scoring and optimization features
 
-## Frontend Architecture
-
-### Next.js App Structure
-```
-src/
-├── app/                    # App Router pages
-│   ├── dashboard/         # Main content management
-│   ├── articles/          # Article CRUD operations
-│   ├── topics/            # Content planning
-│   ├── templates/         # Template management
-│   └── settings/          # Configuration
-├── components/            # Reusable UI components
-│   ├── ui/               # Shadcn UI components
-│   ├── forms/            # Form components
-│   └── layout/           # Layout components
-├── lib/                  # Utilities and configurations
-│   ├── supabase.ts       # Supabase client
-│   ├── shopify.ts        # Shopify API client
-│   └── utils.ts          # Helper functions
-└── types/                # TypeScript definitions
-```
-
-### Key Features
-- **Server-side rendering** with Next.js App Router
-- **Real-time updates** with Supabase subscriptions
-- **Responsive design** with Tailwind CSS
-- **Form validation** with TypeScript interfaces
-- **State management** with React hooks and context
-
-## Content Workflow
-
-### Article Lifecycle
-1. **Topic Research** - Create topics with SEO analysis
-2. **Content Planning** - Assign topics to content calendar
-3. **Draft Creation** - Write articles using templates
-4. **Review Process** - Status progression through workflow
-5. **SEO Optimization** - Keyword analysis and scoring
-6. **Scheduling** - Set future publication dates
-7. **Shopify Publishing** - Sync to Shopify blog
-8. **Performance Tracking** - Monitor engagement metrics
-
-### SEO Optimization Features
-- **Keyword targeting** with JSONB storage
-- **Meta description** optimization
-- **Reading time** calculation
-- **Word count** tracking
-- **SEO score** algorithmic calculation
-- **Competition analysis** integration
-
-## Integration Points
-
-### Shopify Admin API
-- **Blog management** - Create/update blog posts
-- **Category mapping** - Sync content categories
-- **Publication status** - Track publishing state
-- **Media handling** - Upload and manage images
-
-### External SEO Tools
-- **Keyword research** APIs for search volume data
-- **Competition analysis** tools integration
-- **Content scoring** algorithms
-- **Analytics tracking** for performance metrics
+### Phase 3: Review & Publishing (Planned)
+- Shopify API integration
+- Publishing workflow implementation
+- Performance analytics and optimization
 
 ## Monitoring and Logging
 
-### System Monitoring
-- **Workflow execution** tracking in `workflow_logs`
-- **Error handling** with detailed error messages
-- **Performance metrics** collection
-- **API usage** monitoring
+### Vercel Analytics
+- **Web Vitals** - Core performance metrics
+- **Page Views** - User engagement tracking
+- **Error Tracking** - Runtime error monitoring
+- **Function Logs** - API route performance
 
-### Logging Strategy
-- **Structured logging** with JSON format
-- **Execution context** preservation
-- **Error categorization** for debugging
-- **Audit trail** for content changes
-
-## Deployment and Scaling
-
-### Infrastructure
-- **Supabase** managed PostgreSQL and API
-- **Vercel/Netlify** for Next.js frontend deployment
-- **CDN** for static asset delivery
-- **Environment-based** configuration management
-
-### Scaling Considerations
-- **Database connection** pooling
-- **API rate limiting** implementation
-- **Caching strategy** for frequently accessed data
-- **Background job** processing for heavy operations
-
-## Security Considerations
-
-### Data Protection
-- **Row Level Security** on all database tables
-- **API authentication** for all endpoints
-- **Input validation** and sanitization
-- **CORS configuration** for API access
-
-### Privacy Compliance
-- **User data** handling procedures
-- **Content ownership** tracking
-- **Data retention** policies
-- **GDPR compliance** considerations
-
-## Future Enhancements
-
-### Planned Features
-1. **AI Content Generation** - GPT integration for content assistance
-2. **Advanced Analytics** - Content performance dashboard
-3. **Multi-user Collaboration** - Team workflows and permissions
-4. **Content Localization** - Multi-language support
-5. **Advanced SEO Tools** - Competitor analysis and suggestions
-6. **Social Media Integration** - Cross-platform publishing
-7. **Content Versioning** - Track article revisions
-8. **Automated Publishing** - Scheduled content workflows
-
-### Technical Improvements
-1. **Real-time Collaboration** - Live editing capabilities
-2. **Advanced Caching** - Redis integration
-3. **Background Processing** - Queue system for heavy operations
-4. **Advanced Search** - Full-text search with PostgreSQL
-5. **API Optimization** - GraphQL integration
-6. **Mobile App** - React Native companion app
+### Database Monitoring
+- **Supabase Dashboard** - Query performance and usage
+- **Real-time Metrics** - Active connections and throughput
+- **Row Level Security** - Access pattern monitoring
 
 ---
 
 **Last Updated**: January 27, 2025  
-**Version**: 1.0  
-**Architecture Status**: Production Ready 
+**Version**: 2.0 - Phase 1 Implementation  
+**Architecture Status**: Phase 1 Ready for Development 
