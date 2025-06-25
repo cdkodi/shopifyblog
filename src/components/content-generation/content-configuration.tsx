@@ -52,24 +52,64 @@ export interface ContentConfiguration {
 }
 
 export function ContentConfiguration({ selectedTemplate, onConfigurationComplete, onBack, initialData }: ContentConfigurationProps) {
-  const [config, setConfig] = useState<Partial<ContentConfiguration>>({
-    template: selectedTemplate,
-    topic: initialData?.topic || '',
-    targetKeyword: initialData?.targetKeyword || '',
-    relatedKeywords: initialData?.relatedKeywords || [],
-    title: '',
-    metaDescription: '',
-    targetAudience: '',
-    tone: initialData?.tone || 'professional',
-    wordCount: initialData?.wordCount || selectedTemplate.targetLength,
-    includeImages: true,
-    includeCallToAction: true
-  });
+  // Load saved configuration from localStorage
+  const loadSavedConfig = () => {
+    try {
+      const saved = localStorage.getItem('contentConfiguration');
+      if (saved) {
+        const savedConfig = JSON.parse(saved);
+        // Only use saved config if it's for the same template
+        if (savedConfig.template?.id === selectedTemplate.id) {
+          return {
+            template: selectedTemplate,
+            topic: savedConfig.topic || initialData?.topic || '',
+            targetKeyword: savedConfig.targetKeyword || initialData?.targetKeyword || '',
+            relatedKeywords: savedConfig.relatedKeywords || initialData?.relatedKeywords || [],
+            title: savedConfig.title || '',
+            metaDescription: savedConfig.metaDescription || '',
+            targetAudience: savedConfig.targetAudience || '',
+            tone: savedConfig.tone || initialData?.tone || 'professional',
+            wordCount: savedConfig.wordCount || initialData?.wordCount || selectedTemplate.targetLength,
+            includeImages: savedConfig.includeImages ?? true,
+            includeCallToAction: savedConfig.includeCallToAction ?? true
+          };
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load saved configuration:', error);
+    }
+    
+    // Return default config if no saved config or loading failed
+    return {
+      template: selectedTemplate,
+      topic: initialData?.topic || '',
+      targetKeyword: initialData?.targetKeyword || '',
+      relatedKeywords: initialData?.relatedKeywords || [],
+      title: '',
+      metaDescription: '',
+      targetAudience: '',
+      tone: initialData?.tone || 'professional',
+      wordCount: initialData?.wordCount || selectedTemplate.targetLength,
+      includeImages: true,
+      includeCallToAction: true
+    };
+  };
+
+  const [config, setConfig] = useState<Partial<ContentConfiguration>>(loadSavedConfig());
 
   const [keywordResearch, setKeywordResearch] = useState<any>(null);
   const [loadingKeywords, setLoadingKeywords] = useState(false);
   const [keywordError, setKeywordError] = useState<string | null>(null);
   const [suggestedTitles, setSuggestedTitles] = useState<string[]>([]);
+
+  // Auto-save configuration to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('contentConfiguration', JSON.stringify(config));
+    } catch (error) {
+      console.error('Failed to save configuration:', error);
+    }
+  }, [config]);
 
   // Perform keyword research when topic changes
   useEffect(() => {
@@ -163,6 +203,14 @@ export function ContentConfiguration({ selectedTemplate, onConfigurationComplete
     setSuggestedTitles(suggestions);
   };
 
+  const clearSavedConfiguration = () => {
+    try {
+      localStorage.removeItem('contentConfiguration');
+    } catch (error) {
+      console.error('Failed to clear saved configuration:', error);
+    }
+  };
+
   const handleSubmit = () => {
     const finalConfig: ContentConfiguration = {
       template: selectedTemplate,
@@ -192,6 +240,9 @@ export function ContentConfiguration({ selectedTemplate, onConfigurationComplete
       } : undefined
     };
 
+    // Clear saved config once we're proceeding to generation
+    clearSavedConfiguration();
+    
     onConfigurationComplete(finalConfig);
   };
 
@@ -476,16 +527,32 @@ export function ContentConfiguration({ selectedTemplate, onConfigurationComplete
 
       {/* Action Buttons */}
       <div className="flex justify-between pt-6 border-t">
-        <Button onClick={onBack} variant="outline">
-          ← Back to Templates
-        </Button>
-        <Button 
-          onClick={handleSubmit}
-          disabled={!isFormValid}
-          className="px-8"
-        >
-          Generate Content →
-        </Button>
+        <div className="flex items-center space-x-4">
+          <Button onClick={onBack} variant="outline">
+            ← Back to Templates
+          </Button>
+          <div className="flex items-center space-x-2 text-sm text-gray-500">
+            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+            <span>Configuration auto-saved</span>
+          </div>
+        </div>
+        <div className="flex items-center space-x-3">
+          <Button 
+            onClick={clearSavedConfiguration}
+            variant="outline" 
+            size="sm"
+            className="text-gray-500"
+          >
+            Clear Saved
+          </Button>
+          <Button 
+            onClick={handleSubmit}
+            disabled={!isFormValid}
+            className="px-8"
+          >
+            Generate Content →
+          </Button>
+        </div>
       </div>
     </div>
   );

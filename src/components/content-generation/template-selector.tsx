@@ -16,6 +16,17 @@ export function TemplateSelector({ onTemplateSelect, selectedTemplate }: Templat
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hoveredTemplate, setHoveredTemplate] = useState<string | null>(null);
+  const [hasSavedConfig, setHasSavedConfig] = useState(false);
+
+  // Check if there's a saved configuration
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('contentConfiguration');
+      setHasSavedConfig(!!saved);
+    } catch (error) {
+      setHasSavedConfig(false);
+    }
+  }, []);
 
   useEffect(() => {
     async function fetchTemplates() {
@@ -66,6 +77,25 @@ export function TemplateSelector({ onTemplateSelect, selectedTemplate }: Templat
     }
   };
 
+  const loadSavedConfiguration = () => {
+    try {
+      const saved = localStorage.getItem('contentConfiguration');
+      if (saved) {
+        const config = JSON.parse(saved);
+        // Find the template from the saved config
+        const template = templates.find(t => t.id === config.template?.id);
+        if (template) {
+          onTemplateSelect(template);
+        } else {
+          alert('The saved configuration template is no longer available. Please select a new template.');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load saved configuration:', error);
+      alert('Failed to load saved configuration. Please select a template manually.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -106,14 +136,31 @@ export function TemplateSelector({ onTemplateSelect, selectedTemplate }: Templat
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Choose Content Template</h2>
-        <p className="text-gray-600">
-          Select the type of content you want to generate. Each template is optimized for specific SEO goals and uses the best AI provider for that content type.
-        </p>
-        <p className="text-sm text-blue-600 mt-2">
-          {templates.length} templates available
-        </p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Choose Content Template</h2>
+          <p className="text-gray-600">
+            Select the type of content you want to generate. Each template is optimized for specific SEO goals and uses the best AI provider for that content type.
+          </p>
+          <p className="text-sm text-blue-600 mt-2">
+            {templates.length} templates available
+          </p>
+        </div>
+        {hasSavedConfig && (
+          <div className="flex flex-col items-end space-y-2">
+            <Button 
+              onClick={loadSavedConfiguration}
+              variant="outline"
+              size="sm"
+              className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+            >
+              📄 Load Saved Configuration
+            </Button>
+            <p className="text-xs text-green-600">
+              Restore your previous setup
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">

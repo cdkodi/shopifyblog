@@ -93,9 +93,29 @@ export function ContentGenerator({ configuration, onGenerationComplete, onBack }
           status: response.status,
           statusText: response.statusText,
           result,
-          url: response.url
+          url: response.url,
+          requestBody: {
+            prompt: prompt.substring(0, 100) + '...',
+            template: configuration.template.id,
+            tone: configuration.tone,
+            keywords: [configuration.targetKeyword, ...configuration.relatedKeywords],
+            preferredProvider: configuration.template.recommendedProvider
+          }
         });
-        throw new Error(errorMsg);
+        
+        // Create a more informative error message
+        let detailedError = errorMsg;
+        if (response.status === 500) {
+          detailedError = `Server Error (500): ${errorMsg}. This might be due to AI service configuration issues.`;
+        } else if (response.status === 400) {
+          detailedError = `Bad Request (400): ${errorMsg}. Please check your configuration.`;
+        } else if (response.status === 401 || response.status === 403) {
+          detailedError = `Authentication Error (${response.status}): ${errorMsg}. AI service authentication may have failed.`;
+        } else if (!response.ok) {
+          detailedError = `Network Error (${response.status}): ${errorMsg}`;
+        }
+        
+        throw new Error(detailedError);
       }
       
       // Stage 3: Process results
@@ -132,7 +152,7 @@ export function ContentGenerator({ configuration, onGenerationComplete, onBack }
     } catch (err) {
       console.error('Content generation failed:', err);
       
-      // Improved error handling to avoid [object Object]
+      // Enhanced error handling to avoid [object Object] and provide helpful context
       let errorMessage = 'Failed to generate content';
       
       if (err instanceof Error) {
@@ -146,8 +166,27 @@ export function ContentGenerator({ configuration, onGenerationComplete, onBack }
         } else if ('error' in err) {
           errorMessage = String(err.error);
         } else {
-          errorMessage = `Error: ${JSON.stringify(err)}`;
+          try {
+            errorMessage = `Error: ${JSON.stringify(err, null, 2)}`;
+          } catch (jsonError) {
+            errorMessage = 'Unknown error object that could not be serialized';
+          }
         }
+      }
+      
+      // Add additional context for common issues
+      if (errorMessage.includes('fetch') || errorMessage.includes('network')) {
+        errorMessage = `Network Error: ${errorMessage}. Please check your internet connection and try again.`;
+      } else if (errorMessage.includes('timeout') || errorMessage.includes('aborted')) {
+        errorMessage = `Timeout Error: ${errorMessage}. The AI service took too long to respond. Please try again.`;
+      } else if (errorMessage.includes('API key') || errorMessage.includes('authentication') || errorMessage.includes('401') || errorMessage.includes('403')) {
+        errorMessage = `Authentication Error: ${errorMessage}. AI service authentication failed. Please check your API keys.`;
+      } else if (errorMessage.includes('500') || errorMessage.includes('Internal Server Error')) {
+        errorMessage = `Server Error: ${errorMessage}. There was an issue with the AI service. Please try again in a moment.`;
+      } else if (errorMessage.includes('400') || errorMessage.includes('Bad Request')) {
+        errorMessage = `Configuration Error: ${errorMessage}. Please check your content configuration and try again.`;
+      } else if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
+        errorMessage = `Rate Limit Error: ${errorMessage}. You've reached the AI service usage limit. Please try again later.`;
       }
       
       setError(errorMessage);
