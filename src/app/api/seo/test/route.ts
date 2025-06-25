@@ -169,4 +169,38 @@ async function handleHealthTest() {
       error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
-} 
+}
+
+async function handleDebugTest() {
+  try {
+    const debugInfo = {
+      timestamp: new Date().toISOString(),
+      environment: {
+        NODE_ENV: process.env.NODE_ENV,
+        VERCEL_ENV: process.env.VERCEL_ENV
+      },
+      seoService: {
+        available: seoService.isAvailable(),
+        initialized: true
+      },
+      credentials: {
+        login: !!process.env.DATAFORSEO_LOGIN,
+        password: !!process.env.DATAFORSEO_PASSWORD,
+        locationId: process.env.DATAFORSEO_LOCATION_ID || 'default',
+        languageId: process.env.DATAFORSEO_LANGUAGE_ID || 'default'
+      }
+    };
+
+    return NextResponse.json({
+      status: 'success',
+      message: 'Debug information retrieved',
+      results: debugInfo
+    });
+  } catch (error) {
+    return NextResponse.json({
+      status: 'error',
+      message: 'Debug test failed',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
+  }
+}
