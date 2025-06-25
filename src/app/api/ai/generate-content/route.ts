@@ -4,12 +4,19 @@ import { AIGenerationRequest } from '@/lib/ai/types';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('=== Content Generation API Request Started ===');
+    console.log('🔧 AI Service Configuration Debug:');
+    console.log('- Environment:', process.env.NODE_ENV);
+    console.log('- Has Anthropic Key:', !!process.env.ANTHROPIC_API_KEY, process.env.ANTHROPIC_API_KEY ? `(length: ${process.env.ANTHROPIC_API_KEY.length})` : '');
+    console.log('- Has OpenAI Key:', !!process.env.OPENAI_API_KEY, process.env.OPENAI_API_KEY ? `(length: ${process.env.OPENAI_API_KEY.length})` : '');
+    console.log('- Has Google Key:', !!process.env.GOOGLE_API_KEY, process.env.GOOGLE_API_KEY ? `(length: ${process.env.GOOGLE_API_KEY.length})` : '');
     
+    const hasAnyKeys = !!(process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY || process.env.GOOGLE_API_KEY);
+    console.log('- Has Any API Keys:', hasAnyKeys ? `✅ ${hasAnyKeys}` : `❌ ${hasAnyKeys}`);
+
     const body = await request.json();
     const { prompt, template, tone, length, keywords, preferredProvider, options } = body;
 
-    console.log('Request parameters:', {
+    console.log('📝 Request parameters:', {
       promptLength: prompt?.length || 0,
       template: template?.id || 'unknown',
       tone,
@@ -29,8 +36,14 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Getting AI service instance...');
-    // Get AI service instance (this runs on server with access to env vars)
     const aiService = getAIService();
+    
+    if (hasAnyKeys) {
+      console.log('✅ AI API keys detected. Initializing real AI service manager.');
+    } else {
+      console.log('⚠️ No AI API keys found. Using MockAI service.');
+    }
+    
     console.log('AI service instance created successfully');
 
     // Prepare the generation request
@@ -44,10 +57,10 @@ export async function POST(request: NextRequest) {
     };
 
     console.log('Calling AI service generateContent...');
-    // Generate content using the AI service
     const result = await aiService.generateContent(generationRequest, preferredProvider);
     
-    console.log('AI service response:', {
+    // Enhanced result logging with provider attempt details
+    console.log('🎯 AI service response:', {
       success: result.success,
       contentLength: result.content?.length || 0,
       attemptsCount: result.attempts?.length || 0,
@@ -56,40 +69,90 @@ export async function POST(request: NextRequest) {
       hasError: !!result.error
     });
 
-    // Serialize the result to ensure all properties are JSON-safe
-    const serializedAttempts = result.attempts?.map(attempt => ({
-      ...attempt,
-      error: attempt.error ? (typeof attempt.error === 'string' ? attempt.error : String(attempt.error)) : undefined
-    }));
+    // Log each attempt with detailed error information
+    if (result.attempts && result.attempts.length > 0) {
+      console.log('📊 Provider Attempts Details:');
+      result.attempts.forEach((attempt, index) => {
+        console.log(`  Attempt ${index + 1}:`, {
+          provider: attempt.provider,
+          success: attempt.success,
+          responseTime: attempt.responseTime,
+          cost: attempt.cost,
+          errorType: attempt.error?.type || 'none',
+          errorMessage: attempt.error?.message || 'none',
+          errorDetails: attempt.error?.originalError ? 
+            (typeof attempt.error.originalError === 'string' ? 
+              attempt.error.originalError : 
+              attempt.error.originalError.toString()) : 'none'
+        });
+      });
+    }
 
-    const response = {
-      success: result.success,
+    // If there's a general error, log it
+    if (result.error) {
+      console.log('❌ General Error Details:', {
+        type: result.error.type,
+        message: result.error.message,
+        originalError: typeof result.error.originalError === 'string' ? 
+          result.error.originalError : 
+          result.error.originalError?.toString() || 'none'
+      });
+    }
+
+    if (!result.success) {
+      // Create a detailed error message for the client
+      let errorMessage = 'Content generation failed';
+      
+      if (result.attempts && result.attempts.length > 0) {
+        const lastAttempt = result.attempts[result.attempts.length - 1];
+        if (lastAttempt.error) {
+          errorMessage += `: ${lastAttempt.error.message}`;
+          if (lastAttempt.error.type) {
+            errorMessage += ` (${lastAttempt.error.type})`;
+          }
+        }
+      } else if (result.error) {
+        errorMessage += `: ${result.error.message}`;
+        if (result.error.type) {
+          errorMessage += ` (${result.error.type})`;
+        }
+      }
+
+      return NextResponse.json(
+        { 
+          error: errorMessage,
+          details: {
+            attempts: result.attempts?.length || 0,
+            providers: result.attempts?.map(a => a.provider).join(', ') || 'none',
+            lastError: result.attempts?.[result.attempts.length - 1]?.error?.message || result.error?.message || 'unknown'
+          }
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
       content: result.content,
-      attempts: serializedAttempts,
-      totalCost: result.totalCost,
-      totalTokens: result.totalTokens,
+      metadata: result.metadata,
       finalProvider: result.finalProvider,
-      error: result.error ? (typeof result.error === 'string' ? result.error : String(result.error)) : undefined
-    };
-
-    console.log('=== Content Generation API Request Completed Successfully ===');
-    // Return the result
-    return NextResponse.json(response);
+      totalCost: result.totalCost,
+      attempts: result.attempts?.length || 0
+    });
 
   } catch (error) {
-    console.error('=== Content Generation API Error ===');
-    console.error('Error type:', typeof error);
-    console.error('Error constructor:', error?.constructor?.name);
-    console.error('Full error:', error);
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('❌ API Route Error:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace',
+      type: typeof error,
+      errorObject: error
+    });
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    console.error('Sending error response:', errorMessage);
-    
     return NextResponse.json(
       { 
-        success: false, 
-        error: errorMessage
+        error: `API route error: ${errorMessage}`,
+        type: 'api_error'
       },
       { status: 500 }
     );
