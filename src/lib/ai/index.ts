@@ -92,13 +92,31 @@ class MockAIService {
         errorRate: 0,
         successfulRequests: 100,
         failedRequests: 0
+      },
+      [AI_PROVIDERS.OPENAI]: {
+        isHealthy: true,
+        responseTime: 600,
+        lastChecked: new Date(),
+        errorRate: 0,
+        successfulRequests: 50,
+        failedRequests: 0
+      },
+      [AI_PROVIDERS.GOOGLE]: {
+        isHealthy: true,
+        responseTime: 550,
+        lastChecked: new Date(),
+        errorRate: 0,
+        successfulRequests: 75,
+        failedRequests: 0
       }
     };
   }
 
   async validateAllProviders(): Promise<Record<AIProviderName, boolean>> {
     return {
-      [AI_PROVIDERS.ANTHROPIC]: true
+      [AI_PROVIDERS.ANTHROPIC]: true,
+      [AI_PROVIDERS.OPENAI]: true,
+      [AI_PROVIDERS.GOOGLE]: true
     };
   }
 }
