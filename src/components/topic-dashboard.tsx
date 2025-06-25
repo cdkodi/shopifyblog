@@ -177,14 +177,14 @@ export function TopicDashboard({ onCreateTopic, onEditTopic }: TopicDashboardPro
             <div className="space-y-2">
               <Label className="text-sm text-gray-700">Industry</Label>
               <Select
-                value={filters.industry || ''}
-                onValueChange={(value) => updateFilter('industry', value)}
+                value={filters.industry || 'all'}
+                onValueChange={(value) => updateFilter('industry', value === 'all' ? '' : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All industries" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All industries</SelectItem>
+                  <SelectItem value="all">All industries</SelectItem>
                   {configValues?.industries?.map((industry) => (
                     <SelectItem key={industry} value={industry}>
                       {industry}
@@ -197,14 +197,14 @@ export function TopicDashboard({ onCreateTopic, onEditTopic }: TopicDashboardPro
             <div className="space-y-2">
               <Label className="text-sm text-gray-700">Market Segment</Label>
               <Select
-                value={filters.market_segment || ''}
-                onValueChange={(value) => updateFilter('market_segment', value)}
+                value={filters.market_segment || 'all'}
+                onValueChange={(value) => updateFilter('market_segment', value === 'all' ? '' : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All segments" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All segments</SelectItem>
+                  <SelectItem value="all">All segments</SelectItem>
                   {configValues?.market_segments?.map((segment) => (
                     <SelectItem key={segment} value={segment}>
                       {segment}

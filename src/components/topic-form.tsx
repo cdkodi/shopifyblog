@@ -173,14 +173,14 @@ export function TopicForm({ initialData, topicId, onSuccess, onCancel }: TopicFo
           <div className="space-y-2">
             <Label className="text-gray-700">Industry</Label>
             <Select
-              value={watchedValues.industry || ''}
-              onValueChange={(value) => setValue('industry', value)}
+              value={watchedValues.industry || 'none'}
+              onValueChange={(value) => setValue('industry', value === 'none' ? '' : value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select industry..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="none">None</SelectItem>
                 {configValues?.industries?.map((industry) => (
                   <SelectItem key={industry} value={industry}>
                     {industry}
@@ -193,14 +193,14 @@ export function TopicForm({ initialData, topicId, onSuccess, onCancel }: TopicFo
           <div className="space-y-2">
             <Label className="text-gray-700">Market Segment</Label>
             <Select
-              value={watchedValues.market_segment || ''}
-              onValueChange={(value) => setValue('market_segment', value)}
+              value={watchedValues.market_segment || 'none'}
+              onValueChange={(value) => setValue('market_segment', value === 'none' ? '' : value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select segment..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="none">None</SelectItem>
                 {configValues?.market_segments?.map((segment) => (
                   <SelectItem key={segment} value={segment}>
                     {segment}
@@ -224,14 +224,14 @@ export function TopicForm({ initialData, topicId, onSuccess, onCancel }: TopicFo
             <div className="space-y-2">
               <Label className="text-gray-700">Tone</Label>
               <Select
-                value={watchedValues.style_preferences?.tone || ''}
-                onValueChange={(value) => setValue('style_preferences.tone', value)}
+                value={watchedValues.style_preferences?.tone || 'default'}
+                onValueChange={(value) => setValue('style_preferences.tone', value === 'default' ? '' : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select tone..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Default</SelectItem>
+                  <SelectItem value="default">Default</SelectItem>
                   {configValues?.style_tones?.map((tone) => (
                     <SelectItem key={tone} value={tone}>
                       {tone}
@@ -244,14 +244,14 @@ export function TopicForm({ initialData, topicId, onSuccess, onCancel }: TopicFo
             <div className="space-y-2">
               <Label className="text-gray-700">Article Length</Label>
               <Select
-                value={watchedValues.style_preferences?.length || ''}
-                onValueChange={(value) => setValue('style_preferences.length', value)}
+                value={watchedValues.style_preferences?.length || 'default'}
+                onValueChange={(value) => setValue('style_preferences.length', value === 'default' ? '' : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select length..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Default</SelectItem>
+                  <SelectItem value="default">Default</SelectItem>
                   {configValues?.article_lengths?.map((length) => (
                     <SelectItem key={length} value={length}>
                       {length}
@@ -264,14 +264,14 @@ export function TopicForm({ initialData, topicId, onSuccess, onCancel }: TopicFo
             <div className="space-y-2">
               <Label className="text-gray-700">Target Audience</Label>
               <Select
-                value={watchedValues.style_preferences?.target_audience || ''}
-                onValueChange={(value) => setValue('style_preferences.target_audience', value)}
+                value={watchedValues.style_preferences?.target_audience || 'default'}
+                onValueChange={(value) => setValue('style_preferences.target_audience', value === 'default' ? '' : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select audience..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Default</SelectItem>
+                  <SelectItem value="default">Default</SelectItem>
                   {configValues?.target_audiences?.map((audience) => (
                     <SelectItem key={audience} value={audience}>
                       {audience}
@@ -284,14 +284,14 @@ export function TopicForm({ initialData, topicId, onSuccess, onCancel }: TopicFo
             <div className="space-y-2">
               <Label className="text-gray-700">Content Template</Label>
               <Select
-                value={watchedValues.style_preferences?.template || ''}
-                onValueChange={(value) => setValue('style_preferences.template', value)}
+                value={watchedValues.style_preferences?.template || 'default'}
+                onValueChange={(value) => setValue('style_preferences.template', value === 'default' ? '' : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select template..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Default</SelectItem>
+                  <SelectItem value="default">Default</SelectItem>
                   {configValues?.content_templates?.map((template) => (
                     <SelectItem key={template} value={template}>
                       {template}
