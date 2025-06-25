@@ -69,7 +69,12 @@ export function ContentGenerator({ configuration, onGenerationComplete, onBack }
       
       const result = await aiService.generateContent({
         prompt,
-        template: configuration.template.id
+        template: configuration.template.id,
+        tone: configuration.tone,
+        options: {
+          maxTokens: Math.floor(configuration.wordCount * 1.5), // Rough estimate
+          temperature: 0.7
+        }
       }, configuration.template.recommendedProvider);
       
       if (!result.success || !result.content) {

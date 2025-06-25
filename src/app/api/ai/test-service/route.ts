@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
 
         const testPrompt = "Write a single sentence about the benefits of using AI in content creation.";
 
-        const result = await aiService.generateWithFallback({
+        const result = await aiService.generateContent({
           prompt: testPrompt,
           options: { maxTokens: 100, temperature: 0.7 }
         });
