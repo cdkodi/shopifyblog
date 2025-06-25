@@ -9,13 +9,14 @@ import { TopicService } from '../lib/supabase/topics'
 import { formatDate, truncateText } from '../lib/utils'
 import type { Database } from '../lib/types/database'
 import type { TopicFilterData } from '../lib/validations/topic'
-import { Edit, Trash2, Plus, Search } from 'lucide-react'
+import { Edit, Trash2, Plus, Search, FileText } from 'lucide-react'
 
 type Topic = Database['public']['Tables']['topics']['Row']
 
 interface TopicDashboardProps {
   onCreateTopic?: () => void
   onEditTopic?: (topic: Topic) => void
+  onGenerateContent?: (topic: Topic) => void
 }
 
 interface ConfigValues {
@@ -24,7 +25,7 @@ interface ConfigValues {
   content_templates: string[]
 }
 
-export function TopicDashboard({ onCreateTopic, onEditTopic }: TopicDashboardProps) {
+export function TopicDashboard({ onCreateTopic, onEditTopic, onGenerateContent }: TopicDashboardProps) {
   const [topics, setTopics] = useState<Topic[]>([])
   const [configValues, setConfigValues] = useState<ConfigValues | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -251,10 +252,21 @@ export function TopicDashboard({ onCreateTopic, onEditTopic }: TopicDashboardPro
                   </span>
                   <div className="flex gap-2">
                     <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => onGenerateContent?.(topic)}
+                      className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white"
+                      title="Generate Content"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span className="hidden sm:inline">Generate</span>
+                    </Button>
+                    <Button
                       variant="outline"
                       size="sm"
                       onClick={() => onEditTopic?.(topic)}
                       className="p-2"
+                      title="Edit Topic"
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
@@ -264,6 +276,7 @@ export function TopicDashboard({ onCreateTopic, onEditTopic }: TopicDashboardPro
                       onClick={() => handleDeleteTopic(topic.id)}
                       disabled={deletingId === topic.id}
                       className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      title="Delete Topic"
                     >
                       {deletingId === topic.id ? (
                         <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />

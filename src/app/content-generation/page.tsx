@@ -1,18 +1,53 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { TemplateSelector, ContentTemplate } from '@/components/content-generation/template-selector';
 import { ContentConfiguration, ContentConfiguration as ContentConfigInterface } from '@/components/content-generation/content-configuration';
 import { ContentGenerator, GeneratedContent } from '@/components/content-generation/content-generator';
 import { ContentEditor, PublishedContent } from '@/components/content-generation/content-editor';
 import { Button } from '@/components/ui/button';
 
-export default function ContentGenerationPage() {
+function ContentGenerationInner() {
+  const searchParams = useSearchParams();
   const [selectedTemplate, setSelectedTemplate] = useState<ContentTemplate | undefined>();
   const [configuration, setConfiguration] = useState<ContentConfigInterface | undefined>();
   const [generatedContent, setGeneratedContent] = useState<GeneratedContent | undefined>();
   const [publishedContent, setPublishedContent] = useState<PublishedContent | undefined>();
   const [currentStep, setCurrentStep] = useState(1);
+  const [initialConfigData, setInitialConfigData] = useState<any>(null);
+
+  // Parse URL parameters when component mounts
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    const keywords = searchParams.get('keywords');
+    const tone = searchParams.get('tone');
+    const length = searchParams.get('length');
+    const template = searchParams.get('template');
+
+    if (topic || keywords || tone || length || template) {
+      const initialData = {
+        topic: topic || '',
+        targetKeyword: keywords ? keywords.split(',')[0]?.trim() : '',
+        relatedKeywords: keywords ? keywords.split(',').slice(1).map(k => k.trim()).filter(Boolean) : [],
+        tone: tone as any || 'professional',
+        wordCount: length ? parseInt(length) : undefined,
+        suggestedTemplate: template
+      };
+      
+      setInitialConfigData(initialData);
+      
+      // If we have data from URL, show a notification
+      if (topic) {
+        // If there's a suggested template, try to auto-select it
+        if (template) {
+          // You might want to auto-select the template here
+          // For now, we'll stay on step 1 but show the topic data
+        }
+        // Don't auto-advance, let user choose template first
+      }
+    }
+  }, [searchParams]);
 
   const handleTemplateSelect = (template: ContentTemplate) => {
     setSelectedTemplate(template);
@@ -124,6 +159,33 @@ export default function ContentGenerationPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {currentStep === 1 && (
           <div className="space-y-8">
+            {/* Topic Pre-filled Notification */}
+            {initialConfigData?.topic && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <span className="text-blue-600 text-sm font-medium">📝</span>
+                    </div>
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-blue-800">
+                      Topic Selected: "{initialConfigData.topic}"
+                    </h3>
+                    <div className="mt-1 text-sm text-blue-600">
+                      <p>Choose a content template below to generate content for this topic.</p>
+                      {initialConfigData.targetKeyword && (
+                        <p className="mt-1">
+                          <span className="font-medium">Keywords:</span> {initialConfigData.targetKeyword}
+                          {initialConfigData.relatedKeywords?.length > 0 && `, ${initialConfigData.relatedKeywords.join(', ')}`}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <TemplateSelector
               onTemplateSelect={handleTemplateSelect}
               selectedTemplate={selectedTemplate}
@@ -145,6 +207,7 @@ export default function ContentGenerationPage() {
             selectedTemplate={selectedTemplate}
             onConfigurationComplete={handleConfigurationComplete}
             onBack={() => setCurrentStep(1)}
+            initialData={initialConfigData}
           />
         )}
 
@@ -180,5 +243,20 @@ export default function ContentGenerationPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ContentGenerationPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading content generation...</p>
+        </div>
+      </div>
+    }>
+      <ContentGenerationInner />
+    </Suspense>
   );
 } 

@@ -14,6 +14,13 @@ interface ContentConfigurationProps {
   selectedTemplate: ContentTemplate;
   onConfigurationComplete: (config: ContentConfiguration) => void;
   onBack: () => void;
+  initialData?: {
+    topic?: string;
+    targetKeyword?: string;
+    relatedKeywords?: string[];
+    tone?: 'professional' | 'casual' | 'authoritative' | 'friendly' | 'technical';
+    wordCount?: number;
+  };
 }
 
 export interface ContentConfiguration {
@@ -44,17 +51,17 @@ export interface ContentConfiguration {
   };
 }
 
-export function ContentConfiguration({ selectedTemplate, onConfigurationComplete, onBack }: ContentConfigurationProps) {
+export function ContentConfiguration({ selectedTemplate, onConfigurationComplete, onBack, initialData }: ContentConfigurationProps) {
   const [config, setConfig] = useState<Partial<ContentConfiguration>>({
     template: selectedTemplate,
-    topic: '',
-    targetKeyword: '',
-    relatedKeywords: [],
+    topic: initialData?.topic || '',
+    targetKeyword: initialData?.targetKeyword || '',
+    relatedKeywords: initialData?.relatedKeywords || [],
     title: '',
     metaDescription: '',
     targetAudience: '',
-    tone: 'professional',
-    wordCount: selectedTemplate.targetLength,
+    tone: initialData?.tone || 'professional',
+    wordCount: initialData?.wordCount || selectedTemplate.targetLength,
     includeImages: true,
     includeCallToAction: true
   });
