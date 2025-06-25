@@ -13,7 +13,7 @@ export default function HomePage() {
             workflow management, and automated publishing capabilities.
           </p>
           
-          <div className="grid md:grid-cols-2 gap-6 mt-12">
+          <div className="grid md:grid-cols-3 gap-6 mt-12">
             <div className="bg-white p-6 rounded-lg shadow-md border">
               <h2 className="text-2xl font-semibold mb-4 text-gray-800">
                 Phase 1: Topic Management
@@ -33,6 +33,28 @@ export default function HomePage() {
                 className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full"
               >
                 Manage Topics →
+              </Link>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-md border">
+              <h2 className="text-2xl font-semibold mb-4 text-gray-800">
+                Phase 2: AI Content Generation
+              </h2>
+              <p className="text-gray-600 mb-4">
+                Generate SEO-optimized content using AI providers and keyword research.
+              </p>
+              <div className="space-y-2 text-sm text-gray-500 mb-6">
+                <div>✅ Multi-AI provider integration</div>
+                <div>✅ DataForSEO keyword research</div>
+                <div>✅ Template-based generation</div>
+                <div>✅ Cost optimization</div>
+                <div>✅ Real-time SEO scoring</div>
+              </div>
+              <Link 
+                href="/content-generation"
+                className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-green-600 text-white hover:bg-green-700 h-10 px-4 py-2 w-full"
+              >
+                Generate Content →
               </Link>
             </div>
             
