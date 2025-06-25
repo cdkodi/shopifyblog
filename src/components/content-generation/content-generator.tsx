@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ContentConfiguration } from './content-configuration';
-import { getAIService } from '@/lib/ai';
 
 interface ContentGeneratorProps {
   configuration: ContentConfiguration;
@@ -52,7 +51,6 @@ export function ContentGenerator({ configuration, onGenerationComplete, onBack }
       setGenerationStage('Initializing AI Service...');
       setProgress(20);
       
-      const aiService = getAIService();
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Stage 2: Generate content
@@ -67,18 +65,29 @@ export function ContentGenerator({ configuration, onGenerationComplete, onBack }
       
       Make it comprehensive and SEO-optimized.`;
       
-      const result = await aiService.generateContent({
-        prompt,
-        template: configuration.template.id,
-        tone: configuration.tone,
-        options: {
-          maxTokens: Math.floor(configuration.wordCount * 1.5), // Rough estimate
-          temperature: 0.7
-        }
-      }, configuration.template.recommendedProvider);
+      // Call the API route instead of direct AI service
+      const response = await fetch('/api/ai/generate-content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt,
+          template: configuration.template.id,
+          tone: configuration.tone,
+          keywords: [configuration.targetKeyword, ...configuration.relatedKeywords],
+          preferredProvider: configuration.template.recommendedProvider,
+          options: {
+            maxTokens: Math.floor(configuration.wordCount * 1.5), // Rough estimate
+            temperature: 0.7
+          }
+        })
+      });
+
+      const result = await response.json();
       
-      if (!result.success || !result.content) {
-        throw new Error(result.error?.message || 'Failed to generate content');
+      if (!response.ok || !result.success || !result.content) {
+        throw new Error(result.error || 'Failed to generate content');
       }
       
       // Stage 3: Process results
@@ -104,8 +113,8 @@ export function ContentGenerator({ configuration, onGenerationComplete, onBack }
           readingTime,
           seoScore,
           generationTime: Date.now() - startTime,
-          aiProvider: configuration.template.recommendedProvider,
-          cost: configuration.template.estimatedCost
+          aiProvider: result.finalProvider || configuration.template.recommendedProvider,
+          cost: result.totalCost || configuration.template.estimatedCost
         }
       };
       
