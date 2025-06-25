@@ -29,18 +29,18 @@ export class DataForSEOService {
    */
   async getKeywordSuggestions(topic: string, limit: number = 100): Promise<KeywordSuggestion[]> {
     try {
-      // Use Live API for immediate results
-      const response = await this.makeRequest('/keywords_data/google_ads/keywords_for_keywords/live', {
+      // Use DataForSEO Labs API for better results and live data
+      const response = await this.makeRequest('/dataforseo_labs/google/keyword_ideas/live', {
         keywords: [topic],
-        location_code: this.config.locationId,
-        language_code: this.config.languageId,
-        include_adult_keywords: false,
-        limit: Math.min(limit, 50) // Live API has lower limits
+        location_code: this.config.locationId || 2840, // US by default
+        language_code: this.config.languageId || 'en', // English by default
+        limit: Math.min(limit, 100), // Labs API supports higher limits
+        include_clickstream_data: false
       });
 
-      // Parse response from Live API
+      // Parse response from Labs API
       const results = response.tasks?.[0]?.result?.[0];
-      return this.parseKeywordSuggestions(results);
+      return this.parseKeywordSuggestionsFromLabs(results);
     } catch (error) {
       this.handleError(error);
       throw error;
@@ -216,6 +216,23 @@ export class DataForSEOService {
     }));
   }
 
+  private parseKeywordSuggestionsFromLabs(response: any): KeywordSuggestion[] {
+    // Handle Labs API response format
+    const items = response?.items || [];
+    
+    if (!Array.isArray(items)) {
+      console.log('DataForSEO Labs response format:', JSON.stringify(response, null, 2));
+      return [];
+    }
+
+    return items.map((item: any) => ({
+      keyword: item.keyword || '',
+      search_volume: item.keyword_info?.search_volume || 0,
+      competition_level: this.mapCompetitionLevel(item.keyword_info?.competition || 0),
+      relevance_score: this.calculateRelevanceScore(item)
+    }));
+  }
+
   private mapCompetitionLevel(competition: number): 'low' | 'medium' | 'high' {
     if (competition < 0.3) return 'low';
     if (competition < 0.7) return 'medium';
@@ -224,8 +241,8 @@ export class DataForSEOService {
 
   private calculateRelevanceScore(item: any): number {
     // Simple relevance scoring based on search volume and competition
-    const volume = item.search_volume || 0;
-    const competition = item.competition || 1;
+    const volume = item.keyword_info?.search_volume || item.search_volume || 0;
+    const competition = item.keyword_info?.competition || item.competition || 1;
     return Math.min(100, (volume / competition) * 0.1);
   }
 

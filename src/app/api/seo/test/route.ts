@@ -22,9 +22,12 @@ export async function GET(request: NextRequest) {
       case 'health':
         return handleHealthTest();
       
+      case 'debug':
+        return handleDebugTest();
+      
       default:
         return NextResponse.json(
-          { error: 'Invalid test type. Available: basic, keywords, research, health' },
+          { error: 'Invalid test type. Available: basic, keywords, research, health, debug' },
           { status: 400 }
         );
     }
