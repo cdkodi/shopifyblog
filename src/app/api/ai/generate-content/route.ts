@@ -31,15 +31,21 @@ export async function POST(request: NextRequest) {
     // Generate content using the AI service
     const result = await aiService.generateContent(generationRequest, preferredProvider);
 
+    // Serialize the result to ensure all properties are JSON-safe
+    const serializedAttempts = result.attempts?.map(attempt => ({
+      ...attempt,
+      error: attempt.error ? (typeof attempt.error === 'string' ? attempt.error : String(attempt.error)) : undefined
+    }));
+
     // Return the result
     return NextResponse.json({
       success: result.success,
       content: result.content,
-      attempts: result.attempts,
+      attempts: serializedAttempts,
       totalCost: result.totalCost,
       totalTokens: result.totalTokens,
       finalProvider: result.finalProvider,
-      error: result.error
+      error: result.error ? (typeof result.error === 'string' ? result.error : String(result.error)) : undefined
     });
 
   } catch (error) {

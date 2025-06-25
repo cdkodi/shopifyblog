@@ -115,7 +115,8 @@ export abstract class BaseAIProvider implements AIProvider {
       message,
       provider: this.name,
       retryable: this.isRetryableError(code),
-      originalError
+      // Don't include originalError to avoid serialization issues
+      ...(originalError && { originalError: originalError.message })
     };
   }
 

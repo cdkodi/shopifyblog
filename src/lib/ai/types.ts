@@ -33,7 +33,7 @@ export interface ProviderError {
   message: string;
   provider: string;
   retryable: boolean;
-  originalError?: Error;
+  originalError?: Error | string;
 }
 
 export interface ProviderHealth {
