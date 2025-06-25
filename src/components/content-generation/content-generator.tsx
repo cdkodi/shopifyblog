@@ -87,7 +87,15 @@ export function ContentGenerator({ configuration, onGenerationComplete, onBack }
       const result = await response.json();
       
       if (!response.ok || !result.success || !result.content) {
-        throw new Error(result.error || 'Failed to generate content');
+        // Provide more detailed error information
+        const errorMsg = result.error || `HTTP ${response.status}: ${response.statusText}`;
+        console.error('API response error:', {
+          status: response.status,
+          statusText: response.statusText,
+          result,
+          url: response.url
+        });
+        throw new Error(errorMsg);
       }
       
       // Stage 3: Process results
@@ -123,7 +131,26 @@ export function ContentGenerator({ configuration, onGenerationComplete, onBack }
       
     } catch (err) {
       console.error('Content generation failed:', err);
-      setError(err instanceof Error ? err.message : 'Failed to generate content');
+      
+      // Improved error handling to avoid [object Object]
+      let errorMessage = 'Failed to generate content';
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err && typeof err === 'object') {
+        // Try to extract meaningful error information
+        if ('message' in err) {
+          errorMessage = String(err.message);
+        } else if ('error' in err) {
+          errorMessage = String(err.error);
+        } else {
+          errorMessage = `Error: ${JSON.stringify(err)}`;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setGenerating(false);
     }

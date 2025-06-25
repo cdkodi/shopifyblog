@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Home, FileText, Target, Settings } from 'lucide-react'
+import { Home, FileText, Target, Settings, BookOpen } from 'lucide-react'
 
 export function Navigation() {
   return (
@@ -33,6 +33,13 @@ export function Navigation() {
               >
                 <FileText className="w-4 h-4 mr-2" />
                 Content Generation
+              </Link>
+              <Link
+                href="/articles"
+                className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
+              >
+                <BookOpen className="w-4 h-4 mr-2" />
+                Articles
               </Link>
             </div>
           </div>

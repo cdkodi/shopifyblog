@@ -9,6 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { GeneratedContent } from './content-generator';
 import { blogIntegration } from '@/lib/publishing/blog-integration';
+import { ArticleService } from '@/lib/supabase/articles';
 
 interface ContentEditorProps {
   generatedContent: GeneratedContent;
@@ -120,6 +121,32 @@ export function ContentEditor({ generatedContent, onPublish, onBack }: ContentEd
       alert('Draft saved successfully!');
     } else {
       alert(`Failed to save draft: ${result.error}`);
+    }
+  };
+
+  const handleSaveToArticles = async () => {
+    try {
+      const articleData = {
+        title: editedContent.title,
+        content: editedContent.content,
+        metaDescription: editedContent.metaDescription,
+        slug: editedContent.slug,
+        status: 'draft' as const,
+        targetKeywords: editedContent.tags,
+        seoScore: Math.round((seoOptimizations.keywordDensity + seoOptimizations.readabilityScore + seoOptimizations.headingsStructure) / 3),
+        scheduledPublishDate: editedContent.scheduledDate || undefined
+      };
+
+      const { data: article, error } = await ArticleService.createArticle(articleData);
+      
+      if (error) {
+        alert(`Failed to save article: ${error}`);
+      } else {
+        alert('Article saved to database successfully!');
+      }
+    } catch (err) {
+      console.error('Error saving article:', err);
+      alert('Failed to save article to database');
     }
   };
 
@@ -454,14 +481,14 @@ export function ContentEditor({ generatedContent, onPublish, onBack }: ContentEd
           ← Back to Generation
         </Button>
         <div className="space-x-3">
+          <Button onClick={handleSaveToArticles} className="bg-blue-600 text-white hover:bg-blue-700 px-6">
+            💾 Save to Articles
+          </Button>
           <Button onClick={handleSaveDraft} variant="outline">
-            Save Draft
+            💾 Save Draft
           </Button>
           <Button onClick={handleExport} variant="outline">
-            Export Files
-          </Button>
-          <Button onClick={handlePublish} className="px-8">
-            Publish Content
+            📥 Export Files
           </Button>
         </div>
       </div>
