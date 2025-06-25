@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
           message: 'Content generation test completed',
           data: {
             result: {
-              content: result.content.substring(0, 200) + '...',
+              content: result.content ? result.content.substring(0, 200) + '...' : 'No content generated',
               provider: result.provider,
               tokensUsed: result.tokensUsed,
               cost: result.cost,
