@@ -19,11 +19,8 @@ interface TopicFormProps {
 }
 
 interface ConfigValues {
-  industries: string[]
-  market_segments: string[]
   style_tones: string[]
   article_lengths: string[]
-  target_audiences: string[]
   content_templates: string[]
 }
 
@@ -44,17 +41,9 @@ export function TopicForm({ initialData, topicId, onSuccess, onCancel }: TopicFo
     defaultValues: {
       title: initialData?.title || '',
       keywords: initialData?.keywords || '',
-      industry: initialData?.industry || '',
-      market_segment: initialData?.market_segment || '',
-      priority: initialData?.priority || 5,
-      search_volume: initialData?.search_volume || undefined,
-      competition_score: initialData?.competition_score || undefined,
-      style_preferences: {
-        tone: initialData?.style_preferences?.tone || '',
-        length: initialData?.style_preferences?.length || '',
-        target_audience: initialData?.style_preferences?.target_audience || '',
-        template: initialData?.style_preferences?.template || '',
-      },
+      tone: initialData?.tone || '',
+      length: initialData?.length || '',
+      template: initialData?.template || '',
     },
     mode: 'onChange',
   })
@@ -78,17 +67,9 @@ export function TopicForm({ initialData, topicId, onSuccess, onCancel }: TopicFo
       reset({
         title: initialData.title || '',
         keywords: initialData.keywords || '',
-        industry: initialData.industry || '',
-        market_segment: initialData.market_segment || '',
-        priority: initialData.priority || 5,
-        search_volume: initialData.search_volume || undefined,
-        competition_score: initialData.competition_score || undefined,
-        style_preferences: {
-          tone: initialData.style_preferences?.tone || '',
-          length: initialData.style_preferences?.length || '',
-          target_audience: initialData.style_preferences?.target_audience || '',
-          template: initialData.style_preferences?.template || '',
-        },
+        tone: initialData.tone || '',
+        length: initialData.length || '',
+        template: initialData.template || '',
       })
     }
   }, [initialData, reset])
@@ -168,49 +149,6 @@ export function TopicForm({ initialData, topicId, onSuccess, onCancel }: TopicFo
           </p>
         </div>
 
-        {/* Industry & Market Segment */}
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label className="text-gray-700">Industry</Label>
-            <Select
-              value={watchedValues.industry || 'none'}
-              onValueChange={(value) => setValue('industry', value === 'none' ? '' : value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select industry..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {configValues?.industries?.map((industry) => (
-                  <SelectItem key={industry} value={industry}>
-                    {industry}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-gray-700">Market Segment</Label>
-            <Select
-              value={watchedValues.market_segment || 'none'}
-              onValueChange={(value) => setValue('market_segment', value === 'none' ? '' : value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select segment..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {configValues?.market_segments?.map((segment) => (
-                  <SelectItem key={segment} value={segment}>
-                    {segment}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
         {/* Style Preferences */}
         <div className="space-y-4">
           <div className="border-t pt-4">
@@ -220,12 +158,12 @@ export function TopicForm({ initialData, topicId, onSuccess, onCancel }: TopicFo
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label className="text-gray-700">Tone</Label>
               <Select
-                value={watchedValues.style_preferences?.tone || 'default'}
-                onValueChange={(value) => setValue('style_preferences.tone', value === 'default' ? '' : value)}
+                value={watchedValues.tone || 'default'}
+                onValueChange={(value) => setValue('tone', value === 'default' ? '' : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select tone..." />
@@ -244,8 +182,8 @@ export function TopicForm({ initialData, topicId, onSuccess, onCancel }: TopicFo
             <div className="space-y-2">
               <Label className="text-gray-700">Article Length</Label>
               <Select
-                value={watchedValues.style_preferences?.length || 'default'}
-                onValueChange={(value) => setValue('style_preferences.length', value === 'default' ? '' : value)}
+                value={watchedValues.length || 'default'}
+                onValueChange={(value) => setValue('length', value === 'default' ? '' : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select length..." />
@@ -262,30 +200,10 @@ export function TopicForm({ initialData, topicId, onSuccess, onCancel }: TopicFo
             </div>
 
             <div className="space-y-2">
-              <Label className="text-gray-700">Target Audience</Label>
-              <Select
-                value={watchedValues.style_preferences?.target_audience || 'default'}
-                onValueChange={(value) => setValue('style_preferences.target_audience', value === 'default' ? '' : value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select audience..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="default">Default</SelectItem>
-                  {configValues?.target_audiences?.map((audience) => (
-                    <SelectItem key={audience} value={audience}>
-                      {audience}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
               <Label className="text-gray-700">Content Template</Label>
               <Select
-                value={watchedValues.style_preferences?.template || 'default'}
-                onValueChange={(value) => setValue('style_preferences.template', value === 'default' ? '' : value)}
+                value={watchedValues.template || 'default'}
+                onValueChange={(value) => setValue('template', value === 'default' ? '' : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select template..." />
@@ -303,90 +221,30 @@ export function TopicForm({ initialData, topicId, onSuccess, onCancel }: TopicFo
           </div>
         </div>
 
-        {/* Priority & SEO Metrics */}
-        <div className="grid md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="priority" className="text-gray-700">
-              Priority (1-10)
-            </Label>
-            <Input
-              id="priority"
-              type="number"
-              min="1"
-              max="10"
-              {...register('priority', { valueAsNumber: true })}
-              className={errors.priority ? 'border-red-500' : ''}
-            />
-            {errors.priority && (
-              <p className="text-sm text-red-600">{errors.priority.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="search_volume" className="text-gray-700">
-              Search Volume
-            </Label>
-            <Input
-              id="search_volume"
-              type="number"
-              min="0"
-              {...register('search_volume', { valueAsNumber: true })}
-              placeholder="Monthly searches..."
-              className={errors.search_volume ? 'border-red-500' : ''}
-            />
-            {errors.search_volume && (
-              <p className="text-sm text-red-600">{errors.search_volume.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="competition_score" className="text-gray-700">
-              Competition (0-100)
-            </Label>
-            <Input
-              id="competition_score"
-              type="number"
-              min="0"
-              max="100"
-              {...register('competition_score', { valueAsNumber: true })}
-              placeholder="Competition level..."
-              className={errors.competition_score ? 'border-red-500' : ''}
-            />
-            {errors.competition_score && (
-              <p className="text-sm text-red-600">{errors.competition_score.message}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Error Message */}
+        {/* Error Display */}
         {submitError && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+          <div className="p-4 bg-red-50 border border-red-200 rounded-md">
             <p className="text-sm text-red-600">{submitError}</p>
           </div>
         )}
 
         {/* Form Actions */}
-        <div className="flex gap-3 pt-4 border-t">
+        <div className="flex justify-end gap-3 pt-6 border-t">
           {onCancel && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              disabled={isSubmitting}
-            >
+            <Button type="button" variant="outline" onClick={onCancel}>
               Cancel
             </Button>
           )}
-          <Button
-            type="submit"
+          <Button 
+            type="submit" 
             disabled={!isValid || isSubmitting}
-            className="flex-1"
+            className="min-w-[120px]"
           >
             {isSubmitting ? (
-              <span className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 {topicId ? 'Updating...' : 'Creating...'}
-              </span>
+              </div>
             ) : (
               topicId ? 'Update Topic' : 'Create Topic'
             )}

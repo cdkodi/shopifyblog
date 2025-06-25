@@ -19,8 +19,9 @@ interface TopicDashboardProps {
 }
 
 interface ConfigValues {
-  industries: string[]
-  market_segments: string[]
+  style_tones: string[]
+  article_lengths: string[]
+  content_templates: string[]
 }
 
 export function TopicDashboard({ onCreateTopic, onEditTopic }: TopicDashboardProps) {
@@ -336,7 +337,14 @@ export function TopicDashboard({ onCreateTopic, onEditTopic }: TopicDashboardPro
                   {topic.keywords && (
                     <div>
                       <span className="font-medium">Keywords:</span>{' '}
-                      {truncateText(typeof topic.keywords === 'string' ? topic.keywords : '', 80)}
+                      {truncateText(
+                        Array.isArray(topic.keywords) 
+                          ? topic.keywords.join(', ')
+                          : typeof topic.keywords === 'string' 
+                            ? topic.keywords 
+                            : '', 
+                        80
+                      )}
                     </div>
                   )}
                   {topic.market_segment && (

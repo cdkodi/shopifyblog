@@ -9,30 +9,9 @@ export const topicSchema = z.object({
     .max(500, 'Keywords cannot exceed 500 characters')
     .optional()
     .or(z.literal('')),
-  industry: z.string()
-    .optional()
-    .or(z.literal('')),
-  market_segment: z.string()
-    .optional()
-    .or(z.literal('')),
-  style_preferences: z.object({
-    tone: z.string().optional(),
-    length: z.string().optional(),
-    target_audience: z.string().optional(),
-    template: z.string().optional(),
-  }).optional(),
-  priority: z.number()
-    .min(1, 'Priority must be between 1-10')
-    .max(10, 'Priority must be between 1-10')
-    .default(5),
-  search_volume: z.preprocess(
-    (val) => val === '' ? undefined : val,
-    z.number().min(0, 'Search volume cannot be negative').optional()
-  ),
-  competition_score: z.preprocess(
-    (val) => val === '' ? undefined : val,
-    z.number().min(0, 'Competition score must be between 0-100').max(100, 'Competition score must be between 0-100').optional()
-  ),
+  tone: z.string().optional(),
+  length: z.string().optional(),
+  template: z.string().optional(),
 })
 
 export type TopicFormData = z.infer<typeof topicSchema>

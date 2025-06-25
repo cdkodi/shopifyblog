@@ -138,11 +138,8 @@ export class TopicService {
   // Get configuration values for form dropdowns
   static async getConfigValues(): Promise<{ 
     data: { 
-      industries: string[]; 
-      market_segments: string[]; 
       style_tones: string[]; 
       article_lengths: string[]; 
-      target_audiences: string[]; 
       content_templates: string[] 
     } | null; 
     error: string | null 
@@ -152,11 +149,8 @@ export class TopicService {
         .from('app_config')
         .select('config_key, config_value')
         .in('config_key', [
-          'industries',
-          'market_segments', 
           'style_tones',
           'article_lengths',
-          'target_audiences',
           'content_templates'
         ])
 
