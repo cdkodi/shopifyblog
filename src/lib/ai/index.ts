@@ -48,20 +48,25 @@ class MockAIService {
         finalProvider: preferredProvider || AI_PROVIDERS.ANTHROPIC
       };
     } catch (error) {
-      // Ensure any error is properly serialized
-      const errorMessage = error instanceof Error ? error.message : 'Mock AI service error';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred in mock AI service';
       
       return {
         success: false,
-        attempts: [{
+        attempts: [{ 
           provider: preferredProvider || AI_PROVIDERS.ANTHROPIC,
           success: false,
           error: errorMessage,
-          responseTime: 1000
+          responseTime: 0
         }],
         totalCost: 0,
         totalTokens: 0,
-        error: errorMessage
+        error: {
+          code: 'MOCK_SERVICE_ERROR',
+          message: errorMessage,
+          provider: preferredProvider || AI_PROVIDERS.ANTHROPIC,
+          retryable: false,
+          originalError: error instanceof Error ? error : new Error(errorMessage)
+        }
       };
     }
   }
