@@ -35,8 +35,8 @@ Before you begin, ensure you have:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/shopify-blog-cms.git
-cd shopify-blog-cms
+git clone https://github.com/cdkodi/shopifyblog.git
+cd shopifyblog
 ```
 
 ### 2. Install Dependencies
@@ -227,8 +227,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🆘 Support
 
 - **Documentation**: [Technical Architecture](./TECH_ARCHITECTURE.md)
-- **Issues**: [GitHub Issues](https://github.com/your-username/shopify-blog-cms/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-username/shopify-blog-cms/discussions)
+- **Issues**: [GitHub Issues](https://github.com/cdkodi/shopifyblog/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/cdkodi/shopifyblog/discussions)
 
 ## 🚧 Roadmap
 
@@ -243,4 +243,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Built with ❤️ for content creators and Shopify merchants** 
+**Built with ❤️ for content creators and Shopify merchants**
