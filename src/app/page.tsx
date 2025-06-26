@@ -1,121 +1,183 @@
 import Link from 'next/link'
+import { Target, FileText, BookOpen, PenTool, Database, BarChart3 } from 'lucide-react'
 
 export default function HomePage() {
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center space-y-6">
-          <h1 className="text-4xl font-bold tracking-tight text-gray-900">
-            Shopify Blog CMS
-          </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Comprehensive content management system with SEO optimization, 
-            workflow management, and automated publishing capabilities.
-          </p>
-          
-          <div className="grid md:grid-cols-3 gap-6 mt-12">
-            <div className="bg-white p-6 rounded-lg shadow-md border">
-              <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-                Phase 1: Topic Management
-              </h2>
-              <p className="text-gray-600 mb-4">
-                Create and manage content topics with style preferences for future article generation.
-              </p>
-              <div className="space-y-2 text-sm text-gray-500 mb-6">
-                <div>✅ Topic input forms with validation</div>
-                <div>✅ Style preference configuration</div>
-                <div>✅ Topic dashboard with filtering</div>
-                <div>✅ Full CRUD operations</div>
-                <div>✅ Responsive design</div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <div className="container mx-auto px-4 py-12">
+        <div className="max-w-6xl mx-auto">
+          {/* Hero Section */}
+          <div className="text-center space-y-6 mb-16">
+            <h1 className="text-5xl font-bold text-gray-900 mb-4">
+              Content Management Hub
+            </h1>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              Create, manage, and optimize your blog content with AI-powered tools. 
+              From topic research to publication-ready articles.
+            </p>
+          </div>
+
+          {/* Feature Cards */}
+          <div className="grid md:grid-cols-3 gap-8 mb-16">
+            {/* Topics Card */}
+            <div className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100">
+              <div className="p-8">
+                <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center mb-6 group-hover:bg-blue-200 transition-colors">
+                  <Target className="w-7 h-7 text-blue-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Topic Research</h3>
+                <p className="text-gray-600 mb-6 leading-relaxed">
+                  Discover trending topics, analyze keywords, and plan your content strategy with data-driven insights.
+                </p>
+                <div className="space-y-3 mb-8">
+                  <div className="flex items-center text-sm text-gray-500">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full mr-3"></div>
+                    Keyword research & analysis
+                  </div>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full mr-3"></div>
+                    Trend identification
+                  </div>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full mr-3"></div>
+                    Content planning
+                  </div>
+                </div>
+                <Link 
+                  href="/topics" 
+                  className="inline-flex items-center justify-center w-full px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
+                >
+                  <Target className="w-4 h-4 mr-2" />
+                  Manage Topics
+                </Link>
               </div>
-              <Link 
-                href="/topics"
-                className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full"
-              >
-                Manage Topics →
-              </Link>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow-md border">
-              <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-                Phase 2: AI Content Generation
-              </h2>
-              <p className="text-gray-600 mb-4">
-                Generate SEO-optimized content using AI providers and keyword research.
-              </p>
-              <div className="space-y-2 text-sm text-gray-500 mb-6">
-                <div>✅ Multi-AI provider integration</div>
-                <div>✅ DataForSEO keyword research</div>
-                <div>✅ Template-based generation</div>
-                <div>✅ Cost optimization</div>
-                <div>✅ Real-time SEO scoring</div>
+            {/* Content Generation Card */}
+            <div className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100">
+              <div className="p-8">
+                <div className="w-14 h-14 bg-emerald-100 rounded-xl flex items-center justify-center mb-6 group-hover:bg-emerald-200 transition-colors">
+                  <PenTool className="w-7 h-7 text-emerald-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">AI Content Creation</h3>
+                <p className="text-gray-600 mb-6 leading-relaxed">
+                  Transform your topics into engaging, SEO-optimized articles using advanced AI writing tools.
+                </p>
+                <div className="space-y-3 mb-8">
+                  <div className="flex items-center text-sm text-gray-500">
+                    <div className="w-2 h-2 bg-emerald-400 rounded-full mr-3"></div>
+                    AI-powered writing
+                  </div>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <div className="w-2 h-2 bg-emerald-400 rounded-full mr-3"></div>
+                    SEO optimization
+                  </div>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <div className="w-2 h-2 bg-emerald-400 rounded-full mr-3"></div>
+                    Multiple content styles
+                  </div>
+                </div>
+                <Link 
+                  href="/content-generation" 
+                  className="inline-flex items-center justify-center w-full px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-medium"
+                >
+                  <PenTool className="w-4 h-4 mr-2" />
+                  Create Content
+                </Link>
               </div>
-              <Link 
-                href="/content-generation"
-                className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-green-600 text-white hover:bg-green-700 h-10 px-4 py-2 w-full"
-              >
-                Generate Content →
-              </Link>
             </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow-md border">
-              <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-                Tech Stack
-              </h2>
-              <div className="space-y-2 text-sm mb-6">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Frontend:</span>
-                  <span className="font-medium">Next.js 14 + React</span>
+
+            {/* Articles Card */}
+            <div className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100">
+              <div className="p-8">
+                <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center mb-6 group-hover:bg-purple-200 transition-colors">
+                  <BookOpen className="w-7 h-7 text-purple-600" />
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Database:</span>
-                  <span className="font-medium">Supabase PostgreSQL</span>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Article Library</h3>
+                <p className="text-gray-600 mb-6 leading-relaxed">
+                  Organize, edit, and manage your complete content library with powerful search and filtering tools.
+                </p>
+                <div className="space-y-3 mb-8">
+                  <div className="flex items-center text-sm text-gray-500">
+                    <div className="w-2 h-2 bg-purple-400 rounded-full mr-3"></div>
+                    Content organization
+                  </div>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <div className="w-2 h-2 bg-purple-400 rounded-full mr-3"></div>
+                    Advanced editing tools
+                  </div>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <div className="w-2 h-2 bg-purple-400 rounded-full mr-3"></div>
+                    Performance tracking
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Styling:</span>
-                  <span className="font-medium">Tailwind + Shadcn UI</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Forms:</span>
-                  <span className="font-medium">React Hook Form + Zod</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Deployment:</span>
-                  <span className="font-medium">Vercel</span>
-                </div>
-              </div>
-              <div className="text-center">
-                <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                  Production Ready
-                </span>
+                <Link 
+                  href="/articles" 
+                  className="inline-flex items-center justify-center w-full px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors font-medium"
+                >
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  View Articles
+                </Link>
               </div>
             </div>
           </div>
-          
-          <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-blue-200">
-            <div className="max-w-2xl mx-auto text-center">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                🎉 Phase 1 Complete!
-              </h3>
-              <p className="text-gray-700 mb-4">
-                Your topic management system is ready for use. Create topics with style preferences, 
-                filter and search through your content ideas, and prepare for the next phase of automated content generation.
+
+          {/* Stats Section */}
+          <div className="bg-white rounded-2xl shadow-lg p-8 mb-12 border border-gray-100">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">Streamline Your Content Workflow</h2>
+              <p className="text-gray-600 max-w-2xl mx-auto">
+                From initial research to published articles, manage your entire content creation process in one place.
               </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            </div>
+            <div className="grid md:grid-cols-3 gap-8">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <Database className="w-6 h-6 text-blue-600" />
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-2">Research & Plan</h3>
+                <p className="text-sm text-gray-600">Identify trending topics and plan your content strategy</p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <PenTool className="w-6 h-6 text-emerald-600" />
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-2">Generate & Edit</h3>
+                <p className="text-sm text-gray-600">Create high-quality content with AI assistance</p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <BarChart3 className="w-6 h-6 text-purple-600" />
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-2">Manage & Optimize</h3>
+                <p className="text-sm text-gray-600">Organize your library and track performance</p>
+              </div>
+            </div>
+          </div>
+
+          {/* CTA Section */}
+          <div className="text-center">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white">
+              <h2 className="text-3xl font-bold mb-4">Ready to Create Amazing Content?</h2>
+              <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
+                Start with topic research or jump straight into content creation. 
+                Your next great article is just a click away.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link 
-                  href="/topics"
-                  className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+                  href="/topics" 
+                  className="inline-flex items-center justify-center px-8 py-3 bg-white text-blue-600 rounded-xl hover:bg-gray-50 transition-colors font-medium"
                 >
-                  Start Managing Topics
+                  <Target className="w-4 h-4 mr-2" />
+                  Start with Topics
                 </Link>
-                <a 
-                  href="https://github.com/cdkodi/shopifyblog"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+                <Link 
+                  href="/content-generation" 
+                  className="inline-flex items-center justify-center px-8 py-3 bg-blue-500 bg-opacity-20 text-white rounded-xl hover:bg-opacity-30 transition-colors font-medium border border-blue-300"
                 >
-                  View Source Code
-                </a>
+                  <PenTool className="w-4 h-4 mr-2" />
+                  Create Content Now
+                </Link>
               </div>
             </div>
           </div>
