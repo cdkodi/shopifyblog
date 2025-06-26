@@ -41,6 +41,13 @@ export function Navigation() {
                 <BookOpen className="w-4 h-4 mr-2" />
                 Articles
               </Link>
+              <Link
+                href="/demo-form"
+                className="inline-flex items-center px-1 pt-1 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors border-b-2 border-blue-600"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Form Demo
+              </Link>
             </div>
           </div>
           <div className="hidden sm:ml-6 sm:flex sm:items-center">
