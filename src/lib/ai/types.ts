@@ -26,22 +26,6 @@ export interface AIGenerationRequest {
   tone?: string;
   length?: string;
   keywords?: string[];
-  productContext?: ProductContext;
-}
-
-export interface ProductContext {
-  availableProducts: Array<{
-    id: string;
-    title: string;
-    description: string;
-    price: number;
-    vendor: string;
-    productType?: string;
-    tags?: string[];
-  }>;
-  integrationStyle: 'contextual' | 'featured' | 'subtle';
-  targetCollection?: string;
-  maxProducts: number;
 }
 
 export interface ProviderError {

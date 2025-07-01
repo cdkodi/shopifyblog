@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAIService } from '@/lib/ai';
 import { AIGenerationRequest } from '@/lib/ai/types';
-import { ProductAwarePromptBuilder } from '@/lib/ai/product-aware-prompts';
+import { ProductAwarePromptBuilder, ProductAwareGenerationRequest } from '@/lib/ai/product-aware-prompts';
 
 export async function POST(request: NextRequest) {
   try {
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Enhance with product context if requested
-    let finalRequest = baseRequest;
+    let finalRequest: ProductAwareGenerationRequest = baseRequest;
     if (includeProducts && contentTopic) {
       console.log('🛍️ Enhancing prompt with product context...');
       finalRequest = await ProductAwarePromptBuilder.enhancePromptWithProducts(
