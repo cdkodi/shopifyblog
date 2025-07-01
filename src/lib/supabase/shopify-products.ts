@@ -58,20 +58,36 @@ export class ShopifyProductService {
   // Get products by keywords/tags for content generation
   static async getProductsByKeywords(keywords: string[]): Promise<ProductForContentGeneration[]> {
     try {
+      console.log('🔍 getProductsByKeywords called with:', keywords);
+
+      // Filter out very short or common words
+      const meaningfulKeywords = keywords.filter(keyword => 
+        keyword && keyword.length > 2 && 
+        !['the', 'and', 'with', 'for', 'new', '2025', 'celebrate'].includes(keyword.toLowerCase())
+      );
+
+      console.log('🔍 Meaningful keywords:', meaningfulKeywords);
+
+      if (meaningfulKeywords.length === 0) {
+        console.log('🔍 No meaningful keywords, returning empty array');
+        return [];
+      }
+
       // Build a query that searches across title, description, tags, and collections
       let query = supabase
         .from('shopify_products')
         .select('*')
         .eq('status', 'active')
 
-      // Create OR conditions for keyword matching
-      const keywordConditions = keywords.map(keyword => {
+      // Create OR conditions for keyword matching - make it more flexible
+      const keywordConditions = meaningfulKeywords.map(keyword => {
         const lowerKeyword = keyword.toLowerCase()
         return [
           `title.ilike.%${lowerKeyword}%`,
           `description.ilike.%${lowerKeyword}%`,
-          `tags.cs.${JSON.stringify([lowerKeyword])}`,
-          `collections.cs.${JSON.stringify([lowerKeyword])}`
+          // Use ilike for tags to be more flexible than exact array matching
+          `tags::text.ilike.%${lowerKeyword}%`,
+          `collections::text.ilike.%${lowerKeyword}%`
         ].join(',')
       }).join(',')
 
@@ -84,6 +100,7 @@ export class ShopifyProductService {
         return []
       }
 
+      console.log('🔍 getProductsByKeywords found:', products?.length || 0, 'products');
       return products?.map(this.transformForContentGeneration) || []
     } catch (err) {
       console.error('Unexpected error fetching products by keywords:', err)
@@ -133,33 +150,51 @@ export class ShopifyProductService {
   // Smart product selection for content topic
   static async getRelevantProducts(contentTopic: string, targetKeywords: string[] = []): Promise<ProductForContentGeneration[]> {
     try {
-      // Combine content topic and keywords for comprehensive search
+      console.log('🔍 getRelevantProducts called with:', { contentTopic, targetKeywords });
+
+      // Try specific searches first
       const searchTerms = [
         contentTopic,
         ...targetKeywords,
-        // Extract key terms from topic
-        ...contentTopic.toLowerCase().split(' ').filter(word => word.length > 3)
+        // Extract key terms from topic (filter out short words and punctuation)
+        ...contentTopic.toLowerCase().split(/[\s\-:.,!?]+/).filter(word => word.length > 2)
       ]
+
+      console.log('🔍 Search terms:', searchTerms);
 
       // Get products by keywords
       const productsByKeywords = await this.getProductsByKeywords(searchTerms)
+      console.log('🔍 Products by keywords:', productsByKeywords.length);
 
       // If we have specific collection matches, prioritize those
       const collectionMatches = await this.getProductsByCollection(
         contentTopic.toLowerCase().replace(/\s+/g, '-')
       )
+      console.log('🔍 Collection matches:', collectionMatches.length);
 
       // Combine and deduplicate
-      const allProducts = [...collectionMatches, ...productsByKeywords]
-      const uniqueProducts = allProducts.filter((product, index, self) => 
+      let allProducts = [...collectionMatches, ...productsByKeywords]
+      let uniqueProducts = allProducts.filter((product, index, self) => 
         index === self.findIndex(p => p.handle === product.handle)
       )
+
+      console.log('🔍 Unique products after search:', uniqueProducts.length);
+
+      // If no specific matches found, return a selection of all products
+      if (uniqueProducts.length === 0) {
+        console.log('🔍 No specific matches, getting all products as fallback');
+        const fallbackProducts = await this.getAllProducts(10);
+        console.log('🔍 Fallback products:', fallbackProducts.length);
+        return fallbackProducts;
+      }
 
       // Limit to top 10 most relevant products
       return uniqueProducts.slice(0, 10)
     } catch (err) {
       console.error('Error getting relevant products:', err)
-      return []
+      // Fallback to all products if there's an error
+      console.log('🔍 Error fallback: getting all products');
+      return this.getAllProducts(10);
     }
   }
 
