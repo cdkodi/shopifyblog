@@ -97,7 +97,16 @@ export function ProductSelector({
   // Auto-discover products based on content topic
   useEffect(() => {
     const discoverProducts = async () => {
-      if (!contentTopic) return;
+      console.log('🔍 ProductSelector: discoverProducts called with:', { 
+        contentTopic, 
+        isDevMode, 
+        preferredCollections 
+      });
+      
+      if (!contentTopic) {
+        console.log('❌ No contentTopic provided, skipping product discovery');
+        return;
+      }
 
       setLoading(true);
       try {
@@ -114,18 +123,27 @@ export function ProductSelector({
               product.collections.some(col => topicLower.includes(col.toLowerCase().replace(/\s+/g, '')))
             );
           });
-        } else {
-          // Use API endpoint in production
-          const response = await fetch(`/api/products?topic=${encodeURIComponent(contentTopic)}&limit=20`);
-          const result = await response.json();
-          
-          if (result.success && result.data.products) {
-            products = result.data.products;
-          } else {
-            console.warn('Failed to fetch products from API, using mock data:', result.error);
-            products = mockProducts; // Fallback to mock data
+                  } else {
+            // Use API endpoint in production
+            console.log('🛒 Fetching products from API for topic:', contentTopic);
+            const response = await fetch(`/api/products?topic=${encodeURIComponent(contentTopic)}&limit=20`);
+            const result = await response.json();
+            
+            console.log('🛒 API Response:', { 
+              status: response.status, 
+              success: result.success, 
+              productCount: result.data?.products?.length || 0,
+              error: result.error 
+            });
+            
+            if (result.success && result.data.products) {
+              products = result.data.products;
+              console.log('🛒 Successfully loaded products:', products.length);
+            } else {
+              console.warn('❌ Failed to fetch products from API, using mock data:', result.error);
+              products = mockProducts; // Fallback to mock data
+            }
           }
-        }
 
         // Calculate relevance scores and add match reasons
         const productsWithRelevance: ProductWithRelevance[] = products.map(product => {
