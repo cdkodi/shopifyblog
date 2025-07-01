@@ -165,7 +165,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Process product mentions if this was a product-aware request
-    let productMentions = [];
+    let productMentions: Array<{
+      handle: string;
+      position: number;
+      context: string;
+    }> = [];
     let cleanContent = result.content;
     
     if (includeProducts && result.content) {
