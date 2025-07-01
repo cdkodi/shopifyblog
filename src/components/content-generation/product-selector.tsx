@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ShopifyProductService, ProductForContentGeneration } from '@/lib/supabase/shopify-products';
+import { ProductForContentGeneration } from '@/lib/supabase/shopify-products';
 
 interface ProductSelectorProps {
   selectedProducts: ProductForContentGeneration[];
@@ -115,8 +115,16 @@ export function ProductSelector({
             );
           });
         } else {
-          // Use real service in production
-          products = await ShopifyProductService.getRelevantProducts(contentTopic, []);
+          // Use API endpoint in production
+          const response = await fetch(`/api/products?topic=${encodeURIComponent(contentTopic)}&limit=20`);
+          const result = await response.json();
+          
+          if (result.success && result.data.products) {
+            products = result.data.products;
+          } else {
+            console.warn('Failed to fetch products from API, using mock data:', result.error);
+            products = mockProducts; // Fallback to mock data
+          }
         }
 
         // Calculate relevance scores and add match reasons

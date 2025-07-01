@@ -32,8 +32,8 @@ export interface ProductForContentGeneration {
 }
 
 export class ShopifyProductService {
-  // Get products by collection for content generation
-  static async getProductsByCollection(collectionName: string): Promise<ProductForContentGeneration[]> {
+  // Get products by collection with limit
+  static async getProductsByCollection(collectionName: string, limit: number = 20): Promise<ProductForContentGeneration[]> {
     try {
       const { data: products, error } = await supabase
         .from('shopify_products')
@@ -41,6 +41,7 @@ export class ShopifyProductService {
         .contains('collections', JSON.stringify([collectionName]))
         .eq('status', 'active')
         .order('title')
+        .limit(limit)
 
       if (error) {
         console.error('Error fetching products by collection:', error)
@@ -158,6 +159,72 @@ export class ShopifyProductService {
       return uniqueProducts.slice(0, 10)
     } catch (err) {
       console.error('Error getting relevant products:', err)
+      return []
+    }
+  }
+
+  // Get all products with limit
+  static async getAllProducts(limit: number = 20): Promise<ProductForContentGeneration[]> {
+    try {
+      const { data: products, error } = await supabase
+        .from('shopify_products')
+        .select('*')
+        .eq('status', 'active')
+        .order('title')
+        .limit(limit)
+
+      if (error) {
+        console.error('Error fetching all products:', error)
+        return []
+      }
+
+      return products?.map(this.transformForContentGeneration) || []
+    } catch (err) {
+      console.error('Unexpected error fetching all products:', err)
+      return []
+    }
+  }
+
+  // Search products by query and collections
+  static async searchProducts(
+    searchQuery: string, 
+    collections: string[] = [], 
+    limit: number = 20
+  ): Promise<ProductForContentGeneration[]> {
+    try {
+      let query = supabase
+        .from('shopify_products')
+        .select('*')
+        .eq('status', 'active')
+
+      // Add search query filter
+      if (searchQuery && searchQuery.trim()) {
+        const searchTerm = searchQuery.toLowerCase()
+        query = query.or(
+          `title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,tags.cs.${JSON.stringify([searchTerm])}`
+        )
+      }
+
+      // Add collection filter
+      if (collections.length > 0) {
+        const collectionFilter = collections.map(col => 
+          `collections.cs.${JSON.stringify([col])}`
+        ).join(',')
+        query = query.or(collectionFilter)
+      }
+
+      const { data: products, error } = await query
+        .order('title')
+        .limit(limit)
+
+      if (error) {
+        console.error('Error searching products:', error)
+        return []
+      }
+
+      return products?.map(this.transformForContentGeneration) || []
+    } catch (err) {
+      console.error('Unexpected error searching products:', err)
       return []
     }
   }

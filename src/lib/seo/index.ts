@@ -17,7 +17,7 @@ export class SEOServiceManager {
 
   public initialize(): void {
     try {
-      const login = process.env.DATAFORSEO_LOGIN;
+      const login = process.env.DATAFORSEO_LOGIN || process.env.DATAFORSEO_USERNAME;
       const password = process.env.DATAFORSEO_PASSWORD;
 
       if (!login || !password) {
