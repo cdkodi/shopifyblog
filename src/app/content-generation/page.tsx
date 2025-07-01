@@ -22,7 +22,12 @@ function ContentGenerationInner() {
   const [publishedContent, setPublishedContent] = useState<PublishedContent | undefined>();
   const [currentStep, setCurrentStep] = useState(1);
   const [initialConfigData, setInitialConfigData] = useState<any>(null);
-  const [isDevMode] = useState(true); // Set to false when AI services are configured
+  const [isDevMode, setIsDevMode] = useState(true);
+  const [aiServiceStatus, setAiServiceStatus] = useState<{
+    available: boolean;
+    providers: string[];
+    loading: boolean;
+  }>({ available: false, providers: [], loading: true });
 
   // Parse URL parameters when component mounts
   useEffect(() => {
@@ -55,6 +60,34 @@ function ContentGenerationInner() {
       }
     }
   }, [searchParams]);
+
+  // Check AI service availability
+  useEffect(() => {
+    const checkAiServices = async () => {
+      try {
+        const response = await fetch('/api/ai/generate-content');
+        const data = await response.json();
+        
+        setAiServiceStatus({
+          available: data.success && data.availableProviders && data.availableProviders.length > 0,
+          providers: data.availableProviders || [],
+          loading: false
+        });
+        
+        setIsDevMode(!(data.success && data.availableProviders && data.availableProviders.length > 0));
+      } catch (error) {
+        console.error('Failed to check AI services:', error);
+        setAiServiceStatus({
+          available: false,
+          providers: [],
+          loading: false
+        });
+        setIsDevMode(true);
+      }
+    };
+
+    checkAiServices();
+  }, []);
 
   const handleTemplateSelect = (template: ContentTemplate) => {
     setSelectedTemplate(template);
@@ -113,8 +146,13 @@ function ContentGenerationInner() {
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <span className="flex items-center">
-                  <div className={`w-2 h-2 rounded-full mr-2 ${isDevMode ? 'bg-amber-500' : 'bg-green-500'}`}></div>
-                  {isDevMode ? 'Development Mode' : 'AI Services Active'}
+                  <div className={`w-2 h-2 rounded-full mr-2 ${
+                    aiServiceStatus.loading ? 'bg-yellow-500' : 
+                    isDevMode ? 'bg-amber-500' : 'bg-green-500'
+                  }`}></div>
+                  {aiServiceStatus.loading ? 'Checking AI Services...' :
+                   isDevMode ? 'Development Mode' : 
+                   `AI Services Active (${aiServiceStatus.providers.join(', ')})`}
                 </span>
                 <span className="flex items-center">
                   <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
