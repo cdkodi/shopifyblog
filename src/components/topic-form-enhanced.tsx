@@ -29,6 +29,9 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [configValues, setConfigValues] = useState<ConfigValues | null>(null)
+  const [loadingKeywords, setLoadingKeywords] = useState(false)
+  const [keywordSuggestions, setKeywordSuggestions] = useState<string[]>([])
+  const [keywordError, setKeywordError] = useState<string | null>(null)
 
   const {
     register,
@@ -74,6 +77,50 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
       })
     }
   }, [initialData, reset])
+
+  // Keyword research when title changes
+  useEffect(() => {
+    const performKeywordResearch = async () => {
+      const title = watchedValues.title
+      if (!title || title.length < 3) {
+        setKeywordSuggestions([])
+        return
+      }
+
+      setLoadingKeywords(true)
+      setKeywordError(null)
+
+      try {
+        const response = await fetch(`/api/seo/keywords?topic=${encodeURIComponent(title)}&limit=10`)
+        const result = await response.json()
+        
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to fetch keyword data')
+        }
+
+        if (result.success && result.data.keywords && result.data.keywords.length > 0) {
+          const keywords = result.data.keywords.map((k: any) => k.keyword).slice(0, 8)
+          setKeywordSuggestions(keywords)
+          
+          // Auto-suggest keywords if field is empty
+          if (!watchedValues.keywords || watchedValues.keywords.trim() === '') {
+            setValue('keywords', keywords.join(', '))
+          }
+        } else {
+          setKeywordSuggestions([])
+        }
+      } catch (error) {
+        console.error('Keyword research failed:', error)
+        setKeywordError('Failed to fetch keyword suggestions. You can still enter keywords manually.')
+        setKeywordSuggestions([])
+      } finally {
+        setLoadingKeywords(false)
+      }
+    }
+
+    const debounceTimer = setTimeout(performKeywordResearch, 1000)
+    return () => clearTimeout(debounceTimer)
+  }, [watchedValues.title, setValue, watchedValues.keywords])
 
   const onSubmit = async (data: TopicFormData) => {
     setIsSubmitting(true)
@@ -127,11 +174,56 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
           </p>
         </div>
 
-        {/* Keywords - Optional Field */}
+        {/* Keywords - Optional Field with AI Suggestions */}
         <div className="space-y-2">
-          <Label htmlFor="keywords" className="text-gray-700 font-medium">
+          <Label htmlFor="keywords" className="text-gray-700 font-medium flex items-center gap-2">
             Keywords
+            {loadingKeywords && (
+              <span className="text-blue-600 text-sm flex items-center gap-1">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                </svg>
+                Researching keywords...
+              </span>
+            )}
           </Label>
+          
+          {/* Keyword Suggestions */}
+          {keywordSuggestions.length > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium text-blue-800">💡 Suggested Keywords (click to add):</p>
+                <button
+                  type="button"
+                  onClick={() => setValue('keywords', keywordSuggestions.join(', '))}
+                  className="text-xs text-blue-600 hover:text-blue-800 underline"
+                >
+                  Add all
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {keywordSuggestions.map((keyword, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => {
+                      const currentKeywords = watchedValues.keywords || ''
+                      const keywordList = currentKeywords.split(',').map(k => k.trim()).filter(Boolean)
+                      if (!keywordList.includes(keyword)) {
+                        const newKeywords = [...keywordList, keyword].join(', ')
+                        setValue('keywords', newKeywords)
+                      }
+                    }}
+                    className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200 transition-colors"
+                  >
+                    + {keyword}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <Textarea
             id="keywords"
             {...register('keywords')}
@@ -139,11 +231,17 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
             rows={3}
             className={errors.keywords ? 'border-red-500' : ''}
           />
+          
           {errors.keywords && (
             <p className="text-sm text-red-600">{errors.keywords.message}</p>
           )}
+          
+          {keywordError && (
+            <p className="text-sm text-amber-600">⚠️ {keywordError}</p>
+          )}
+          
           <p className="text-xs text-gray-500">
-            Optional • Use 5-10 relevant search terms your audience would use, separated by commas
+            Optional • Keywords will be automatically suggested based on your topic title using SEO research
           </p>
         </div>
 
