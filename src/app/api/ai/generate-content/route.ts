@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAIService } from '@/lib/ai';
 import { AIGenerationRequest } from '@/lib/ai/types';
+import { ProductAwarePromptBuilder } from '@/lib/ai/product-aware-prompts';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +15,19 @@ export async function POST(request: NextRequest) {
     console.log('- Has Any API Keys:', hasAnyKeys ? `✅ ${hasAnyKeys}` : `❌ ${hasAnyKeys}`);
 
     const body = await request.json();
-    const { prompt, template, tone, length, keywords, preferredProvider, options } = body;
+    const { 
+      prompt, 
+      template, 
+      tone, 
+      length, 
+      keywords, 
+      preferredProvider, 
+      options,
+      // New product-aware parameters
+      contentTopic,
+      includeProducts,
+      productOptions
+    } = body;
 
     console.log('📝 Request parameters:', {
       promptLength: prompt?.length || 0,
@@ -23,7 +36,10 @@ export async function POST(request: NextRequest) {
       length,
       keywordsCount: keywords?.length || 0,
       preferredProvider,
-      options
+      options,
+      contentTopic,
+      includeProducts,
+      productOptions
     });
 
     // Validate required fields
@@ -46,8 +62,8 @@ export async function POST(request: NextRequest) {
     
     console.log('AI service instance created successfully');
 
-    // Prepare the generation request
-    const generationRequest: AIGenerationRequest = {
+    // Prepare the base generation request
+    const baseRequest: AIGenerationRequest = {
       prompt,
       template,
       tone,
@@ -56,8 +72,31 @@ export async function POST(request: NextRequest) {
       options
     };
 
+    // Enhance with product context if requested
+    let finalRequest = baseRequest;
+    if (includeProducts && contentTopic) {
+      console.log('🛍️ Enhancing prompt with product context...');
+      finalRequest = await ProductAwarePromptBuilder.enhancePromptWithProducts(
+        baseRequest,
+        contentTopic,
+        {
+          includeProducts: true,
+          targetCollection: productOptions?.targetCollection,
+          maxProducts: productOptions?.maxProducts || 5,
+          integrationStyle: productOptions?.integrationStyle || 'contextual',
+          wordsPerProduct: productOptions?.wordsPerProduct || 300
+        }
+      );
+      
+      console.log('📦 Product enhancement result:', {
+        originalPromptLength: baseRequest.prompt.length,
+        enhancedPromptLength: finalRequest.prompt.length,
+        productsFound: finalRequest.productContext?.availableProducts.length || 0
+      });
+    }
+
     console.log('Calling AI service generateContent...');
-    const result = await aiService.generateContent(generationRequest, preferredProvider);
+    const result = await aiService.generateContent(finalRequest, preferredProvider);
     
     // Enhanced result logging with provider attempt details
     console.log('🎯 AI service response:', {
@@ -125,13 +164,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Process product mentions if this was a product-aware request
+    let productMentions = [];
+    let cleanContent = result.content;
+    
+    if (includeProducts && result.content) {
+      console.log('🔍 Processing product mentions...');
+      productMentions = ProductAwarePromptBuilder.extractProductMentions(result.content);
+      cleanContent = ProductAwarePromptBuilder.cleanProductMarkers(result.content);
+      
+      console.log('📝 Product processing result:', {
+        mentionsFound: productMentions.length,
+        originalContentLength: result.content.length,
+        cleanContentLength: cleanContent.length
+      });
+    }
+
     return NextResponse.json({
       success: true,
-      content: result.content,
+      content: cleanContent,
       finalProvider: result.finalProvider,
       totalCost: result.totalCost,
       totalTokens: result.totalTokens,
-      attempts: result.attempts?.length || 0
+      attempts: result.attempts?.length || 0,
+      // Product-aware response data
+      productMentions,
+      productContext: finalRequest.productContext,
+      hasProductIntegration: includeProducts && productMentions.length > 0
     });
 
   } catch (error) {

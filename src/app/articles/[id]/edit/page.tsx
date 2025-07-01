@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ArrowLeftIcon, SaveIcon, TrashIcon } from 'lucide-react';
 import { ArticleService, ArticleFormData } from '@/lib/supabase/articles';
+import { ProductIntegrationManager } from '@/components/articles/product-integration-manager';
 import type { Database } from '@/lib/types/database';
 
 type Article = Database['public']['Tables']['articles']['Row'];
@@ -272,6 +273,17 @@ export default function ArticleEditPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Product Integration */}
+            <ProductIntegrationManager
+              articleId={articleId}
+              articleTitle={articleData.title}
+              articleContent={articleData.content}
+              onUpdate={() => {
+                // Optionally refresh article data or show notification
+                console.log('Product suggestions updated');
+              }}
+            />
           </div>
 
           {/* Sidebar */}

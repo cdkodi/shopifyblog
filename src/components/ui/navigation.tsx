@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Home, FileText, Target, Settings, BookOpen } from 'lucide-react'
+import { Home, FileText, Target, Settings, BookOpen, Edit3 } from 'lucide-react'
 
 export function Navigation() {
   return (
@@ -40,6 +40,13 @@ export function Navigation() {
               >
                 <BookOpen className="w-4 h-4 mr-2" />
                 Articles
+              </Link>
+              <Link
+                href="/editorial"
+                className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
+              >
+                <Edit3 className="w-4 h-4 mr-2" />
+                Editorial
               </Link>
               <Link
                 href="/demo-form"

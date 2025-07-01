@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAIService } from '@/lib/ai';
 
 export async function GET(request: NextRequest) {
   try {
@@ -151,6 +152,41 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST() {
-  return NextResponse.json({ error: 'Method not allowed' }, { status: 405 });
+export async function POST(request: NextRequest) {
+  try {
+    const { prompt } = await request.json();
+    
+    if (!prompt) {
+      return NextResponse.json(
+        { error: 'Prompt is required' },
+        { status: 400 }
+      );
+    }
+
+    const aiService = getAIService();
+    
+    const result = await aiService.generateContent({
+      prompt,
+      template: 'test',
+      options: { maxTokens: 100 }
+    });
+
+    return NextResponse.json({
+      success: result.success,
+      content: result.content || '',
+      provider: result.finalProvider,
+      attempts: result.attempts,
+      error: result.error?.message
+    });
+  } catch (error) {
+    console.error('AI test service error:', error);
+    return NextResponse.json(
+      { 
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        attempts: []
+      },
+      { status: 500 }
+    );
+  }
 } 

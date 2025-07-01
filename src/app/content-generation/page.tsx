@@ -6,16 +6,23 @@ import { TemplateSelector, ContentTemplate } from '@/components/content-generati
 import { ContentConfiguration, ContentConfiguration as ContentConfigInterface } from '@/components/content-generation/content-configuration';
 import { ContentGenerator, GeneratedContent } from '@/components/content-generation/content-generator';
 import { ContentEditor, PublishedContent } from '@/components/content-generation/content-editor';
+import { GenerationConfig, EnhancedContentConfig } from '@/components/content-generation/generation-config';
+import { ProductSelector } from '@/components/content-generation/product-selector';
+import { ContentPreview } from '@/components/content-generation/content-preview';
+import { ProductForContentGeneration } from '@/lib/supabase/shopify-products';
 import { Button } from '@/components/ui/button';
 
 function ContentGenerationInner() {
   const searchParams = useSearchParams();
   const [selectedTemplate, setSelectedTemplate] = useState<ContentTemplate | undefined>();
   const [configuration, setConfiguration] = useState<ContentConfigInterface | undefined>();
+  const [enhancedConfig, setEnhancedConfig] = useState<EnhancedContentConfig | undefined>();
+  const [selectedProducts, setSelectedProducts] = useState<ProductForContentGeneration[]>([]);
   const [generatedContent, setGeneratedContent] = useState<GeneratedContent | undefined>();
   const [publishedContent, setPublishedContent] = useState<PublishedContent | undefined>();
   const [currentStep, setCurrentStep] = useState(1);
   const [initialConfigData, setInitialConfigData] = useState<any>(null);
+  const [isDevMode] = useState(true); // Set to false when AI services are configured
 
   // Parse URL parameters when component mounts
   useEffect(() => {
@@ -64,6 +71,14 @@ function ContentGenerationInner() {
     setCurrentStep(3);
   };
 
+  const handleEnhancedConfigChange = (config: EnhancedContentConfig) => {
+    setEnhancedConfig(config);
+  };
+
+  const handleProductsChange = (products: ProductForContentGeneration[]) => {
+    setSelectedProducts(products);
+  };
+
   const handleGenerationComplete = (content: GeneratedContent) => {
     setGeneratedContent(content);
     setCurrentStep(4);
@@ -98,8 +113,8 @@ function ContentGenerationInner() {
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <span className="flex items-center">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                  AI Services Active
+                  <div className={`w-2 h-2 rounded-full mr-2 ${isDevMode ? 'bg-amber-500' : 'bg-green-500'}`}></div>
+                  {isDevMode ? 'Development Mode' : 'AI Services Active'}
                 </span>
                 <span className="flex items-center">
                   <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
@@ -203,12 +218,75 @@ function ContentGenerationInner() {
         )}
 
         {currentStep === 2 && selectedTemplate && (
-          <ContentConfiguration
-            selectedTemplate={selectedTemplate}
-            onConfigurationComplete={handleConfigurationComplete}
-            onBack={() => setCurrentStep(1)}
-            initialData={initialConfigData}
-          />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Main Configuration Panel */}
+            <div className="lg:col-span-2 space-y-6">
+              <GenerationConfig
+                selectedTemplate={selectedTemplate}
+                onConfigChange={handleEnhancedConfigChange}
+                isDevMode={isDevMode}
+                initialData={initialConfigData}
+              />
+
+              {/* Product Selection Panel */}
+              {enhancedConfig?.includeProducts && (
+                <ProductSelector
+                  selectedProducts={selectedProducts}
+                  onProductsChange={handleProductsChange}
+                  maxProducts={enhancedConfig.productIntegration.maxProducts}
+                  contentTopic={enhancedConfig.topic}
+                  preferredCollections={enhancedConfig.productIntegration.preferredCollections}
+                  isDevMode={isDevMode}
+                />
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex justify-between">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setCurrentStep(1)}
+                >
+                  ← Back to Templates
+                </Button>
+                <Button 
+                  onClick={() => {
+                    // Convert enhanced config to legacy format for now
+                    if (enhancedConfig) {
+                      setConfiguration({
+                        template: enhancedConfig.template,
+                        topic: enhancedConfig.topic,
+                        targetKeyword: enhancedConfig.targetKeyword,
+                        relatedKeywords: enhancedConfig.relatedKeywords,
+                        title: enhancedConfig.title || `Complete Guide to ${enhancedConfig.topic}`,
+                        metaDescription: enhancedConfig.metaDescription || `Discover everything about ${enhancedConfig.topic}`,
+                        targetAudience: enhancedConfig.targetAudience,
+                        tone: enhancedConfig.tone,
+                        wordCount: enhancedConfig.wordCount,
+                        includeImages: enhancedConfig.includeImages,
+                        includeCallToAction: enhancedConfig.includeCallToAction,
+                        seoData: enhancedConfig.seoData
+                      });
+                      setCurrentStep(3);
+                    }
+                  }}
+                  disabled={!enhancedConfig?.topic || !enhancedConfig?.wordCount}
+                  size="lg"
+                  className="px-8"
+                >
+                  Generate Content →
+                </Button>
+              </div>
+            </div>
+
+            {/* Preview Panel */}
+            <div className="lg:col-span-1">
+              <ContentPreview
+                config={enhancedConfig || {}}
+                selectedProducts={selectedProducts}
+                isDevMode={isDevMode}
+              />
+            </div>
+          </div>
         )}
 
         {currentStep === 3 && configuration && (
