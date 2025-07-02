@@ -383,9 +383,9 @@ function ContentGenerationInner() {
                 <ProductSelector
                   selectedProducts={selectedProducts}
                   onProductsChange={handleProductsChange}
-                  maxProducts={enhancedConfig.productIntegration.maxProducts}
-                  contentTopic={enhancedConfig.topic}
-                  preferredCollections={enhancedConfig.productIntegration.preferredCollections}
+                  maxProducts={enhancedConfig?.productIntegration?.maxProducts || 3}
+                  contentTopic={enhancedConfig?.topic || ''}
+                  preferredCollections={enhancedConfig?.productIntegration?.preferredCollections || []}
                   isDevMode={isDevMode}
                 />
               )}
