@@ -39,6 +39,9 @@ export default function TopicsPage() {
   }
 
   const handleGenerateContent = (topic: Topic) => {
+    console.log('🚀 Generate clicked for topic:', topic);
+    console.log('📊 Style preferences:', topic.style_preferences);
+    
     // Navigate to content generation page with topic data
     const params = new URLSearchParams()
     
@@ -62,13 +65,27 @@ export default function TopicsPage() {
     // Add style preferences
     if (topic.style_preferences) {
       const prefs = topic.style_preferences as any
+      console.log('🎨 Processing style preferences:', prefs);
+      console.log('🎨 Template value:', prefs.template, typeof prefs.template);
+      
       if (prefs.tone) params.set('tone', prefs.tone)
       if (prefs.length) params.set('length', prefs.length)
-      if (prefs.template) params.set('template', prefs.template)
+      if (prefs.template_type || prefs.template) {
+        const template = prefs.template_type || prefs.template;
+        params.set('template', template)
+        console.log('✅ Added template to URL:', template);
+      } else {
+        console.log('❌ Template is empty/null. Available fields:', Object.keys(prefs));
+      }
+    } else {
+      console.log('❌ No style_preferences found on topic');
     }
     
+    const finalUrl = `/content-generation?${params.toString()}`;
+    console.log('🔗 Final URL:', finalUrl);
+    
     // Navigate to content generation with pre-filled data
-    router.push(`/content-generation?${params.toString()}`)
+    router.push(finalUrl)
   }
 
   return (

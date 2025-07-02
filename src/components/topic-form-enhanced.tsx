@@ -127,16 +127,30 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
     setSubmitError(null)
 
     try {
-      // Mock submission for demo (replace with real API call)
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      console.log('💾 Saving topic with data:', data)
       
-      console.log('Form submitted with data:', data)
-      onSuccess?.(data)
+      let result;
+      if (topicId) {
+        // Update existing topic
+        result = await TopicService.updateTopic(topicId, data)
+      } else {
+        // Create new topic
+        result = await TopicService.createTopic(data)
+      }
+      
+      if (result.error) {
+        setSubmitError(result.error)
+        return
+      }
+      
+      console.log('✅ Topic saved successfully:', result.data)
+      onSuccess?.(result.data)
       
       if (!topicId) {
         reset() // Reset form after successful creation
       }
     } catch (error) {
+      console.error('Topic submission error:', error)
       setSubmitError('An unexpected error occurred')
     } finally {
       setIsSubmitting(false)
