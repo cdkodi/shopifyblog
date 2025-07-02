@@ -28,6 +28,9 @@ interface ArticleEditorState {
   seoScore: number;
 }
 
+// Feature flag for product integration
+const ENABLE_PRODUCT_INTEGRATION = false; // Set to true to re-enable
+
 export default function ArticleEditPage() {
   const router = useRouter();
   const params = useParams();
@@ -153,8 +156,6 @@ export default function ArticleEditPage() {
     }
   };
 
-
-
   const generateSlug = () => {
     const slug = articleData.title
       .toLowerCase()
@@ -229,8 +230,6 @@ export default function ArticleEditPage() {
               {saving ? 'Saving...' : 'Save'}
             </Button>
             
-
-            
             <Button
               onClick={() => setDeleteDialog(true)}
               variant="outline"
@@ -274,16 +273,18 @@ export default function ArticleEditPage() {
               </CardContent>
             </Card>
 
-            {/* Product Integration */}
-            <ProductIntegrationManager
-              articleId={articleId}
-              articleTitle={articleData.title}
-              articleContent={articleData.content}
-              onUpdate={() => {
-                // Optionally refresh article data or show notification
-                console.log('Product suggestions updated');
-              }}
-            />
+            {/* Product Integration - Hidden for Launch */}
+            {ENABLE_PRODUCT_INTEGRATION && (
+              <ProductIntegrationManager
+                articleId={articleId}
+                articleTitle={articleData.title}
+                articleContent={articleData.content}
+                onUpdate={() => {
+                  // Optionally refresh article data or show notification
+                  console.log('Product suggestions updated');
+                }}
+              />
+            )}
           </div>
 
           {/* Sidebar */}
