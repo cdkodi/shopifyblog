@@ -457,14 +457,43 @@ export function GenerationConfig({
           <CardContent>
             <div className="space-y-3">
               <div>
-                <Label>Suggested Keywords</Label>
+                <Label>Suggested Keywords (click to add)</Label>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {keywordResearch.slice(0, 8).map((keyword: any, index: number) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {keyword.keyword} ({keyword.search_volume || 'N/A'} vol)
-                    </Badge>
-                  ))}
+                  {keywordResearch.slice(0, 8).map((keyword: any, index: number) => {
+                    const isSelected = config.targetKeyword === keyword.keyword || 
+                                     config.relatedKeywords.includes(keyword.keyword);
+                    
+                    return (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => {
+                          if (!config.targetKeyword) {
+                            // If no target keyword set, make this the target keyword
+                            updateConfig({ targetKeyword: keyword.keyword });
+                          } else if (!config.relatedKeywords.includes(keyword.keyword) && 
+                                   config.targetKeyword !== keyword.keyword) {
+                            // Add to related keywords if not already present
+                            updateConfig({ 
+                              relatedKeywords: [...config.relatedKeywords, keyword.keyword]
+                            });
+                          }
+                        }}
+                        disabled={isSelected}
+                        className={`text-xs px-2 py-1 rounded border transition-colors ${
+                          isSelected 
+                            ? 'bg-blue-100 border-blue-300 text-blue-700 cursor-default' 
+                            : 'bg-white border-gray-300 text-gray-700 hover:bg-blue-50 hover:border-blue-300 cursor-pointer'
+                        }`}
+                      >
+                        {isSelected ? '✓ ' : '+ '}{keyword.keyword} ({keyword.search_volume || 'N/A'} vol)
+                      </button>
+                    );
+                  })}
                 </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Click keywords to add them. First click sets target keyword, additional clicks add related keywords.
+                </p>
               </div>
             </div>
           </CardContent>
