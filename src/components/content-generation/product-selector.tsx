@@ -124,24 +124,57 @@ export function ProductSelector({
             );
           });
                   } else {
-            // Use API endpoint in production
-            console.log('🛒 Fetching products from API for topic:', contentTopic);
-            const response = await fetch(`/api/products?topic=${encodeURIComponent(contentTopic)}&limit=20`);
-            const result = await response.json();
+            // Use POST search endpoint which works better for topic-based searches
+            console.log('🛒 Searching products for topic:', contentTopic);
             
-            console.log('🛒 API Response:', { 
-              status: response.status, 
-              success: result.success, 
-              productCount: result.data?.products?.length || 0,
-              error: result.error 
+            // Extract search terms from the topic
+            const searchTerms = [
+              contentTopic,
+              ...contentTopic.toLowerCase().split(/\s+/).filter(word => word.length > 2)
+            ];
+            
+            // Try the topic as a whole first
+            let response = await fetch('/api/products', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                searchQuery: contentTopic,
+                limit: 20
+              })
             });
             
-            if (result.success && result.data.products) {
-              products = result.data.products;
-              console.log('🛒 Successfully loaded products:', products.length);
-            } else {
-              console.warn('❌ Failed to fetch products from API, using mock data:', result.error);
-              products = mockProducts; // Fallback to mock data
+            let result = await response.json();
+            products = result.success ? result.data.products : [];
+            
+            console.log('🛒 Direct topic search found:', products.length, 'products');
+            
+            // If we didn't find enough products, try individual terms
+            if (products.length < 5) {
+              for (const term of searchTerms.slice(1)) {
+                const termResponse = await fetch('/api/products', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    searchQuery: term,
+                    limit: 10
+                  })
+                });
+                
+                const termResult = await termResponse.json();
+                if (termResult.success && termResult.data.products) {
+                  // Add new products (avoid duplicates)
+                  const newProducts = termResult.data.products.filter(newP => 
+                    !products.some(existingP => existingP.handle === newP.handle)
+                  );
+                  products.push(...newProducts);
+                }
+              }
+              console.log('🛒 After additional searches, total products:', products.length);
+            }
+            
+            if (products.length === 0) {
+              console.warn('❌ No products found, using mock data as fallback');
+              products = mockProducts;
             }
           }
 
