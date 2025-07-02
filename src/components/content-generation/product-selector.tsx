@@ -163,8 +163,8 @@ export function ProductSelector({
                 const termResult = await termResponse.json();
                 if (termResult.success && termResult.data.products) {
                   // Add new products (avoid duplicates)
-                  const newProducts = termResult.data.products.filter(newP => 
-                    !products.some(existingP => existingP.handle === newP.handle)
+                  const newProducts = termResult.data.products.filter((newP: ProductForContentGeneration) => 
+                    !products.some((existingP: ProductForContentGeneration) => existingP.handle === newP.handle)
                   );
                   products.push(...newProducts);
                 }
