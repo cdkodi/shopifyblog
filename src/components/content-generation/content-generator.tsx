@@ -76,7 +76,7 @@ export function ContentGenerator({ configuration, onGenerationComplete, onBack }
           template: configuration.template.id,
           tone: configuration.tone,
           keywords: [configuration.targetKeyword, ...configuration.relatedKeywords],
-          preferredProvider: configuration.template.recommendedProvider,
+          preferredProvider: configuration.aiProvider === 'auto' ? configuration.template.recommendedProvider : configuration.aiProvider,
           options: {
             maxTokens: Math.floor(configuration.wordCount * 1.5), // Rough estimate
             temperature: 0.7
@@ -266,8 +266,12 @@ export function ContentGenerator({ configuration, onGenerationComplete, onBack }
                 <div>
                   <span className="text-gray-500">AI Provider:</span>
                   <p className="font-medium">
-                    {configuration.template.recommendedProvider === 'anthropic' ? 'Claude' :
-                     configuration.template.recommendedProvider === 'openai' ? 'GPT-4' : 'Gemini'}
+                    {(() => {
+                      const provider = configuration.aiProvider === 'auto' ? configuration.template.recommendedProvider : configuration.aiProvider;
+                      return provider === 'anthropic' ? 'Claude' :
+                             provider === 'openai' ? 'GPT-4' : 
+                             provider === 'google' ? 'Gemini' : 'Auto';
+                    })()}
                   </p>
                 </div>
                 <div>

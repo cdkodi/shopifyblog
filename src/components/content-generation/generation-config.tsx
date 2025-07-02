@@ -42,6 +42,9 @@ export interface EnhancedContentConfig {
   includeImages: boolean;
   includeCallToAction: boolean;
   
+  // AI Provider Selection
+  aiProvider: 'anthropic' | 'openai' | 'google' | 'auto';
+  
   // Enhanced product integration options
   includeProducts: boolean;
   productIntegration: {
@@ -98,6 +101,29 @@ const availableCollections = [
   'Traditional Art'
 ];
 
+const aiProviders = [
+  {
+    value: 'auto' as const,
+    label: 'Auto (Recommended)',
+    description: 'Automatically selects the best available AI provider'
+  },
+  {
+    value: 'anthropic' as const,
+    label: 'Anthropic Claude',
+    description: 'Best for creative and analytical content'
+  },
+  {
+    value: 'openai' as const,
+    label: 'OpenAI GPT',
+    description: 'Excellent for technical and structured content'
+  },
+  {
+    value: 'google' as const,
+    label: 'Google Gemini',
+    description: 'Good for research and fact-based content'
+  }
+];
+
 export function GenerationConfig({ 
   selectedTemplate, 
   onConfigChange, 
@@ -117,6 +143,7 @@ export function GenerationConfig({
     wordCount: initialData?.wordCount || selectedTemplate.targetLength,
     includeImages: true,
     includeCallToAction: true,
+    aiProvider: 'auto',
     
     // Default product integration settings
     includeProducts: false,
@@ -256,7 +283,7 @@ export function GenerationConfig({
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label htmlFor="wordCount">Target Word Count</Label>
               <Input
@@ -286,6 +313,27 @@ export function GenerationConfig({
                   <SelectItem value="technical">Technical</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label htmlFor="aiProvider">AI Model</Label>
+              <Select
+                value={config.aiProvider || 'auto'}
+                onValueChange={(value) => updateConfig({ aiProvider: value as any })}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select AI provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  {aiProviders.map(provider => (
+                    <SelectItem key={provider.value} value={provider.value}>
+                      {provider.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500 mt-1">
+                {aiProviders.find(p => p.value === config.aiProvider)?.description}
+              </p>
             </div>
           </div>
 

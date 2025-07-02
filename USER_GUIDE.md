@@ -45,13 +45,23 @@
    - **Description**: Detailed explanation of the topic
    - **Target Audience**: Define your intended readers
    - **Content Goals**: Select objectives (educate, entertain, sell, etc.)
+   - **Template**: Select content template type
    - **Keywords**: Add SEO-relevant keywords
    - **Notes**: Additional planning information
 3. **Save** to add to your topic library
-4. **Edit** or **Delete** topics as needed
+4. **Generate Content**: Click "Generate" for streamlined content creation
+5. **Edit** or **Delete** topics as needed
+
+**Streamlined Content Generation** (New):
+- **Direct Generation**: Click "Generate" from any topic to start content creation
+- **Auto-Template Selection**: Selected template automatically carries over
+- **Smart Skipping**: Bypasses template selection step in content generation
+- **Contextual Setup**: Topic data pre-fills content configuration
+- **Seamless Workflow**: Topics → Generate → Configure → Create
 
 **Best Practices**:
 - Use specific, actionable topic titles
+- Select appropriate templates for faster generation
 - Include 5-10 relevant keywords per topic
 - Define clear content goals for better AI generation
 - Update topics based on performance data
@@ -184,17 +194,38 @@
 
 ### Current Product Catalog
 
-**Total Products**: 30 authentic Indian art and decor items
+**Total Products**: 240 authentic Indian art and decor items
 **Source**: Culturati.in (https://culturati.in/)
 **Price Range**: ₹750 - ₹150,000
+**Inventory Status**: All products available and actively maintained
 
 **Product Categories**:
-- **Pichwai Art**: 12 premium traditional paintings (₹17k-₹150k)
-- **Religious Idols**: 4 decorative items (₹750-₹1,500)
-- **Wall Hangings**: 5 home decor pieces (₹1,500-₹1,850)
-- **Elephant Stools**: 4 furniture sets (₹1,899)
-- **Heritage Crafts**: 2 traditional measuring sets (₹2k-₹12k)
-- **Pooja Accessories**: 2 ritual items (₹750-₹850)
+- **Madhubani Art**: 25+ traditional Mithila paintings and sarees (₹10k-₹40k)
+- **Pichwai Art**: 15+ Krishna-themed paintings and wall plates (₹17k-₹150k)
+- **Handcrafted Jewelry**: 30+ traditional necklaces, bangles, and accessories (₹2k-₹15k)
+- **Andhra Leather Lamps**: 20+ decorative table and hanging lamps (₹3k-₹8k)
+- **Traditional Sarees**: 40+ handwoven cotton, silk, and linen sarees (₹8k-₹25k)
+- **Religious Idols**: 15+ decorative Ganesha, Krishna, and spiritual items (₹750-₹5k)
+- **Home Decor**: 25+ wall hangings, coasters, trays, and decorative items (₹1k-₹5k)
+- **Elephant Stools**: 8+ handpainted wooden furniture sets (₹1,899-₹3k)
+- **Heritage Crafts**: 10+ traditional measuring sets, mirrors, and cultural artifacts (₹2k-₹12k)
+- **Handmade Dolls**: 8+ fabric dolls representing cultural themes (₹3k-₹5k)
+- **Embroidered Textiles**: 15+ cushion covers, runners, and home textiles (₹1k-₹3k)
+- **Brass & Metal Items**: 10+ wine glasses, decorative items, and spiritual accessories (₹2k-₹6k)
+
+### Enhanced Product Discovery
+
+**Smart Auto-Detection** (Improved):
+- AI analyzes content topics like "Madhubani Art" and automatically finds relevant products
+- Multi-term search algorithm that checks both full phrases and individual keywords
+- Relevance scoring considers title matches, tag alignments, and contextual fit
+- Automatic fallback to broader searches if specific terms don't yield results
+- Real-time product suggestion with accurate match percentages
+
+**Example**: When you enter "Madhubani Art" as your topic:
+- ✅ **Finds**: "Handcrafted Madhubani- Matsya Krishna Art: Traditional Mithila Paintings"
+- ✅ **Finds**: Multiple Madhubani sarees and art pieces with proper relevance scores
+- ✅ **Shows**: Clear match reasons (Tag: madhubani art, Title match, etc.)
 
 ### Product Integration Features
 
@@ -226,10 +257,18 @@
 Located in `shopify-scripts/` directory for advanced users:
 
 **Data Management**:
-- `shopify-data-import-complete.js`: Import full 30-product catalog
+- `shopify-data-import-complete.js`: Import full 240-product catalog with availability filtering
 - `shopify-data-import-simple.js`: Import curated 8-product selection
 - `fix-product-prices.js`: Correct pricing data formatting
 - `verify-import-success.js`: Verify import and generate analytics
+
+**Enhanced Import Features**:
+- **Full Catalog Import**: Automatically fetches all 250 available products from Culturati.in
+- **Availability Filtering**: Only imports products marked as available for purchase
+- **Batch Processing**: Handles large imports efficiently with 5-product batches
+- **Duplicate Prevention**: Checks existing products to avoid re-importing
+- **Error Handling**: Robust error handling with detailed logging
+- **Status Reporting**: Real-time progress updates and final statistics
 
 **Security Management**:
 - `enforce-rls-security.js`: Apply production-ready security policies
@@ -240,9 +279,21 @@ Located in `shopify-scripts/` directory for advanced users:
 # Navigate to project directory
 cd shopify-scripts
 
-# Run desired script
+# Import complete product catalog (240 products)
 node shopify-data-import-complete.js
+
+# Import curated selection (8 products)
+node shopify-data-import-simple.js
+
+# Verify import success
+node verify-import-success.js
 ```
+
+**Import Results**:
+- **240 Available Products**: All products marked as available for purchase
+- **Smart Inventory Handling**: Uses availability status for inventory tracking
+- **Complete Metadata**: Title, description, tags, collections, pricing, and images
+- **Automatic Status**: Products marked as 'active' or 'draft' based on availability
 
 ## Advanced Features
 
@@ -255,16 +306,33 @@ node shopify-data-import-complete.js
 - **Reading Time**: Automatic calculation for user experience
 - **Content Analysis**: Word count and structure optimization
 
+**Enhanced SEO Keywords Interface** (Improved):
+- **DataForSEO Integration**: Real-time keyword research with search volumes
+- **Interactive Keyword Selection**: Click to add/remove keywords easily
+- **Target vs Related Keywords**: Smart categorization of keyword types
+- **Search Volume Display**: See actual search volumes for each keyword
+- **Toggle Functionality**: Click selected keywords to deselect them
+- **Visual Feedback**: Clear indication of selected vs available keywords
+
+**How to Use SEO Keywords**:
+1. **Auto-Research**: Keywords automatically researched based on your topic
+2. **First Click**: Sets the target keyword (primary SEO focus)
+3. **Additional Clicks**: Add to related keywords list
+4. **Deselect**: Click any selected keyword (✓) to remove it
+5. **Search Volumes**: Displayed for informed keyword selection
+
 **SEO Keywords API** (`/api/seo/keywords`):
 - Research keywords related to your topics
-- Get search volume and competition data
+- Get search volume and competition data from DataForSEO
 - Find related keyword opportunities
 - Integration with content generation workflow
+- Real-time keyword suggestions based on content analysis
 
 **Best Practices**:
 - Include 5-10 target keywords per article
 - Use keywords naturally in content
-- Optimize meta descriptions for click-through rates
+- Choose keywords with good search volume vs competition balance
+- Click to experiment with different keyword combinations
 - Monitor keyword performance and adjust strategy
 
 ### AI Service Configuration
@@ -326,12 +394,22 @@ node shopify-data-import-complete.js
 - Look for "You have unsaved changes" indicator
 - Save button activates automatically when content is modified
 
-#### Product Dropdown Empty
-**Issue**: "Add Product" shows no products
-**Solution**: Database/permissions issue
-- Check internet connection
-- Refresh page and try again
-- Contact administrator if issue persists
+#### Product Search Not Finding Results
+**Issue**: Product search shows no results or wrong products
+**Solution**: Search functionality improvements implemented
+- **Auto-Discovery**: Now works with topics like "Madhubani Art"
+- **Manual Search**: Use specific product terms in the search box
+- **Fallback**: System automatically tries broader searches
+- **Refresh**: Reload page if search results seem cached
+- **Manual Browse**: Use "Browse All Products" if auto-discovery fails
+
+#### SEO Keywords Not Clickable
+**Issue**: Can't deselect SEO keywords after clicking them
+**Solution**: Enhanced with toggle functionality
+- **Click to Toggle**: Selected keywords (✓) can now be clicked to deselect
+- **Visual Feedback**: Clear indication of selected vs available state
+- **Target vs Related**: First click sets target keyword, others add to related list
+- **Easy Management**: Experiment with different keyword combinations easily
 
 #### AI Generation Failing
 **Issue**: Content generation returns errors

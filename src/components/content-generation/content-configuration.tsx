@@ -35,6 +35,7 @@ export interface ContentConfiguration {
   wordCount: number;
   includeImages: boolean;
   includeCallToAction: boolean;
+  aiProvider: 'anthropic' | 'openai' | 'google' | 'auto';
   seoData?: {
     primaryKeyword: {
       keyword: string;
@@ -71,7 +72,8 @@ export function ContentConfiguration({ selectedTemplate, onConfigurationComplete
             tone: savedConfig.tone || initialData?.tone || 'professional',
             wordCount: savedConfig.wordCount || initialData?.wordCount || selectedTemplate.targetLength,
             includeImages: savedConfig.includeImages ?? true,
-            includeCallToAction: savedConfig.includeCallToAction ?? true
+            includeCallToAction: savedConfig.includeCallToAction ?? true,
+            aiProvider: savedConfig.aiProvider || 'auto'
           };
         }
       }
@@ -91,7 +93,8 @@ export function ContentConfiguration({ selectedTemplate, onConfigurationComplete
       tone: initialData?.tone || 'professional',
       wordCount: initialData?.wordCount || selectedTemplate.targetLength,
       includeImages: true,
-      includeCallToAction: true
+      includeCallToAction: true,
+      aiProvider: 'auto'
     };
   };
 
@@ -224,6 +227,7 @@ export function ContentConfiguration({ selectedTemplate, onConfigurationComplete
       wordCount: config.wordCount || selectedTemplate.targetLength,
       includeImages: config.includeImages ?? true,
       includeCallToAction: config.includeCallToAction ?? true,
+      aiProvider: config.aiProvider || 'auto',
       seoData: keywordResearch ? {
         primaryKeyword: {
           keyword: config.targetKeyword || '',

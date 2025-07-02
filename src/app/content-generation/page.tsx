@@ -413,6 +413,7 @@ function ContentGenerationInner() {
                         wordCount: enhancedConfig.wordCount,
                         includeImages: enhancedConfig.includeImages,
                         includeCallToAction: enhancedConfig.includeCallToAction,
+                        aiProvider: enhancedConfig.aiProvider,
                         seoData: enhancedConfig.seoData
                       });
                       setCurrentStep(3);
