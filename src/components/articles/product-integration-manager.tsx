@@ -111,17 +111,15 @@ export function ProductIntegrationManager({
       
       console.log('🔧 Extracted keywords:', keywords.slice(0, 5));
       
-      // Use the same POST API method that works in content generation
-      const searchResponse = await fetch('/api/products', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          topic: articleTitle,
-          keywords: keywords.slice(0, 5),
-          limit: 10
-        })
+      // Use the GET API method that works with getRelevantProducts
+      const searchParams = new URLSearchParams({
+        topic: articleTitle,
+        keywords: keywords.slice(0, 5).join(','),
+        limit: '10'
+      });
+      
+      const searchResponse = await fetch(`/api/products?${searchParams}`, {
+        method: 'GET'
       });
 
       let relevantProducts = [];
@@ -129,16 +127,16 @@ export function ProductIntegrationManager({
         const searchResult = await searchResponse.json();
         if (searchResult.success && searchResult.data?.products) {
           relevantProducts = searchResult.data.products;
-          console.log('🔧 Found relevant products via POST API:', relevantProducts.map((p: any) => ({
+          console.log('🔧 Found relevant products via GET API:', relevantProducts.map((p: any) => ({
             title: p.title,
             tags: p.tags,
             relevanceScore: p.relevanceScore
           })));
         } else {
-          console.error('🔧 POST API search failed:', searchResult.error);
+          console.error('🔧 GET API search failed:', searchResult.error);
         }
       } else {
-        console.error('🔧 POST API request failed:', searchResponse.status);
+        console.error('🔧 GET API request failed:', searchResponse.status);
       }
 
       // Fallback to service method if API fails
@@ -364,14 +362,13 @@ export function ProductIntegrationManager({
                 // Test search functionality
                 try {
                   console.log('🧪 Testing search for article:', articleTitle);
-                  const response = await fetch('/api/products', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      topic: articleTitle,
-                      keywords: ['madhubani', 'art', 'traditional'],
-                      limit: 5
-                    })
+                  const testParams = new URLSearchParams({
+                    topic: articleTitle,
+                    keywords: 'madhubani,art,traditional',
+                    limit: '5'
+                  });
+                  const response = await fetch(`/api/products?${testParams}`, {
+                    method: 'GET'
                   });
                   
                   if (response.ok) {
@@ -379,7 +376,7 @@ export function ProductIntegrationManager({
                     if (result.success && result.data?.products) {
                       const products = result.data.products;
                       const productList = products.map((p: any) => 
-                        `• ${p.title} (${p.relevanceScore}% relevant, tags: ${p.tags?.join(', ') || 'none'})`
+                        `• ${p.title} (tags: ${p.tags?.join(', ') || 'none'})`
                       ).join('\n');
                       alert(`Found ${products.length} products:\n\n${productList}`);
                     } else {
