@@ -50,6 +50,7 @@ export function ProductIntegrationManager({
   const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
   const [availableProducts, setAvailableProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [addingProduct, setAddingProduct] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -227,22 +228,49 @@ export function ProductIntegrationManager({
   };
 
   const addManualSuggestion = async () => {
-    if (!selectedProduct || !linkText) return;
+    // Validation with user feedback
+    if (!selectedProduct) {
+      alert('Please select a product first.');
+      return;
+    }
+    
+    if (!linkText.trim()) {
+      alert('Please enter link text (e.g., "Check out this beautiful artwork").');
+      return;
+    }
 
+    setAddingProduct(true);
     try {
+      console.log('🔧 Adding manual suggestion:', {
+        selectedProduct,
+        linkText,
+        positionInContent,
+        articleId
+      });
+
       // Get the product ID from the database
-      const { data: productData } = await supabase
+      const { data: productData, error: productError } = await supabase
         .from('shopify_products')
-        .select('id')
+        .select('id, title')
         .eq('handle', selectedProduct)
         .single();
 
-      if (!productData) {
-        console.error('Product not found');
+      if (productError) {
+        console.error('Error finding product:', productError);
+        alert('Error finding the selected product. Please try again.');
         return;
       }
 
-      const { error } = await supabase
+      if (!productData) {
+        console.error('Product not found for handle:', selectedProduct);
+        alert('Selected product not found in database. Please try selecting a different product.');
+        return;
+      }
+
+      console.log('✅ Found product:', productData);
+
+      // Insert the suggestion
+      const { error: insertError } = await supabase
         .from('article_product_suggestions')
         .insert({
           article_id: articleId,
@@ -250,15 +278,21 @@ export function ProductIntegrationManager({
           suggestion_type: 'manual',
           relevance_score: 75, // Default score for manual additions
           position_in_content: positionInContent,
-          link_text: linkText,
+          link_text: linkText.trim(),
           utm_campaign: 'manual_suggestion',
           is_approved: false
         });
 
-      if (error) {
-        console.error('Error adding suggestion:', error);
+      if (insertError) {
+        console.error('Error inserting suggestion:', insertError);
+        alert(`Error adding product suggestion: ${insertError.message}`);
         return;
       }
+
+      console.log('✅ Successfully added manual suggestion');
+
+      // Success feedback
+      alert(`✅ Product suggestion added successfully!\n\n"${linkText}" will appear after paragraph ${positionInContent}.`);
 
       // Reset form and close dialog
       setSelectedProduct('');
@@ -266,11 +300,15 @@ export function ProductIntegrationManager({
       setPositionInContent(1);
       setShowAddDialog(false);
 
-      // Reload suggestions
+      // Reload suggestions to show the new one
       await loadSuggestions();
       onUpdate?.();
+      
     } catch (err) {
       console.error('Unexpected error adding suggestion:', err);
+      alert(`Unexpected error: ${err}. Please try again.`);
+    } finally {
+      setAddingProduct(false);
     }
   };
 
@@ -516,8 +554,18 @@ export function ProductIntegrationManager({
                     <Button variant="outline" onClick={() => setShowAddDialog(false)}>
                       Cancel
                     </Button>
-                    <Button onClick={addManualSuggestion}>
-                      Add Suggestion
+                    <Button 
+                      onClick={addManualSuggestion}
+                      disabled={addingProduct || !selectedProduct || !linkText.trim()}
+                    >
+                      {addingProduct ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Adding...
+                        </>
+                      ) : (
+                        'Add Suggestion'
+                      )}
                     </Button>
                   </div>
                 </div>
