@@ -168,13 +168,40 @@ export class ShopifyProductService {
     try {
       console.log('🔍 getRelevantProducts called with:', { contentTopic, targetKeywords });
 
+      const topicLower = contentTopic.toLowerCase();
+      
+      // For Madhubani specifically, use direct database search first
+      if (topicLower.includes('madhubani')) {
+        console.log('🎨 Detected Madhubani topic - searching specifically for Madhubani products');
+        
+        // Direct database search for Madhubani products
+        const { data: madhubanProducts, error } = await supabase
+          .from('shopify_products')
+          .select('*')
+          .or('title.ilike.%madhubani%,tags.cs.["madhubani art"],tags.cs.["madhubani"],collections.cs.["Madhubani Art"]')
+          .eq('status', 'active')
+          .limit(10);
+
+        if (!error && madhubanProducts && madhubanProducts.length > 0) {
+          console.log('🎨 Found Madhubani products via direct search:', madhubanProducts.length);
+          console.log('🎨 Sample:', madhubanProducts.slice(0, 3).map(p => ({ title: p.title, tags: p.tags })));
+          
+          const transformedProducts = madhubanProducts.map(this.transformForContentGeneration);
+          return transformedProducts.map((product, index) => ({
+            ...product,
+            relevanceScore: 95 - (index * 5) // High relevance for direct matches
+          }));
+        } else {
+          console.log('🎨 No Madhubani products found via direct search, error:', error);
+        }
+      }
+
       // Create semantic search terms that are more likely to match
       const baseTerms = [contentTopic, ...targetKeywords];
       const extractedTerms = contentTopic.toLowerCase().split(/[\s\-:.,!?]+/).filter(word => word.length > 2);
       
       // Add semantic expansions for art-related topics
       const semanticTerms: string[] = [];
-      const topicLower = contentTopic.toLowerCase();
       
       if (topicLower.includes('madhubani')) {
         semanticTerms.push('madhubani art', 'indian art', 'traditional art', 'folk art', 'bihar art', 'painting', 'madhubani', 'mithila');

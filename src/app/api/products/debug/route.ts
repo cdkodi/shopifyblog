@@ -46,12 +46,29 @@ export async function GET(request: NextRequest) {
       .select('*', { count: 'exact', head: true })
       .eq('status', 'active');
 
+    // Check for Madhubani products specifically
+    const { data: madhubanProducts, error: madhubanError } = await supabase
+      .from('shopify_products')
+      .select('id, title, handle, status, collections, tags')
+      .or('title.ilike.%madhubani%,tags.cs.["madhubani"],tags.cs.["madhubani art"]')
+      .eq('status', 'active');
+
+    console.log('🎨 Madhubani products found:', madhubanProducts?.length || 0);
+    if (madhubanProducts && madhubanProducts.length > 0) {
+      console.log('🎨 Sample Madhubani products:', madhubanProducts.slice(0, 3).map(p => ({
+        title: p.title,
+        tags: p.tags
+      })));
+    }
+
     return NextResponse.json({
       success: true,
       debug: {
         totalProducts: count,
         activeProducts: activeCount,
         sampleProducts: sampleProducts || [],
+        madhubanProducts: madhubanProducts || [],
+        madhubanCount: madhubanProducts?.length || 0,
         databaseConnected: true,
         timestamp: new Date().toISOString()
       }
