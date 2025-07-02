@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { TemplateSelector, ContentTemplate } from '@/components/content-generation/template-selector';
 import { ContentConfiguration, ContentConfiguration as ContentConfigInterface } from '@/components/content-generation/content-configuration';
+import { ContentTemplateService } from '@/lib/supabase/content-templates';
 import { ContentGenerator, GeneratedContent } from '@/components/content-generation/content-generator';
 import { ContentEditor, PublishedContent } from '@/components/content-generation/content-editor';
 import { GenerationConfig, EnhancedContentConfig } from '@/components/content-generation/generation-config';
@@ -28,6 +29,21 @@ function ContentGenerationInner() {
     providers: string[];
     loading: boolean;
   }>({ available: false, providers: [], loading: true });
+  const [templatesLoaded, setTemplatesLoaded] = useState(false);
+  const [comingFromTopics, setComingFromTopics] = useState(false);
+
+  // Template name mapping from Topics form to actual template names
+  const mapTopicTemplateToActualTemplate = (topicTemplate: string): string => {
+    const mapping: Record<string, string> = {
+      'Blog Post': 'Industry Trends', // Map generic blog post to trends
+      'How-to Guide': 'How-To Guide', // Fix casing
+      'Listicle': 'Product Showcase', // Map listicle to product showcase
+      'Review': 'Review',
+      'Case Study': 'Case Study', 
+      'Tutorial': 'Tutorial'
+    };
+    return mapping[topicTemplate] || topicTemplate;
+  };
 
   // Parse URL parameters when component mounts
   useEffect(() => {
@@ -49,14 +65,10 @@ function ContentGenerationInner() {
       
       setInitialConfigData(initialData);
       
-      // If we have data from URL, show a notification
-      if (topic) {
-        // If there's a suggested template, try to auto-select it
-        if (template) {
-          // You might want to auto-select the template here
-          // For now, we'll stay on step 1 but show the topic data
-        }
-        // Don't auto-advance, let user choose template first
+      // If coming from Topics with template, set flag for auto-selection
+      if (topic && template) {
+        console.log('🎯 Coming from Topics with template:', template);
+        setComingFromTopics(true);
       }
     }
   }, [searchParams]);
@@ -88,6 +100,46 @@ function ContentGenerationInner() {
 
     checkAiServices();
   }, []);
+
+  // Auto-select template when coming from Topics
+  useEffect(() => {
+    const autoSelectTemplate = async () => {
+      if (!comingFromTopics || !initialConfigData?.suggestedTemplate || templatesLoaded) return;
+
+      try {
+        console.log('🔄 Auto-selecting template for:', initialConfigData.suggestedTemplate);
+        
+        // Load templates from service
+        const { data: templates, error } = await ContentTemplateService.getContentTemplates();
+        
+        if (error || !templates) {
+          console.error('Failed to load templates for auto-selection:', error);
+          return;
+        }
+
+        // Map topic template name to actual template name
+        const mappedTemplateName = mapTopicTemplateToActualTemplate(initialConfigData.suggestedTemplate);
+        console.log('🗺️ Mapped template name:', mappedTemplateName);
+        
+        // Find matching template
+        const matchingTemplate = templates.find(t => t.name === mappedTemplateName);
+        
+        if (matchingTemplate) {
+          console.log('✅ Auto-selected template:', matchingTemplate.name);
+          setSelectedTemplate(matchingTemplate);
+          setCurrentStep(2); // Skip to Configuration step
+        } else {
+          console.warn('⚠️ No matching template found for:', mappedTemplateName);
+        }
+        
+        setTemplatesLoaded(true);
+      } catch (error) {
+        console.error('Auto-selection failed:', error);
+      }
+    };
+
+    autoSelectTemplate();
+  }, [comingFromTopics, initialConfigData, templatesLoaded]);
 
   const handleTemplateSelect = (template: ContentTemplate) => {
     setSelectedTemplate(template);
@@ -257,6 +309,42 @@ function ContentGenerationInner() {
 
         {currentStep === 2 && selectedTemplate && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Topics Auto-Selection Notification */}
+            {comingFromTopics && initialConfigData?.topic && (
+              <div className="lg:col-span-3 mb-6">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                        <span className="text-green-600 text-sm font-medium">🎯</span>
+                      </div>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-green-800">
+                        Template Pre-selected from Topics: "{selectedTemplate.name}"
+                      </h3>
+                      <div className="mt-1 text-sm text-green-600">
+                        <p>Topic: <span className="font-medium">"{initialConfigData.topic}"</span> • Configuration has been pre-filled based on your topic settings.</p>
+                      </div>
+                    </div>
+                    <div className="ml-auto">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setComingFromTopics(false);
+                          setCurrentStep(1);
+                        }}
+                        className="text-green-700 border-green-300 hover:bg-green-100"
+                      >
+                        Change Template
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Main Configuration Panel */}
             <div className="lg:col-span-2 space-y-6">
               <GenerationConfig
