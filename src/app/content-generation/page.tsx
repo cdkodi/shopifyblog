@@ -63,12 +63,15 @@ function ContentGenerationInner() {
         suggestedTemplate: template
       };
       
+      console.log('📥 URL params parsed:', { topic, keywords, tone, length, template });
       setInitialConfigData(initialData);
       
       // If coming from Topics with template, set flag for auto-selection
       if (topic && template) {
         console.log('🎯 Coming from Topics with template:', template);
         setComingFromTopics(true);
+      } else {
+        console.log('🔍 Not from Topics - missing topic or template:', { hasTopic: !!topic, hasTemplate: !!template });
       }
     }
   }, [searchParams]);
@@ -104,7 +107,22 @@ function ContentGenerationInner() {
   // Auto-select template when coming from Topics
   useEffect(() => {
     const autoSelectTemplate = async () => {
-      if (!comingFromTopics || !initialConfigData?.suggestedTemplate || templatesLoaded) return;
+      console.log('🔍 Auto-selection check:', { 
+        comingFromTopics, 
+        hasInitialData: !!initialConfigData, 
+        suggestedTemplate: initialConfigData?.suggestedTemplate,
+        templatesLoaded 
+      });
+
+      if (!comingFromTopics || !initialConfigData?.suggestedTemplate) {
+        console.log('❌ Auto-selection skipped: missing requirements');
+        return;
+      }
+
+      if (templatesLoaded) {
+        console.log('❌ Auto-selection skipped: templates already loaded');
+        return;
+      }
 
       try {
         console.log('🔄 Auto-selecting template for:', initialConfigData.suggestedTemplate);
@@ -117,9 +135,11 @@ function ContentGenerationInner() {
           return;
         }
 
+        console.log('📚 Available templates:', templates.map(t => t.name));
+
         // Map topic template name to actual template name
         const mappedTemplateName = mapTopicTemplateToActualTemplate(initialConfigData.suggestedTemplate);
-        console.log('🗺️ Mapped template name:', mappedTemplateName);
+        console.log('🗺️ Mapped template name:', `"${initialConfigData.suggestedTemplate}" → "${mappedTemplateName}"`);
         
         // Find matching template
         const matchingTemplate = templates.find(t => t.name === mappedTemplateName);
@@ -130,6 +150,7 @@ function ContentGenerationInner() {
           setCurrentStep(2); // Skip to Configuration step
         } else {
           console.warn('⚠️ No matching template found for:', mappedTemplateName);
+          console.log('Available template names:', templates.map(t => `"${t.name}"`));
         }
         
         setTemplatesLoaded(true);
@@ -138,8 +159,10 @@ function ContentGenerationInner() {
       }
     };
 
-    autoSelectTemplate();
-  }, [comingFromTopics, initialConfigData, templatesLoaded]);
+    // Delay slightly to ensure all state is ready
+    const timer = setTimeout(autoSelectTemplate, 100);
+    return () => clearTimeout(timer);
+  }, [comingFromTopics, initialConfigData]);
 
   const handleTemplateSelect = (template: ContentTemplate) => {
     setSelectedTemplate(template);
