@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -94,22 +94,22 @@ export function ProductSelector({
   const [selectedCollection, setSelectedCollection] = useState<string>('');
   const [showManualBrowser, setShowManualBrowser] = useState(false);
 
-  // Auto-discover products based on content topic
-  useEffect(() => {
-    const discoverProducts = async () => {
-      console.log('🔍 ProductSelector: discoverProducts called with:', { 
-        contentTopic, 
-        isDevMode, 
-        preferredCollections 
-      });
-      
-      if (!contentTopic) {
-        console.log('❌ No contentTopic provided, skipping product discovery');
-        return;
-      }
+  // Product discovery function - moved outside useEffect so it can be called manually
+  const discoverProducts = useCallback(async () => {
+    console.log('🔍 ProductSelector: discoverProducts called with:', { 
+      contentTopic, 
+      isDevMode, 
+      preferredCollections 
+    });
+    console.log('🔍 ProductSelector triggered. Topic length:', contentTopic?.length || 0);
+    
+    if (!contentTopic) {
+      console.log('❌ No contentTopic provided, skipping product discovery');
+      return;
+    }
 
-      setLoading(true);
-      try {
+    setLoading(true);
+    try {
         let products: ProductForContentGeneration[];
         
         if (isDevMode) {
@@ -205,10 +205,12 @@ export function ProductSelector({
       } finally {
         setLoading(false);
       }
-    };
+    }, [contentTopic, isDevMode]);
 
+  // Auto-discover products when content topic changes
+  useEffect(() => {
     discoverProducts();
-  }, [contentTopic, preferredCollections, isDevMode]);
+  }, [discoverProducts]);
 
   // Filter products based on search and collection
   const filteredProducts = availableProducts.filter(product => {
@@ -359,13 +361,31 @@ export function ProductSelector({
             {selectedProducts.length} of {maxProducts} products selected
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowManualBrowser(!showManualBrowser)}
-        >
-          {showManualBrowser ? 'Hide Browser' : 'Browse All'}
-        </Button>
+        <div className="flex space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              setLoading(true);
+              try {
+                // Force refresh product discovery
+                await discoverProducts();
+              } finally {
+                setLoading(false);
+              }
+            }}
+            disabled={loading || !contentTopic}
+          >
+            {loading ? '🔄' : '🔍'} Refresh Suggestions
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowManualBrowser(!showManualBrowser)}
+          >
+            {showManualBrowser ? 'Hide Browser' : 'Browse All'}
+          </Button>
+        </div>
       </div>
 
       {/* Auto-discovered Products */}

@@ -174,23 +174,41 @@ export class ShopifyProductService {
       if (topicLower.includes('madhubani')) {
         console.log('🎨 Detected Madhubani topic - searching specifically for Madhubani products');
         
-        // Direct database search for Madhubani products
+        // Direct database search for Madhubani products - more comprehensive search
         const { data: madhubanProducts, error } = await supabase
           .from('shopify_products')
           .select('*')
-          .or('title.ilike.%madhubani%,tags.cs.["madhubani art"],tags.cs.["madhubani"],collections.cs.["Madhubani Art"]')
+          .or('title.ilike.%madhubani%,tags.cs.["madhubani art"],tags.cs.["madhubani"],tags.cs.["Madhubani Art"],collections.cs.["Madhubani Art"],tags.cs.["mithila"],title.ilike.%mithila%')
           .eq('status', 'active')
-          .limit(10);
+          .limit(20);
 
         if (!error && madhubanProducts && madhubanProducts.length > 0) {
           console.log('🎨 Found Madhubani products via direct search:', madhubanProducts.length);
           console.log('🎨 Sample:', madhubanProducts.slice(0, 3).map(p => ({ title: p.title, tags: p.tags })));
           
-          const transformedProducts = madhubanProducts.map(this.transformForContentGeneration);
-          return transformedProducts.map((product, index) => ({
-            ...product,
-            relevanceScore: 95 - (index * 5) // High relevance for direct matches
-          }));
+          // Filter to only highly relevant Madhubani products
+          const relevantMadhuban = madhubanProducts.filter(product => {
+            const titleLower = product.title.toLowerCase();
+            const tagsLower = (product.tags || []).map(tag => tag.toLowerCase());
+            
+            // Must have direct Madhubani references
+            return titleLower.includes('madhubani') || 
+                   titleLower.includes('mithila') ||
+                   tagsLower.includes('madhubani') ||
+                   tagsLower.includes('madhubani art') ||
+                   tagsLower.includes('mithila') ||
+                   (product.collections && product.collections.includes('Madhubani Art'));
+          });
+          
+          console.log('🎨 Filtered to highly relevant Madhubani products:', relevantMadhuban.length);
+          
+          if (relevantMadhuban.length > 0) {
+            const transformedProducts = relevantMadhuban.map(this.transformForContentGeneration);
+            return transformedProducts.map((product, index) => ({
+              ...product,
+              relevanceScore: 95 - (index * 3) // High relevance for direct matches
+            })).slice(0, 10); // Return top 10
+          }
         } else {
           console.log('🎨 No Madhubani products found via direct search, error:', error);
         }
