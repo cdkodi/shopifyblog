@@ -173,7 +173,7 @@ export function ProductIntegrationManager({
         is_approved: false
       }));
 
-      console.log('🔧 Creating suggestions for products:', newSuggestions.map(s => s.product_handle));
+      console.log('🔧 Creating suggestions for products:', newSuggestions.map((s: any) => s.product_handle));
 
       // Insert suggestions into database
       for (const suggestion of newSuggestions) {
