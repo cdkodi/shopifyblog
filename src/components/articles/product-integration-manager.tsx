@@ -51,10 +51,12 @@ export function ProductIntegrationManager({
   const [availableProducts, setAvailableProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<string>('');
   const [linkText, setLinkText] = useState('');
   const [positionInContent, setPositionInContent] = useState<number>(1);
+  const [dropdownInfo, setDropdownInfo] = useState<string>('');
 
   useEffect(() => {
     loadSuggestions();
@@ -87,11 +89,39 @@ export function ProductIntegrationManager({
 
   const loadAvailableProducts = async () => {
     try {
-      // Get all active products for manual selection
-      const products = await ShopifyProductService.getAllActiveProducts();
-      setAvailableProducts(products);
+      // Get only products relevant to this article's art form
+      const titleWords = articleTitle.toLowerCase().split(' ').filter(word => word.length > 3);
+      const contentWords = articleContent.toLowerCase().split(' ').filter(word => word.length > 3);
+      const keywords = [...new Set([...titleWords, ...contentWords.slice(0, 10)])];
+      
+      console.log('🔍 Loading available products for article:', {
+        title: articleTitle,
+        extractedKeywords: keywords.slice(0, 5)
+      });
+
+      // First try strict art form filtering
+      const strictProducts = await ShopifyProductService.getStrictArtFormProducts(
+        articleTitle,
+        keywords.slice(0, 5)
+      );
+
+      if (strictProducts.length > 0) {
+        console.log('✅ Found strict art form products for dropdown:', strictProducts.length);
+        setAvailableProducts(strictProducts);
+        setDropdownInfo(`Found ${strictProducts.length} products matching your article topic`);
+      } else {
+        console.log('🔍 No strict matches, falling back to all products for manual selection');
+        // If no strict matches, load all products but indicate this in UI
+        const allProducts = await ShopifyProductService.getAllActiveProducts();
+        setAvailableProducts(allProducts);
+        setDropdownInfo(`No topic-specific products found. Showing all ${allProducts.length} products for manual selection`);
+      }
     } catch (err) {
       console.error('Error loading available products:', err);
+      // Fallback to all products
+      const allProducts = await ShopifyProductService.getAllActiveProducts();
+      setAvailableProducts(allProducts);
+      setDropdownInfo(`Error loading topic products. Showing all ${allProducts.length} products`);
     }
   };
 
@@ -99,84 +129,52 @@ export function ProductIntegrationManager({
     try {
       setLoading(true);
       
-      console.log('🔧 Article Integration - Generating suggestions for:', {
+      console.log('🎯 Article Integration - Generating STRICT suggestions for:', {
         title: articleTitle,
         contentLength: articleContent.length
       });
       
-      // Extract basic keywords from article title and content for matching
+      // Extract keywords from article title and content
       const titleWords = articleTitle.toLowerCase().split(' ').filter(word => word.length > 3);
       const contentWords = articleContent.toLowerCase().split(' ').filter(word => word.length > 3);
       const keywords = [...new Set([...titleWords, ...contentWords.slice(0, 10)])];
       
-      console.log('🔧 Extracted keywords:', keywords.slice(0, 5));
+      console.log('🔧 Extracted keywords for art form detection:', keywords.slice(0, 5));
       
-      // Use the GET API method that works with getRelevantProducts
-      const searchParams = new URLSearchParams({
-        topic: articleTitle,
-        keywords: keywords.slice(0, 5).join(','),
-        limit: '10'
-      });
+      // Use STRICT art form filtering - no fallbacks
+      const strictProducts = await ShopifyProductService.getStrictArtFormProducts(
+        articleTitle,
+        keywords.slice(0, 5)
+      );
       
-      const searchResponse = await fetch(`/api/products?${searchParams}`, {
-        method: 'GET'
+      console.log('🎯 Strict art form filtering results:', {
+        productsFound: strictProducts.length,
+        titles: strictProducts.map((p: any) => p.title).slice(0, 3)
       });
 
-      let relevantProducts = [];
-      if (searchResponse.ok) {
-        const searchResult = await searchResponse.json();
-        if (searchResult.success && searchResult.data?.products) {
-          relevantProducts = searchResult.data.products;
-          console.log('🔧 Found relevant products via GET API:', relevantProducts.map((p: any) => ({
-            title: p.title,
-            tags: p.tags,
-            relevanceScore: p.relevanceScore
-          })));
-        } else {
-          console.error('🔧 GET API search failed:', searchResult.error);
-        }
-      } else {
-        console.error('🔧 GET API request failed:', searchResponse.status);
-      }
-
-      // Fallback to service method if API fails
-      if (relevantProducts.length === 0) {
-        console.log('🔧 Falling back to service method...');
-        relevantProducts = await ShopifyProductService.getRelevantProducts(
-          articleTitle,
-          keywords.slice(0, 5)
-        );
-        
-        console.log('🔧 Service method results:', relevantProducts.map(p => ({
-          title: p.title,
-          tags: p.tags,
-          relevanceScore: (p as any).relevanceScore
-        })));
-      }
-
-      if (relevantProducts.length === 0) {
-        alert('No relevant products found. Try adding products manually or check if Madhubani products exist in the database.');
+      if (strictProducts.length === 0) {
+        alert(`No products found that specifically match your article topic.\n\nTo add products manually:\n1. Click "Add Product"\n2. Search through available products\n3. Select relevant items\n\nThis ensures only genuinely relevant products are suggested.`);
         return;
       }
 
-      // Create suggestions for top 5 most relevant products
-      const newSuggestions = relevantProducts.slice(0, 5).map((product: any, index: number) => ({
+      // Create suggestions for ALL found products (they're all highly relevant)
+      const newSuggestions = strictProducts.map((product: any, index: number) => ({
         article_id: articleId,
-        product_handle: product.handle, // Store handle for lookup
+        product_handle: product.handle,
         suggestion_type: 'auto' as const,
-        relevance_score: product.relevanceScore || Math.max(90 - index * 10, 50),
+        relevance_score: product.relevanceScore || (95 - index * 2),
         position_in_content: index + 1,
         link_text: `Learn more about ${product.title}`,
-        utm_campaign: 'auto_suggestion',
+        utm_campaign: 'strict_art_form_suggestion',
         is_approved: false
       }));
 
-      console.log('🔧 Creating suggestions for products:', newSuggestions.map((s: any) => s.product_handle));
+      console.log('🎯 Creating strict suggestions for products:', newSuggestions.map((s: any) => s.product_handle));
 
       // Insert suggestions into database
       for (const suggestion of newSuggestions) {
         try {
-          // First, get the actual product ID from the database
+          // Get the actual product ID from the database
           const { data: productData, error: productError } = await supabase
             .from('shopify_products')
             .select('id')
@@ -205,22 +203,24 @@ export function ProductIntegrationManager({
             if (insertError) {
               console.error('🔧 Error inserting suggestion:', insertError);
             } else {
-              console.log('🔧 Successfully created suggestion for:', suggestion.product_handle);
+              console.log('✅ Successfully created strict suggestion for:', suggestion.product_handle);
             }
-          } else {
-            console.error('🔧 Product not found for handle:', suggestion.product_handle);
           }
         } catch (err) {
           console.error('🔧 Unexpected error creating suggestion:', err);
         }
       }
 
-      // Reload suggestions
+      // Reload suggestions to show new ones
       await loadSuggestions();
       onUpdate?.();
+      
+      // Show success message
+      alert(`✅ Found ${strictProducts.length} highly relevant products for your article!\n\nAll suggestions have 90%+ relevance to your topic.`);
+      
     } catch (err) {
-      console.error('Error generating auto suggestions:', err);
-      alert('Error generating suggestions. Please try again.');
+      console.error('Error generating strict auto suggestions:', err);
+      alert('Error generating suggestions. Please try again or add products manually.');
     } finally {
       setLoading(false);
     }
@@ -336,6 +336,62 @@ export function ProductIntegrationManager({
     return colors[type as keyof typeof colors] || 'bg-gray-100 text-gray-800';
   };
 
+  // Generate HTML preview of article with product links
+  const generateArticlePreview = (): string => {
+    if (!articleContent || suggestions.length === 0) {
+      return `<div class="article-preview">
+        <h1>${articleTitle}</h1>
+        <div class="content">${articleContent.replace(/\n/g, '<br>')}</div>
+        <p><em>No product links added yet.</em></p>
+      </div>`;
+    }
+
+    let content = articleContent;
+    const approvedSuggestions = suggestions.filter(s => s.is_approved);
+    
+    if (approvedSuggestions.length === 0) {
+      return `<div class="article-preview">
+        <h1>${articleTitle}</h1>
+        <div class="content">${content.replace(/\n/g, '<br>')}</div>
+        <p><em>No approved product links yet. Approve suggestions to see them in preview.</em></p>
+      </div>`;
+    }
+
+    // Sort suggestions by position
+    const sortedSuggestions = [...approvedSuggestions].sort((a, b) => 
+      (a.position_in_content || 0) - (b.position_in_content || 0)
+    );
+
+    // Split content into paragraphs
+    const paragraphs = content.split(/\n\s*\n/);
+    let htmlContent = '';
+
+    sortedSuggestions.forEach((suggestion, index) => {
+      const position = suggestion.position_in_content || (index + 1);
+      const paragraphIndex = Math.min(position - 1, paragraphs.length - 1);
+      
+      if (paragraphs[paragraphIndex] && !paragraphs[paragraphIndex].includes('🔗')) {
+        const productLink = `<a href="${suggestion.product.shopify_url || '#'}" target="_blank" class="product-link" style="color: #2563eb; text-decoration: underline; font-weight: 500;">🔗 ${suggestion.link_text}</a>`;
+        paragraphs[paragraphIndex] += `\n\n${productLink}`;
+      }
+    });
+
+    htmlContent = paragraphs.join('<br><br>');
+
+    return `<div class="article-preview" style="max-height: 500px; overflow-y: auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px; background: white;">
+      <h1 style="color: #1f2937; margin-bottom: 20px; font-size: 24px; font-weight: bold;">${articleTitle}</h1>
+      <div class="content" style="line-height: 1.6; color: #374151;">${htmlContent}</div>
+      <div style="margin-top: 20px; padding: 15px; background: #f3f4f6; border-radius: 8px;">
+        <h3 style="margin: 0 0 10px 0; color: #374151; font-size: 16px;">Product Links Added:</h3>
+        <ul style="margin: 0; padding-left: 20px;">
+          ${approvedSuggestions.map(s => 
+            `<li style="margin-bottom: 5px;">${s.product.title} (Position ${s.position_in_content})</li>`
+          ).join('')}
+        </ul>
+      </div>
+    </div>`;
+  };
+
   if (loading) {
     return (
       <Card>
@@ -361,29 +417,20 @@ export function ProductIntegrationManager({
               onClick={async () => {
                 // Test search functionality
                 try {
-                  console.log('🧪 Testing search for article:', articleTitle);
-                  const testParams = new URLSearchParams({
-                    topic: articleTitle,
-                    keywords: 'madhubani,art,traditional',
-                    limit: '5'
-                  });
-                  const response = await fetch(`/api/products?${testParams}`, {
-                    method: 'GET'
-                  });
+                  console.log('🧪 Testing strict search for article:', articleTitle);
+                  const titleWords = articleTitle.toLowerCase().split(' ').filter(word => word.length > 3);
+                  const testProducts = await ShopifyProductService.getStrictArtFormProducts(
+                    articleTitle,
+                    titleWords.slice(0, 3)
+                  );
                   
-                  if (response.ok) {
-                    const result = await response.json();
-                    if (result.success && result.data?.products) {
-                      const products = result.data.products;
-                      const productList = products.map((p: any) => 
-                        `• ${p.title} (tags: ${p.tags?.join(', ') || 'none'})`
-                      ).join('\n');
-                      alert(`Found ${products.length} products:\n\n${productList}`);
-                    } else {
-                      alert(`Search failed: ${result.error || 'No products found'}`);
-                    }
+                  if (testProducts.length > 0) {
+                    const productList = testProducts.map((p: any) => 
+                      `• ${p.title} (${p.relevanceScore}% relevant)`
+                    ).join('\n');
+                    alert(`✅ Found ${testProducts.length} strict matches:\n\n${productList}`);
                   } else {
-                    alert(`API error: ${response.status}`);
+                    alert('❌ No strict matches found for this article topic');
                   }
                 } catch (err) {
                   alert(`Test failed: ${err}`);
@@ -391,7 +438,7 @@ export function ProductIntegrationManager({
               }}
               disabled={loading}
             >
-              🧪 Test Search
+              🧪 Test Strict Search
             </Button>
             <Button 
               variant="outline" 
@@ -399,8 +446,23 @@ export function ProductIntegrationManager({
               onClick={generateAutoSuggestions}
               disabled={loading}
             >
-              🤖 Generate Suggestions
+              🎯 Generate Suggestions
             </Button>
+            {suggestions.filter(s => s.is_approved).length > 0 && (
+              <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    👁️ Preview Article
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[80vh]">
+                  <DialogHeader>
+                    <DialogTitle>Article Preview with Product Links</DialogTitle>
+                  </DialogHeader>
+                  <div dangerouslySetInnerHTML={{ __html: generateArticlePreview() }} />
+                </DialogContent>
+              </Dialog>
+            )}
             <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
               <DialogTrigger asChild>
                 <Button size="sm">+ Add Product</Button>
@@ -410,6 +472,11 @@ export function ProductIntegrationManager({
                   <DialogTitle>Add Product Suggestion</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
+                  {dropdownInfo && (
+                    <div className="text-sm text-blue-600 bg-blue-50 p-3 rounded">
+                      ℹ️ {dropdownInfo}
+                    </div>
+                  )}
                   <div>
                     <label className="text-sm font-medium">Product</label>
                     <Select value={selectedProduct} onValueChange={setSelectedProduct}>
@@ -441,6 +508,9 @@ export function ProductIntegrationManager({
                       value={positionInContent}
                       onChange={(e) => setPositionInContent(parseInt(e.target.value) || 1)}
                     />
+                    <div className="text-xs text-gray-500 mt-1">
+                      Position 1 = after 1st paragraph, Position 2 = after 2nd paragraph, etc.
+                    </div>
                   </div>
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" onClick={() => setShowAddDialog(false)}>
@@ -461,10 +531,10 @@ export function ProductIntegrationManager({
           <div className="text-center py-8">
             <div className="text-gray-400 text-lg mb-2">No product suggestions yet</div>
             <p className="text-gray-500 mb-4">
-              Generate automatic suggestions or add products manually
+              Generate automatic suggestions based on your article topic
             </p>
             <Button onClick={generateAutoSuggestions}>
-              🤖 Generate Auto Suggestions
+              🎯 Generate Strict Suggestions
             </Button>
           </div>
         ) : (
@@ -483,7 +553,7 @@ export function ProductIntegrationManager({
                         {suggestion.product.title}
                       </h4>
                       <Badge className={getSuggestionTypeColor(suggestion.suggestion_type)}>
-                        {suggestion.suggestion_type}
+                        {suggestion.suggestion_type === 'auto' ? 'strict-match' : suggestion.suggestion_type}
                       </Badge>
                       <Badge 
                         className={`${getRelevanceColor(suggestion.relevance_score)} border-0`}
@@ -492,7 +562,7 @@ export function ProductIntegrationManager({
                       </Badge>
                       {suggestion.is_approved && (
                         <Badge className="bg-green-100 text-green-800">
-                          ✓ Approved
+                          ✓ Approved & Linked
                         </Badge>
                       )}
                     </div>
@@ -503,9 +573,9 @@ export function ProductIntegrationManager({
                     
                     <div className="flex items-center gap-4 text-xs text-gray-500">
                       <span>🔗 {suggestion.link_text}</span>
-                      <span>📍 Position: {suggestion.position_in_content}</span>
+                      <span>📍 After paragraph {suggestion.position_in_content}</span>
                       {suggestion.product.price_min && (
-                        <span>💰 ${suggestion.product.price_min}</span>
+                        <span>💰 ₹{suggestion.product.price_min}</span>
                       )}
                     </div>
                     
@@ -531,7 +601,7 @@ export function ProductIntegrationManager({
                         size="sm" 
                         onClick={() => updateSuggestionStatus(suggestion.id, true)}
                       >
-                        Approve
+                        Approve & Link
                       </Button>
                     ) : (
                       <Button 

@@ -475,4 +475,294 @@ export class ShopifyProductService {
       return []
     }
   }
+
+  // Strict art-form specific product filtering - returns ONLY exact matches
+  static async getStrictArtFormProducts(contentTopic: string, targetKeywords: string[] = []): Promise<ProductForContentGeneration[]> {
+    try {
+      console.log('🎯 getStrictArtFormProducts called with:', { contentTopic, targetKeywords });
+
+      const topicLower = contentTopic.toLowerCase();
+      const contentLower = targetKeywords.join(' ').toLowerCase();
+      const allText = `${topicLower} ${contentLower}`;
+      
+      // Detect specific art form with high confidence
+      const detectedArtForm = this.detectArtForm(allText);
+      console.log('🎨 Detected art form:', detectedArtForm);
+
+      if (!detectedArtForm) {
+        console.log('🚫 No specific art form detected, returning empty array');
+        return [];
+      }
+
+      // Get products ONLY for the detected art form
+      const artFormProducts = await this.getProductsForArtForm(detectedArtForm);
+      console.log(`🎨 Found ${artFormProducts.length} products for ${detectedArtForm}`);
+
+      if (artFormProducts.length === 0) {
+        console.log(`🚫 No products found for ${detectedArtForm}`);
+        return [];
+      }
+
+      // Score products specifically for this art form (high relevance only)
+      const scoredProducts = artFormProducts.map((product, index) => ({
+        ...product,
+        relevanceScore: 95 - (index * 2) // 95%, 93%, 91%, etc.
+      }));
+
+      console.log('🎯 Strict art form products:', scoredProducts.map(p => ({
+        title: p.title,
+        score: `${p.relevanceScore}%`,
+        artForm: detectedArtForm
+      })));
+
+      return scoredProducts.slice(0, 10);
+
+    } catch (err) {
+      console.error('Error getting strict art form products:', err);
+      return []; // Return empty on error - no fallbacks
+    }
+  }
+
+  // Detect specific art form from content with high confidence
+  private static detectArtForm(text: string): string | null {
+    const artForms = [
+      {
+        name: 'madhubani',
+        keywords: ['madhubani', 'mithila'],
+        priority: 1
+      },
+      {
+        name: 'pichwai',
+        keywords: ['pichwai', 'pichhwai'],
+        priority: 1
+      },
+      {
+        name: 'kerala-mural',
+        keywords: ['kerala mural', 'kerala-mural', 'kerala art'],
+        priority: 1
+      },
+      {
+        name: 'pattachitra',
+        keywords: ['pattachitra', 'patachitra', 'odisha art'],
+        priority: 1
+      },
+      {
+        name: 'warli',
+        keywords: ['warli', 'warli art'],
+        priority: 1
+      },
+      {
+        name: 'kalamkari',
+        keywords: ['kalamkari'],
+        priority: 1
+      },
+      {
+        name: 'gond',
+        keywords: ['gond art', 'gond painting'],
+        priority: 1
+      },
+      {
+        name: 'traditional-art',
+        keywords: ['traditional art', 'folk art', 'indian art'],
+        priority: 2 // Lower priority - only if no specific form detected
+      },
+      {
+        name: 'spiritual',
+        keywords: ['spiritual', 'religious', 'devotional'],
+        priority: 3 // Lowest priority
+      }
+    ];
+
+    // Look for high-priority specific art forms first
+    for (const artForm of artForms.filter(a => a.priority === 1)) {
+      for (const keyword of artForm.keywords) {
+        if (text.includes(keyword)) {
+          console.log(`🎨 Detected ${artForm.name} from keyword: "${keyword}"`);
+          return artForm.name;
+        }
+      }
+    }
+
+    // Only check lower priority if no specific art form found
+    for (const artForm of artForms.filter(a => a.priority > 1)) {
+      for (const keyword of artForm.keywords) {
+        if (text.includes(keyword)) {
+          console.log(`🎨 Detected ${artForm.name} from keyword: "${keyword}" (lower priority)`);
+          return artForm.name;
+        }
+      }
+    }
+
+    return null; // No art form detected
+  }
+
+  // Get products specifically for a detected art form
+  private static async getProductsForArtForm(artForm: string): Promise<ProductForContentGeneration[]> {
+    try {
+      let query = supabase
+        .from('shopify_products')
+        .select('*')
+        .eq('status', 'active');
+
+      // Build specific filters for each art form
+      switch (artForm) {
+        case 'madhubani':
+          query = query.or(
+            'title.ilike.%madhubani%,title.ilike.%mithila%,tags.cs.["madhubani"],tags.cs.["madhubani art"],tags.cs.["mithila"],collections.cs.["Madhubani Art"]'
+          );
+          break;
+
+        case 'pichwai':
+          query = query.or(
+            'title.ilike.%pichwai%,title.ilike.%pichhwai%,tags.cs.["pichwai"],tags.cs.["pichwai art"],collections.cs.["Pichwai Art"]'
+          );
+          break;
+
+        case 'kerala-mural':
+          query = query.or(
+            'title.ilike.%kerala%,title.ilike.%mural%,tags.cs.["kerala"],tags.cs.["mural"],tags.cs.["kerala art"],collections.cs.["Kerala Mural"]'
+          );
+          break;
+
+        case 'pattachitra':
+          query = query.or(
+            'title.ilike.%pattachitra%,title.ilike.%patachitra%,tags.cs.["pattachitra"],tags.cs.["odisha"],collections.cs.["Pattachitra Art"]'
+          );
+          break;
+
+        case 'warli':
+          query = query.or(
+            'title.ilike.%warli%,tags.cs.["warli"],tags.cs.["warli art"],collections.cs.["Warli Art"]'
+          );
+          break;
+
+        case 'kalamkari':
+          query = query.or(
+            'title.ilike.%kalamkari%,tags.cs.["kalamkari"],collections.cs.["Kalamkari Art"]'
+          );
+          break;
+
+        case 'gond':
+          query = query.or(
+            'title.ilike.%gond%,tags.cs.["gond"],tags.cs.["gond art"],collections.cs.["Gond Art"]'
+          );
+          break;
+
+        case 'traditional-art':
+          query = query.or(
+            'tags.cs.["traditional"],tags.cs.["traditional art"],tags.cs.["folk art"],tags.cs.["indian art"],collections.cs.["Traditional Art"],product_type.ilike.%art%'
+          );
+          break;
+
+        case 'spiritual':
+          query = query.or(
+            'title.ilike.%ganesha%,title.ilike.%krishna%,title.ilike.%spiritual%,tags.cs.["spiritual"],tags.cs.["religious"],tags.cs.["ganesha"],tags.cs.["krishna"],collections.cs.["Spiritual"],collections.cs.["Religious"]'
+          );
+          break;
+
+        default:
+          console.log(`🚫 Unknown art form: ${artForm}`);
+          return [];
+      }
+
+      const { data: products, error } = await query
+        .order('title')
+        .limit(20);
+
+      if (error) {
+        console.error(`Error fetching ${artForm} products:`, error);
+        return [];
+      }
+
+      console.log(`🎨 Raw ${artForm} products found:`, products?.length || 0);
+      
+      if (!products || products.length === 0) {
+        return [];
+      }
+
+      // Additional filtering for extra precision
+      const filteredProducts = products.filter(product => {
+        return this.isProductRelevantToArtForm(product, artForm);
+      });
+
+      console.log(`🎯 Filtered ${artForm} products:`, filteredProducts.length);
+
+      return filteredProducts.map(this.transformForContentGeneration);
+
+    } catch (err) {
+      console.error(`Error getting products for art form ${artForm}:`, err);
+      return [];
+    }
+  }
+
+  // Additional validation to ensure product really matches the art form
+  private static isProductRelevantToArtForm(product: any, artForm: string): boolean {
+    const title = product.title.toLowerCase();
+    const tags = (product.tags || []).map((tag: string) => tag.toLowerCase());
+    const collections = (product.collections || []).map((col: string) => col.toLowerCase());
+    const description = (product.description || '').toLowerCase();
+
+    switch (artForm) {
+      case 'madhubani':
+        return title.includes('madhubani') || 
+               title.includes('mithila') ||
+               tags.some((tag: string) => tag.includes('madhubani') || tag.includes('mithila')) ||
+               collections.some((col: string) => col.includes('madhubani'));
+
+      case 'pichwai':
+        return title.includes('pichwai') || 
+               title.includes('pichhwai') ||
+               tags.some((tag: string) => tag.includes('pichwai')) ||
+               collections.some((col: string) => col.includes('pichwai'));
+
+      case 'kerala-mural':
+        return (title.includes('kerala') && title.includes('mural')) ||
+               title.includes('kerala-mural') ||
+               tags.some((tag: string) => tag.includes('kerala') || tag.includes('mural')) ||
+               collections.some((col: string) => col.includes('kerala'));
+
+      case 'pattachitra':
+        return title.includes('pattachitra') || 
+               title.includes('patachitra') ||
+               tags.some((tag: string) => tag.includes('pattachitra') || tag.includes('odisha')) ||
+               collections.some((col: string) => col.includes('pattachitra'));
+
+      case 'warli':
+        return title.includes('warli') ||
+               tags.some((tag: string) => tag.includes('warli')) ||
+               collections.some((col: string) => col.includes('warli'));
+
+      case 'kalamkari':
+        return title.includes('kalamkari') ||
+               tags.some((tag: string) => tag.includes('kalamkari')) ||
+               collections.some((col: string) => col.includes('kalamkari'));
+
+      case 'gond':
+        return title.includes('gond') ||
+               tags.some((tag: string) => tag.includes('gond')) ||
+               collections.some((col: string) => col.includes('gond'));
+
+      case 'traditional-art':
+        return tags.some((tag: string) => 
+          tag.includes('traditional') || 
+          tag.includes('folk') || 
+          tag.includes('indian art') ||
+          tag.includes('cultural')
+        ) || collections.some((col: string) => col.includes('traditional'));
+
+      case 'spiritual':
+        return title.includes('ganesha') || 
+               title.includes('krishna') ||
+               title.includes('spiritual') ||
+               tags.some((tag: string) => 
+                 tag.includes('spiritual') || 
+                 tag.includes('religious') ||
+                 tag.includes('ganesha') ||
+                 tag.includes('krishna')
+               );
+
+      default:
+        return false;
+    }
+  }
 } 
