@@ -173,7 +173,7 @@ export class ShopifyProductService {
       const extractedTerms = contentTopic.toLowerCase().split(/[\s\-:.,!?]+/).filter(word => word.length > 2);
       
       // Add semantic expansions for art-related topics
-      const semanticTerms = [];
+      const semanticTerms: string[] = [];
       const topicLower = contentTopic.toLowerCase();
       
       if (topicLower.includes('madhubani')) {
