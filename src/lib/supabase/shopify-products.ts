@@ -189,7 +189,7 @@ export class ShopifyProductService {
           // Filter to only highly relevant Madhubani products
           const relevantMadhuban = madhubanProducts.filter(product => {
             const titleLower = product.title.toLowerCase();
-            const tagsLower = (product.tags || []).map(tag => tag.toLowerCase());
+            const tagsLower = (product.tags || []).map((tag: string) => tag.toLowerCase());
             
             // Must have direct Madhubani references
             return titleLower.includes('madhubani') || 
@@ -278,7 +278,7 @@ export class ShopifyProductService {
         if (product.title.toLowerCase().includes(topicLower)) score += 10;
         
         // Score for tag matches
-        const productTags = (product.tags || []).map(tag => tag.toLowerCase());
+        const productTags = (product.tags || []).map((tag: string) => tag.toLowerCase());
         semanticTerms.forEach(term => {
           if (productTags.some(tag => tag.includes(term))) score += 5;
         });
