@@ -461,7 +461,7 @@ export function GenerationConfig({
                 <div className="mt-2 flex flex-wrap gap-2">
                   {keywordResearch.slice(0, 8).map((keyword: any, index: number) => {
                     const isSelected = config.targetKeyword === keyword.keyword || 
-                                     config.relatedKeywords.includes(keyword.keyword);
+                                     (config.relatedKeywords || []).includes(keyword.keyword);
                     
                     return (
                       <button
@@ -471,12 +471,12 @@ export function GenerationConfig({
                           if (!config.targetKeyword) {
                             // If no target keyword set, make this the target keyword
                             updateConfig({ targetKeyword: keyword.keyword });
-                          } else if (!config.relatedKeywords.includes(keyword.keyword) && 
-                                   config.targetKeyword !== keyword.keyword) {
-                            // Add to related keywords if not already present
-                            updateConfig({ 
-                              relatedKeywords: [...config.relatedKeywords, keyword.keyword]
-                            });
+                                                     } else if (!(config.relatedKeywords || []).includes(keyword.keyword) && 
+                                    config.targetKeyword !== keyword.keyword) {
+                             // Add to related keywords if not already present
+                             updateConfig({ 
+                               relatedKeywords: [...(config.relatedKeywords || []), keyword.keyword]
+                             });
                           }
                         }}
                         disabled={isSelected}
