@@ -21,7 +21,12 @@ export async function GET(request: NextRequest) {
     if (topic) {
       // Get products relevant to a content topic
       const keywordArray = keywords ? keywords.split(',').map(k => k.trim()) : [];
+      console.log('🛒 Calling getRelevantProducts with:', { topic, keywordArray });
       products = await ShopifyProductService.getRelevantProducts(topic, keywordArray);
+      console.log('🛒 getRelevantProducts returned:', products.length, 'products');
+      if (products.length > 0) {
+        console.log('🛒 First few results:', products.slice(0, 3).map(p => ({ title: p.title, tags: p.tags })));
+      }
     } else if (collection) {
       // Get products from a specific collection
       products = await ShopifyProductService.getProductsByCollection(collection, limit);

@@ -468,22 +468,28 @@ export function GenerationConfig({
                         key={index}
                         type="button"
                         onClick={() => {
-                          if (!config.targetKeyword) {
+                          if (config.targetKeyword === keyword.keyword) {
+                            // If this is the target keyword, remove it
+                            updateConfig({ targetKeyword: '' });
+                          } else if ((config.relatedKeywords || []).includes(keyword.keyword)) {
+                            // If it's in related keywords, remove it
+                            updateConfig({ 
+                              relatedKeywords: (config.relatedKeywords || []).filter(k => k !== keyword.keyword)
+                            });
+                          } else if (!config.targetKeyword) {
                             // If no target keyword set, make this the target keyword
                             updateConfig({ targetKeyword: keyword.keyword });
-                                                     } else if (!(config.relatedKeywords || []).includes(keyword.keyword) && 
-                                    config.targetKeyword !== keyword.keyword) {
-                             // Add to related keywords if not already present
-                             updateConfig({ 
-                               relatedKeywords: [...(config.relatedKeywords || []), keyword.keyword]
-                             });
+                          } else {
+                            // Add to related keywords
+                            updateConfig({ 
+                              relatedKeywords: [...(config.relatedKeywords || []), keyword.keyword]
+                            });
                           }
                         }}
-                        disabled={isSelected}
-                        className={`text-xs px-2 py-1 rounded border transition-colors ${
+                        className={`text-xs px-2 py-1 rounded border transition-colors cursor-pointer ${
                           isSelected 
-                            ? 'bg-blue-100 border-blue-300 text-blue-700 cursor-default' 
-                            : 'bg-white border-gray-300 text-gray-700 hover:bg-blue-50 hover:border-blue-300 cursor-pointer'
+                            ? 'bg-blue-100 border-blue-300 text-blue-700 hover:bg-blue-200' 
+                            : 'bg-white border-gray-300 text-gray-700 hover:bg-blue-50 hover:border-blue-300'
                         }`}
                       >
                         {isSelected ? '✓ ' : '+ '}{keyword.keyword} ({keyword.search_volume || 'N/A'} vol)
