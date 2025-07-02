@@ -197,26 +197,47 @@ export function ProductSelector({
   ): number => {
     let score = 0;
     const topicLower = topic.toLowerCase();
+    const topicWords = topicLower.split(/\s+/).filter(word => word.length > 2);
 
     // Collection preference bonus
     if (collections.some(col => product.collections.includes(col))) {
       score += 0.4;
     }
 
-    // Title match
-    if (product.title.toLowerCase().includes(topicLower)) {
-      score += 0.3;
+    // Title match - check both full topic and individual words
+    const titleLower = product.title.toLowerCase();
+    if (titleLower.includes(topicLower)) {
+      score += 0.5; // Exact phrase match gets high score
+    } else {
+      // Check individual words
+      const titleWordMatches = topicWords.filter(word => titleLower.includes(word));
+      score += titleWordMatches.length * 0.2;
     }
 
-    // Tag matches
-    const tagMatches = product.tags.filter(tag => 
-      topicLower.includes(tag.toLowerCase()) || tag.toLowerCase().includes(topicLower)
-    );
-    score += tagMatches.length * 0.1;
+    // Tag matches - improved matching logic
+    const productTagsLower = product.tags.map(tag => tag.toLowerCase());
+    
+    // Check for exact topic match in tags
+    if (productTagsLower.some(tag => tag === topicLower)) {
+      score += 0.6; // Exact tag match
+    } else {
+      // Check individual words and partial matches
+      topicWords.forEach(word => {
+        productTagsLower.forEach(tag => {
+          if (tag.includes(word) || word.includes(tag)) {
+            score += 0.15;
+          }
+        });
+      });
+    }
 
     // Description match
-    if (product.description.toLowerCase().includes(topicLower)) {
-      score += 0.2;
+    const descLower = product.description.toLowerCase();
+    if (descLower.includes(topicLower)) {
+      score += 0.3;
+    } else {
+      const descWordMatches = topicWords.filter(word => descLower.includes(word));
+      score += descWordMatches.length * 0.1;
     }
 
     return Math.min(score, 1); // Cap at 1
@@ -228,23 +249,49 @@ export function ProductSelector({
     collections: string[]
   ): string => {
     const reasons = [];
+    const topicLower = topic.toLowerCase();
+    const topicWords = topicLower.split(/\s+/).filter(word => word.length > 2);
 
     if (collections.some(col => product.collections.includes(col))) {
       reasons.push('Preferred collection');
     }
 
-    if (product.title.toLowerCase().includes(topic.toLowerCase())) {
+    const titleLower = product.title.toLowerCase();
+    if (titleLower.includes(topicLower)) {
       reasons.push('Title match');
+    } else {
+      const titleWordMatches = topicWords.filter(word => titleLower.includes(word));
+      if (titleWordMatches.length > 0) {
+        reasons.push(`Title: ${titleWordMatches[0]}`);
+      }
     }
 
-    const tagMatches = product.tags.filter(tag => 
-      topic.toLowerCase().includes(tag.toLowerCase())
-    );
-    if (tagMatches.length > 0) {
-      reasons.push(`Tag: ${tagMatches[0]}`);
+    const productTagsLower = product.tags.map(tag => tag.toLowerCase());
+    
+    // Check for exact topic match in tags
+    const exactTagMatch = productTagsLower.find(tag => tag === topicLower);
+    if (exactTagMatch) {
+      reasons.push(`Tag: ${exactTagMatch}`);
+    } else {
+      // Check individual word matches
+      const tagWordMatches: string[] = [];
+      topicWords.forEach(word => {
+        const matchingTag = productTagsLower.find(tag => tag.includes(word) || word.includes(tag));
+        if (matchingTag && !tagWordMatches.includes(matchingTag)) {
+          tagWordMatches.push(matchingTag);
+        }
+      });
+      if (tagWordMatches.length > 0) {
+        reasons.push(`Tag: ${tagWordMatches[0]}`);
+      }
     }
 
-    return reasons.length > 0 ? reasons.join(', ') : 'Keyword relevance';
+    const descLower = product.description.toLowerCase();
+    if (descLower.includes(topicLower)) {
+      reasons.push('Description match');
+    }
+
+    return reasons.length > 0 ? reasons.join(', ') : 'Semantic relevance';
   };
 
   const toggleProductSelection = (product: ProductForContentGeneration) => {
