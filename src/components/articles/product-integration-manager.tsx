@@ -99,50 +99,121 @@ export function ProductIntegrationManager({
     try {
       setLoading(true);
       
+      console.log('🔧 Article Integration - Generating suggestions for:', {
+        title: articleTitle,
+        contentLength: articleContent.length
+      });
+      
       // Extract basic keywords from article title and content for matching
       const titleWords = articleTitle.toLowerCase().split(' ').filter(word => word.length > 3);
       const contentWords = articleContent.toLowerCase().split(' ').filter(word => word.length > 3);
       const keywords = [...new Set([...titleWords, ...contentWords.slice(0, 10)])];
       
-      // Get relevant products based on article content
-      const relevantProducts = await ShopifyProductService.getRelevantProducts(
-        articleTitle,
-        keywords.slice(0, 5) // Use top 5 keywords
-      );
+      console.log('🔧 Extracted keywords:', keywords.slice(0, 5));
+      
+      // Use the same POST API method that works in content generation
+      const searchResponse = await fetch('/api/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          topic: articleTitle,
+          keywords: keywords.slice(0, 5),
+          limit: 10
+        })
+      });
+
+      let relevantProducts = [];
+      if (searchResponse.ok) {
+        const searchResult = await searchResponse.json();
+        if (searchResult.success && searchResult.data?.products) {
+          relevantProducts = searchResult.data.products;
+          console.log('🔧 Found relevant products via POST API:', relevantProducts.map((p: any) => ({
+            title: p.title,
+            tags: p.tags,
+            relevanceScore: p.relevanceScore
+          })));
+        } else {
+          console.error('🔧 POST API search failed:', searchResult.error);
+        }
+      } else {
+        console.error('🔧 POST API request failed:', searchResponse.status);
+      }
+
+      // Fallback to service method if API fails
+      if (relevantProducts.length === 0) {
+        console.log('🔧 Falling back to service method...');
+        relevantProducts = await ShopifyProductService.getRelevantProducts(
+          articleTitle,
+          keywords.slice(0, 5)
+        );
+        
+        console.log('🔧 Service method results:', relevantProducts.map(p => ({
+          title: p.title,
+          tags: p.tags,
+          relevanceScore: (p as any).relevanceScore
+        })));
+      }
 
       if (relevantProducts.length === 0) {
-        alert('No relevant products found. Try adding products manually.');
+        alert('No relevant products found. Try adding products manually or check if Madhubani products exist in the database.');
         return;
       }
 
       // Create suggestions for top 5 most relevant products
-      const newSuggestions = relevantProducts.slice(0, 5).map((product, index) => ({
+      const newSuggestions = relevantProducts.slice(0, 5).map((product: any, index: number) => ({
         article_id: articleId,
-        product_id: product.handle, // Using handle as ID for now
+        product_handle: product.handle, // Store handle for lookup
         suggestion_type: 'auto' as const,
-        relevance_score: Math.max(90 - index * 10, 50), // Decreasing relevance
+        relevance_score: product.relevanceScore || Math.max(90 - index * 10, 50),
         position_in_content: index + 1,
         link_text: `Learn more about ${product.title}`,
         utm_campaign: 'auto_suggestion',
         is_approved: false
       }));
 
+      console.log('🔧 Creating suggestions for products:', newSuggestions.map(s => s.product_handle));
+
       // Insert suggestions into database
       for (const suggestion of newSuggestions) {
-        // First, get the actual product ID from the database
-        const { data: productData } = await supabase
-          .from('shopify_products')
-          .select('id')
-          .eq('handle', suggestion.product_id)
-          .single();
+        try {
+          // First, get the actual product ID from the database
+          const { data: productData, error: productError } = await supabase
+            .from('shopify_products')
+            .select('id')
+            .eq('handle', suggestion.product_handle)
+            .single();
 
-        if (productData) {
-          await supabase
-            .from('article_product_suggestions')
-            .insert({
-              ...suggestion,
-              product_id: productData.id
-            });
+          if (productError) {
+            console.error('🔧 Error finding product by handle:', suggestion.product_handle, productError);
+            continue;
+          }
+
+          if (productData) {
+            const { error: insertError } = await supabase
+              .from('article_product_suggestions')
+              .insert({
+                article_id: suggestion.article_id,
+                product_id: productData.id,
+                suggestion_type: suggestion.suggestion_type,
+                relevance_score: suggestion.relevance_score,
+                position_in_content: suggestion.position_in_content,
+                link_text: suggestion.link_text,
+                utm_campaign: suggestion.utm_campaign,
+                is_approved: suggestion.is_approved
+              });
+
+            if (insertError) {
+              console.error('🔧 Error inserting suggestion:', insertError);
+            } else {
+              console.log('🔧 Successfully created suggestion for:', suggestion.product_handle);
+            }
+          } else {
+            console.error('🔧 Product not found for handle:', suggestion.product_handle);
+          }
+        } catch (err) {
+          console.error('🔧 Unexpected error creating suggestion:', err);
         }
       }
 
@@ -286,6 +357,45 @@ export function ProductIntegrationManager({
         <div className="flex justify-between items-center">
           <CardTitle className="text-lg">Product Integration</CardTitle>
           <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={async () => {
+                // Test search functionality
+                try {
+                  console.log('🧪 Testing search for article:', articleTitle);
+                  const response = await fetch('/api/products', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      topic: articleTitle,
+                      keywords: ['madhubani', 'art', 'traditional'],
+                      limit: 5
+                    })
+                  });
+                  
+                  if (response.ok) {
+                    const result = await response.json();
+                    if (result.success && result.data?.products) {
+                      const products = result.data.products;
+                      const productList = products.map((p: any) => 
+                        `• ${p.title} (${p.relevanceScore}% relevant, tags: ${p.tags?.join(', ') || 'none'})`
+                      ).join('\n');
+                      alert(`Found ${products.length} products:\n\n${productList}`);
+                    } else {
+                      alert(`Search failed: ${result.error || 'No products found'}`);
+                    }
+                  } else {
+                    alert(`API error: ${response.status}`);
+                  }
+                } catch (err) {
+                  alert(`Test failed: ${err}`);
+                }
+              }}
+              disabled={loading}
+            >
+              🧪 Test Search
+            </Button>
             <Button 
               variant="outline" 
               size="sm"
