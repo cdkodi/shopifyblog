@@ -351,150 +351,153 @@ export function GenerationConfig({
       </Card>
 
       {/* Product Integration Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            Product Integration
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="includeProducts" className="text-sm">Enable</Label>
-              <input
-                id="includeProducts"
-                type="checkbox"
-                checked={config.includeProducts || false}
-                onChange={(e) => updateConfig({ includeProducts: e.target.checked })}
-                className="rounded"
-              />
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {config.includeProducts ? (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="maxProducts">Max Products</Label>
-                  <Input
-                    id="maxProducts"
-                    type="number"
-                    min="1"
-                    max="10"
-                    value={config.productIntegration?.maxProducts || 3}
-                    onChange={(e) => updateProductIntegration({ 
-                      maxProducts: parseInt(e.target.value) || 3 
-                    })}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="wordsPerProduct">Words per Product</Label>
-                  <Input
-                    id="wordsPerProduct"
-                    type="number"
-                    min="100"
-                    max="500"
-                    step="50"
-                    value={config.productIntegration?.wordsPerProduct || 300}
-                    onChange={(e) => updateProductIntegration({ 
-                      wordsPerProduct: parseInt(e.target.value) || 300 
-                    })}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="integrationStyle">Integration Style</Label>
-                  <Select
-                    value={config.productIntegration?.integrationStyle || 'contextual'}
-                    onValueChange={(value) => updateProductIntegration({ 
-                      integrationStyle: value as any 
-                    })}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select style" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {integrationStyles.map(style => (
-                        <SelectItem key={style.value} value={style.value}>
-                          {style.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Integration Style Description */}
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">
-                    {integrationStyles.find(s => s.value === config.productIntegration?.integrationStyle)?.label}:
-                  </span>{' '}
-                  {integrationStyles.find(s => s.value === config.productIntegration?.integrationStyle)?.description}
-                </p>
-              </div>
-
-              {/* Collection Preferences */}
-              <div>
-                <Label>Preferred Collections (optional)</Label>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {availableCollections.map(collection => {
-                    const isSelected = config.productIntegration?.preferredCollections?.includes(collection) || false;
-                    return (
-                      <button
-                        key={collection}
-                        type="button"
-                        onClick={() => {
-                          console.log('Clicking collection:', collection, 'Current selected:', config.productIntegration?.preferredCollections);
-                          toggleCollection(collection);
-                        }}
-                        className="focus:outline-none"
-                      >
-                        <Badge
-                          variant={isSelected ? "default" : "outline"}
-                          className="cursor-pointer hover:bg-blue-100 transition-colors"
-                        >
-                          {collection}
-                        </Badge>
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="text-sm text-gray-500 mt-1">
-                  Click to select preferred product collections. Leave empty for automatic selection.
-                </p>
-                <div className="text-xs text-gray-400 mt-1">
-                  Selected: {JSON.stringify(config.productIntegration?.preferredCollections || [])}
-                </div>
-              </div>
-
-              {/* Manual Product Selection Toggle */}
+      {/* Feature flag: Hide Product Integration for launch simplicity */}
+      {false && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              Product Integration
               <div className="flex items-center space-x-2">
+                <Label htmlFor="includeProducts" className="text-sm">Enable</Label>
                 <input
-                  id="manualSelection"
+                  id="includeProducts"
                   type="checkbox"
-                  checked={config.productIntegration?.manualProductSelection || false}
-                  onChange={(e) => updateProductIntegration({ 
-                    manualProductSelection: e.target.checked 
-                  })}
+                  checked={config.includeProducts || false}
+                  onChange={(e) => updateConfig({ includeProducts: e.target.checked })}
                   className="rounded"
                 />
-                <Label htmlFor="manualSelection" className="text-sm">
-                  Enable manual product selection
-                </Label>
               </div>
-              {config.productIntegration?.manualProductSelection && (
-                <p className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
-                  💡 You'll be able to browse and select specific products in the next step.
-                </p>
-              )}
-            </>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <p>Product integration is disabled.</p>
-              <p className="text-sm">Enable to include product suggestions in your content.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {config.includeProducts ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="maxProducts">Max Products</Label>
+                    <Input
+                      id="maxProducts"
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={config.productIntegration?.maxProducts || 3}
+                      onChange={(e) => updateProductIntegration({ 
+                        maxProducts: parseInt(e.target.value) || 3 
+                      })}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="wordsPerProduct">Words per Product</Label>
+                    <Input
+                      id="wordsPerProduct"
+                      type="number"
+                      min="100"
+                      max="500"
+                      step="50"
+                      value={config.productIntegration?.wordsPerProduct || 300}
+                      onChange={(e) => updateProductIntegration({ 
+                        wordsPerProduct: parseInt(e.target.value) || 300 
+                      })}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="integrationStyle">Integration Style</Label>
+                    <Select
+                      value={config.productIntegration?.integrationStyle || 'contextual'}
+                      onValueChange={(value) => updateProductIntegration({ 
+                        integrationStyle: value as any 
+                      })}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Select style" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {integrationStyles.map(style => (
+                          <SelectItem key={style.value} value={style.value}>
+                            {style.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Integration Style Description */}
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">
+                      {integrationStyles.find(s => s.value === config.productIntegration?.integrationStyle)?.label}:
+                    </span>{' '}
+                    {integrationStyles.find(s => s.value === config.productIntegration?.integrationStyle)?.description}
+                  </p>
+                </div>
+
+                {/* Collection Preferences */}
+                <div>
+                  <Label>Preferred Collections (optional)</Label>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {availableCollections.map(collection => {
+                      const isSelected = config.productIntegration?.preferredCollections?.includes(collection) || false;
+                      return (
+                        <button
+                          key={collection}
+                          type="button"
+                          onClick={() => {
+                            console.log('Clicking collection:', collection, 'Current selected:', config.productIntegration?.preferredCollections);
+                            toggleCollection(collection);
+                          }}
+                          className="focus:outline-none"
+                        >
+                          <Badge
+                            variant={isSelected ? "default" : "outline"}
+                            className="cursor-pointer hover:bg-blue-100 transition-colors"
+                          >
+                            {collection}
+                          </Badge>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Click to select preferred product collections. Leave empty for automatic selection.
+                  </p>
+                  <div className="text-xs text-gray-400 mt-1">
+                    Selected: {JSON.stringify(config.productIntegration?.preferredCollections || [])}
+                  </div>
+                </div>
+
+                {/* Manual Product Selection Toggle */}
+                <div className="flex items-center space-x-2">
+                  <input
+                    id="manualSelection"
+                    type="checkbox"
+                    checked={config.productIntegration?.manualProductSelection || false}
+                    onChange={(e) => updateProductIntegration({ 
+                      manualProductSelection: e.target.checked 
+                    })}
+                    className="rounded"
+                  />
+                  <Label htmlFor="manualSelection" className="text-sm">
+                    Enable manual product selection
+                  </Label>
+                </div>
+                {config.productIntegration?.manualProductSelection && (
+                  <p className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
+                    💡 You'll be able to browse and select specific products in the next step.
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p>Product integration is disabled.</p>
+                <p className="text-sm">Enable to include product suggestions in your content.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* SEO Preview */}
       {keywordResearch && (

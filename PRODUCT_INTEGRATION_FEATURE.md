@@ -123,6 +123,44 @@ WHERE (
 ) AND status = 'active'
 ```
 
+## 🔒 Feature Flag Implementation
+
+The Product Integration feature is currently **hidden behind feature flags** in multiple locations:
+
+### **1. Article Editor** (`src/app/articles/[id]/edit/page.tsx`)
+```typescript
+// Line ~87
+const ENABLE_PRODUCT_INTEGRATION = false;
+// Completely hides the ProductIntegrationManager component
+// Reduces bundle size from ~11.5kB to ~4.05kB (64% reduction)
+```
+
+### **2. Content Generation Configuration** (`src/components/content-generation/generation-config.tsx`)
+```typescript
+// Line ~349 - Wraps entire Product Integration Card
+{false && (
+  <Card>
+    <CardHeader>
+      <CardTitle>Product Integration</CardTitle>
+      {/* All product integration options hidden */}
+    </CardHeader>
+  </Card>
+)}
+```
+
+### **3. Content Generation Page** (`src/app/content-generation/page.tsx`)
+```typescript  
+// Line ~379 - Hides ProductSelector component
+{false && enhancedConfig?.includeProducts && (
+  <ProductSelector
+    selectedProducts={selectedProducts}
+    // Component completely hidden
+  />
+)}
+```
+
+**Result**: Clean CMS launch without product complexity, all functionality preserved for future activation.
+
 ## 📊 Product Catalog
 
 **Total Products**: 240 authentic Indian art and decor items  
@@ -138,10 +176,20 @@ WHERE (
 
 ## 🚀 How to Re-Enable
 
-### **Step 1: Enable Feature Flag**
+### **Step 1: Enable Feature Flags (3 locations)**
 ```typescript
-// In src/app/articles/[id]/edit/page.tsx
+// 1. Article Editor: src/app/articles/[id]/edit/page.tsx
 const ENABLE_PRODUCT_INTEGRATION = true; // Change to true
+
+// 2. Content Generation Config: src/components/content-generation/generation-config.tsx  
+{true && ( // Change false to true
+  <Card>
+    <CardHeader>
+      <CardTitle>Product Integration</CardTitle>
+
+// 3. Content Generation Page: src/app/content-generation/page.tsx
+{true && enhancedConfig?.includeProducts && ( // Change false to true
+  <ProductSelector
 ```
 
 ### **Step 2: Test Functionality**
@@ -225,7 +273,10 @@ node verify-import-success.js
 
 When ready to launch Product Integration:
 
-1. **Set flag to true** (1 line change)
+1. **Set flags to true** (3 simple changes):
+   - Article Editor: `ENABLE_PRODUCT_INTEGRATION = true`
+   - Content Generation Config: `{true &&` 
+   - Content Generation Page: `{true &&`
 2. **Test with Madhubani article** (verify filtering works)
 3. **Document user guidance** (how to use the feature)
 4. **Monitor usage** (see which art forms get most engagement)

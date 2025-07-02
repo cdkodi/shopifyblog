@@ -378,7 +378,8 @@ function ContentGenerationInner() {
               />
 
               {/* Product Selection Panel */}
-              {enhancedConfig?.includeProducts && (
+              {/* Feature flag: Hide Product Selection for launch simplicity */}
+              {false && enhancedConfig?.includeProducts && (
                 <ProductSelector
                   selectedProducts={selectedProducts}
                   onProductsChange={handleProductsChange}
