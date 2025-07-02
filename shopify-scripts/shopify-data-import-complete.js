@@ -26,14 +26,26 @@ async function fetchShopifyProducts() {
   console.log('🔄 Fetching all products from Culturati.in...');
   
   try {
-    const response = await fetch('https://culturati.in/products.json');
+    // Get all available products (max limit is 250)
+    const response = await fetch('https://culturati.in/products.json?limit=250');
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
     const data = await response.json();
-    console.log(`✅ Found ${data.products.length} products from Culturati.in`);
-    return data.products;
+    console.log(`✅ Found ${data.products.length} total products from Culturati.in`);
+    
+    // Filter for available products only
+    const availableProducts = data.products.filter(product => {
+      const isAvailable = product.variants && product.variants.length > 0 && 
+                         product.variants[0].available === true;
+      return isAvailable;
+    });
+    
+    console.log(`📦 ${availableProducts.length} products are available for purchase`);
+    console.log(`🚫 ${data.products.length - availableProducts.length} products are unavailable`);
+    
+    return availableProducts;
   } catch (error) {
     console.error('❌ Error fetching products:', error);
     throw error;
@@ -52,6 +64,11 @@ function transformProduct(product) {
   const priceMin = Math.min(...prices);
   const priceMax = Math.max(...prices);
 
+  // Handle inventory - use actual quantity if available, otherwise use availability status
+  const inventoryQuantity = firstVariant.inventory_quantity !== null ? 
+    firstVariant.inventory_quantity : 
+    (firstVariant.available ? 999 : 0); // Use 999 for "available" items (made-to-order)
+
   return {
     shopify_id: parseInt(product.id),
     title: product.title,
@@ -64,8 +81,8 @@ function transformProduct(product) {
     images: images,
     price_min: priceMin,
     price_max: priceMax,
-    inventory_quantity: firstVariant.inventory_quantity || 0,
-    status: product.published_at ? 'active' : 'draft',
+    inventory_quantity: inventoryQuantity,
+    status: firstVariant.available ? 'active' : 'draft', // Use availability for status
     shopify_url: `https://culturati.in/products/${product.handle}`
   };
 }

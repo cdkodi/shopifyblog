@@ -73,27 +73,36 @@ export class ShopifyProductService {
         return [];
       }
 
-      // Build a query that searches across title, description, tags, and collections
+      // Build a more comprehensive search that handles multiple keywords better
       let query = supabase
         .from('shopify_products')
         .select('*')
         .eq('status', 'active')
 
-      // Create OR conditions for keyword matching - make it more flexible
-      const keywordConditions = meaningfulKeywords.map(keyword => {
-        const lowerKeyword = keyword.toLowerCase()
-        return [
-          `title.ilike.%${lowerKeyword}%`,
-          `description.ilike.%${lowerKeyword}%`,
-          // Use ilike for tags to be more flexible than exact array matching
-          `tags::text.ilike.%${lowerKeyword}%`,
-          `collections::text.ilike.%${lowerKeyword}%`
-        ].join(',')
-      }).join(',')
+      // Create individual OR conditions for each keyword
+      const allConditions: string[] = [];
 
-      query = query.or(keywordConditions)
+      meaningfulKeywords.forEach(keyword => {
+        const lowerKeyword = keyword.toLowerCase();
+        
+        // Add conditions for each field
+        allConditions.push(`title.ilike.%${lowerKeyword}%`);
+        allConditions.push(`description.ilike.%${lowerKeyword}%`);
+        allConditions.push(`tags::text.ilike.%${lowerKeyword}%`);
+        allConditions.push(`collections::text.ilike.%${lowerKeyword}%`);
+        
+        // Special handling for compound keywords like "madhubani art"
+        if (keyword.includes(' ')) {
+          const spaceless = keyword.replace(/\s+/g, '');
+          allConditions.push(`tags::text.ilike.%${spaceless}%`);
+          allConditions.push(`title.ilike.%${spaceless}%`);
+        }
+      });
 
-      const { data: products, error } = await query.order('title').limit(20)
+      const orCondition = allConditions.join(',');
+      query = query.or(orCondition);
+
+      const { data: products, error } = await query.order('title').limit(30)
 
       if (error) {
         console.error('Error fetching products by keywords:', error)
@@ -101,6 +110,13 @@ export class ShopifyProductService {
       }
 
       console.log('🔍 getProductsByKeywords found:', products?.length || 0, 'products');
+      if (products?.length && products.length > 0) {
+        console.log('🔍 Sample matches:', products.slice(0, 3).map(p => ({
+          title: p.title,
+          tags: p.tags
+        })));
+      }
+      
       return products?.map(this.transformForContentGeneration) || []
     } catch (err) {
       console.error('Unexpected error fetching products by keywords:', err)
@@ -152,35 +168,56 @@ export class ShopifyProductService {
     try {
       console.log('🔍 getRelevantProducts called with:', { contentTopic, targetKeywords });
 
-      // Try specific searches first
-      const searchTerms = [
-        contentTopic,
-        ...targetKeywords,
-        // Extract key terms from topic (filter out short words and punctuation)
-        ...contentTopic.toLowerCase().split(/[\s\-:.,!?]+/).filter(word => word.length > 2)
-      ]
+      // Create semantic search terms that are more likely to match
+      const baseTerms = [contentTopic, ...targetKeywords];
+      const extractedTerms = contentTopic.toLowerCase().split(/[\s\-:.,!?]+/).filter(word => word.length > 2);
+      
+      // Add semantic expansions for art-related topics
+      const semanticTerms = [];
+      const topicLower = contentTopic.toLowerCase();
+      
+      if (topicLower.includes('madhubani')) {
+        semanticTerms.push('madhubani art', 'indian art', 'traditional art', 'folk art', 'bihar art', 'painting', 'madhubani', 'mithila');
+      }
+      if (topicLower.includes('art')) {
+        semanticTerms.push('indian art', 'traditional', 'home decor', 'cultural', 'heritage', 'handicrafts', 'handmade art');
+      }
+      if (topicLower.includes('traditional')) {
+        semanticTerms.push('indian art', 'cultural', 'heritage', 'handicrafts', 'traditional art');
+      }
+      if (topicLower.includes('painting')) {
+        semanticTerms.push('art', 'indian art', 'traditional', 'handmade art');
+      }
 
-      console.log('🔍 Search terms:', searchTerms);
+      const allSearchTerms = [...baseTerms, ...extractedTerms, ...semanticTerms];
+      console.log('🔍 All search terms (including semantic):', allSearchTerms);
 
-      // Get products by keywords
-      const productsByKeywords = await this.getProductsByKeywords(searchTerms)
+      // Get products by keywords with expanded search
+      const productsByKeywords = await this.getProductsByKeywords(allSearchTerms)
       console.log('🔍 Products by keywords:', productsByKeywords.length);
 
-      // If we have specific collection matches, prioritize those
+      // Try collection matches (less likely to work but worth trying)
       const collectionMatches = await this.getProductsByCollection(
         contentTopic.toLowerCase().replace(/\s+/g, '-')
       )
       console.log('🔍 Collection matches:', collectionMatches.length);
 
+      // Try broader art/decor searches as fallback
+      let broadMatchProducts: ProductForContentGeneration[] = [];
+      if (topicLower.includes('art') || topicLower.includes('traditional') || topicLower.includes('painting')) {
+        broadMatchProducts = await this.getProductsByKeywords(['art', 'traditional', 'decor', 'indian', 'cultural']);
+        console.log('🔍 Broad art/decor matches:', broadMatchProducts.length);
+      }
+
       // Combine and deduplicate
-      let allProducts = [...collectionMatches, ...productsByKeywords]
+      let allProducts = [...collectionMatches, ...productsByKeywords, ...broadMatchProducts]
       let uniqueProducts = allProducts.filter((product, index, self) => 
         index === self.findIndex(p => p.handle === product.handle)
       )
 
-      console.log('🔍 Unique products after search:', uniqueProducts.length);
+      console.log('🔍 Unique products after all searches:', uniqueProducts.length);
 
-      // If no specific matches found, return a selection of all products
+      // If still no matches, return a selection of all products
       if (uniqueProducts.length === 0) {
         console.log('🔍 No specific matches, getting all products as fallback');
         const fallbackProducts = await this.getAllProducts(10);
@@ -188,8 +225,40 @@ export class ShopifyProductService {
         return fallbackProducts;
       }
 
-      // Limit to top 10 most relevant products
-      return uniqueProducts.slice(0, 10)
+      // Score products based on relevance
+      const scoredProducts = uniqueProducts.map(product => {
+        let score = 0;
+        
+        // Higher score for title matches
+        if (product.title.toLowerCase().includes(topicLower)) score += 10;
+        
+        // Score for tag matches
+        const productTags = (product.tags || []).map(tag => tag.toLowerCase());
+        semanticTerms.forEach(term => {
+          if (productTags.some(tag => tag.includes(term))) score += 5;
+        });
+        
+        // Score for any search term matches
+        allSearchTerms.forEach(term => {
+          const termLower = term.toLowerCase();
+          if (product.title.toLowerCase().includes(termLower)) score += 3;
+          if (productTags.some(tag => tag.includes(termLower))) score += 2;
+        });
+
+        return { ...product, relevanceScore: score };
+      });
+
+      // Sort by relevance score and return top matches
+      scoredProducts.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
+      const topProducts = scoredProducts.slice(0, 10);
+      
+      console.log('🔍 Top scored products:', topProducts.map(p => ({
+        title: p.title,
+        score: p.relevanceScore,
+        tags: p.tags
+      })));
+
+      return topProducts;
     } catch (err) {
       console.error('Error getting relevant products:', err)
       // Fallback to all products if there's an error
