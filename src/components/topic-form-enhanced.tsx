@@ -32,6 +32,9 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
   const [loadingKeywords, setLoadingKeywords] = useState(false)
   const [keywordSuggestions, setKeywordSuggestions] = useState<string[]>([])
   const [keywordError, setKeywordError] = useState<string | null>(null)
+  const [titleSuggestions, setTitleSuggestions] = useState<string[]>([])
+  const [loadingTitles, setLoadingTitles] = useState(false)
+  const [titleError, setTitleError] = useState<string | null>(null)
 
   const {
     register,
@@ -122,6 +125,69 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
     return () => clearTimeout(debounceTimer)
   }, [watchedValues.title, setValue, watchedValues.keywords])
 
+  // AI-powered title suggestions when topic details change
+  useEffect(() => {
+    const generateTitleSuggestions = async () => {
+      const title = watchedValues.title
+      const tone = watchedValues.tone
+      const template = watchedValues.template
+      
+      // Need at least a topic title with reasonable length
+      if (!title || title.length < 10) {
+        setTitleSuggestions([])
+        return
+      }
+
+      setLoadingTitles(true)
+      setTitleError(null)
+
+      try {
+        console.log('🎯 Generating title suggestions for:', { title, tone, template })
+        
+        const response = await fetch('/api/ai/suggest-titles', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            topic: title,
+            tone: tone || 'Professional',
+            targetAudience: 'intermediate readers',
+            templateType: template || 'Blog Post',
+            keywords: watchedValues.keywords || ''
+          })
+        })
+
+        const result = await response.json()
+        
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to generate title suggestions')
+        }
+
+        if (result.success && result.titles && result.titles.length > 0) {
+          setTitleSuggestions(result.titles)
+          console.log('✅ Title suggestions generated:', result.titles)
+        } else {
+          setTitleSuggestions([])
+          if (result.fallback && result.fallback.length > 0) {
+            setTitleSuggestions(result.fallback)
+            console.log('📝 Using fallback titles:', result.fallback)
+          }
+        }
+      } catch (error) {
+        console.error('Title generation failed:', error)
+        setTitleError('Failed to generate title suggestions. You can enter a title manually.')
+        setTitleSuggestions([])
+      } finally {
+        setLoadingTitles(false)
+      }
+    }
+
+    // Debounce title generation to avoid too many API calls
+    const debounceTimer = setTimeout(generateTitleSuggestions, 2000) // Longer delay for title generation
+    return () => clearTimeout(debounceTimer)
+  }, [watchedValues.title, watchedValues.tone, watchedValues.template, watchedValues.keywords])
+
   const onSubmit = async (data: TopicFormData) => {
     setIsSubmitting(true)
     setSubmitError(null)
@@ -171,8 +237,17 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Title - Required Field */}
         <div className="space-y-2">
-          <Label htmlFor="title" className="text-gray-700 font-medium">
+          <Label htmlFor="title" className="text-gray-700 font-medium flex items-center gap-2">
             Topic Title <span className="text-red-500">*</span>
+            {loadingTitles && (
+              <span className="text-purple-600 text-sm flex items-center gap-1">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                </svg>
+                Generating title ideas...
+              </span>
+            )}
           </Label>
           <Input
             id="title"
@@ -183,6 +258,58 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
           {errors.title && (
             <p className="text-sm text-red-600">{errors.title.message}</p>
           )}
+          
+          {/* AI Title Suggestions */}
+          {titleSuggestions.length > 0 && (
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4 mt-3">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-medium text-purple-800 flex items-center gap-2">
+                  ✨ AI-Generated Title Suggestions 
+                  {loadingTitles && (
+                    <span className="text-purple-600 text-xs flex items-center gap-1">
+                      <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                      </svg>
+                      Generating...
+                    </span>
+                  )}
+                </p>
+                <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">
+                  Click to use
+                </span>
+              </div>
+              <div className="space-y-2">
+                {titleSuggestions.map((title, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => setValue('title', title)}
+                    className="w-full text-left p-3 bg-white border border-purple-100 rounded-lg hover:bg-purple-50 hover:border-purple-300 transition-colors group"
+                  >
+                    <div className="flex items-start justify-between">
+                      <span className="text-sm text-gray-900 group-hover:text-purple-900 flex-1 leading-relaxed">
+                        {title}
+                      </span>
+                      <span className="text-xs text-purple-500 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        Use this title
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-purple-600 mt-2 text-center">
+                💡 These titles are optimized for SEO and your selected tone
+              </p>
+            </div>
+          )}
+          
+          {titleError && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2">
+              <p className="text-sm text-amber-800">⚠️ {titleError}</p>
+            </div>
+          )}
+          
           <p className="text-xs text-gray-500">
             Be specific and include key details like year, target audience, or main benefit
           </p>
