@@ -34,7 +34,8 @@
 
 **Features**:
 - **Create New Topics**: Define title, description, target audience, and content goals
-- **Keyword Research**: Add relevant keywords for SEO optimization
+- **AI Title Suggestions**: Get 6 SEO-optimized article titles automatically generated
+- **Keyword Research**: Add relevant keywords for SEO optimization  
 - **Topic Organization**: Categorize and manage your content pipeline
 - **Status Tracking**: Monitor topic development progress
 
@@ -59,11 +60,32 @@
 - **Contextual Setup**: Topic data pre-fills content configuration
 - **Seamless Workflow**: Topics → Generate → Configure → Create
 
+**AI Title Suggestion Feature** (New):
+- **Automatic Generation**: After typing a topic title (10+ characters), AI generates 6 compelling article titles
+- **Smart Timing**: 2-second debounce prevents excessive API calls during typing
+- **Contextual Intelligence**: Considers your selected tone, template, and keywords
+- **Multiple Styles**: Includes how-to guides, listicles, questions, benefit-focused titles
+- **One-Click Selection**: Click any suggested title to instantly use it
+- **SEO Optimized**: Titles are crafted for search engine visibility
+- **Fallback System**: Provides manual titles if AI service is unavailable
+
+**Example Title Suggestions for "Madhubani Paintings"**:
+```
+✨ AI-Generated Title Suggestions:
+1. The Sacred Art of Madhubani: Complete Cultural Guide
+2. How to Appreciate Traditional Madhubani Paintings  
+3. 5 Hidden Symbols in Madhubani Art You Should Know
+4. Why Madhubani Paintings Tell Stories: A Cultural Journey
+5. Madhubani Art for Beginners: Colors, Patterns, and Meaning
+6. Traditional Mithila Art: Madhubani Painting Techniques 2024
+```
+
 **Best Practices**:
-- Use specific, actionable topic titles
+- Use specific, actionable topic titles (triggers better AI suggestions)
 - Select appropriate templates for faster generation
-- Include 5-10 relevant keywords per topic
+- Include 5-10 relevant keywords per topic (improves title quality)
 - Define clear content goals for better AI generation
+- Experiment with different tones to see varied title styles
 - Update topics based on performance data
 
 #### Step 2: Content Generation (`/content-generation`)
@@ -88,7 +110,7 @@
 
 2. **Configure Generation**:
    - **Topic/Title**: Enter your content topic
-   - **Tone**: Professional, casual, authoritative, friendly
+   - **Tone**: Professional, casual, authoritative, friendly, storytelling
    - **Length**: Short (500-800), Medium (800-1200), Long (1200+ words)
    - **Keywords**: Add SEO keywords for optimization
    - **AI Provider**: Select preferred AI service (Anthropic recommended)
@@ -335,10 +357,65 @@ node verify-import-success.js
 - Click to experiment with different keyword combinations
 - Monitor keyword performance and adjust strategy
 
+### AI-Powered Content Creation
+
+**Latest AI Features**:
+
+#### **AI Title Suggestions** (`/api/ai/suggest-titles`)
+- **Purpose**: Generate compelling, SEO-optimized article titles automatically
+- **Trigger**: Activated when typing topic titles (10+ characters, 2-second debounce)
+- **Output**: 6 diverse title styles including how-to guides, listicles, questions
+- **Intelligence**: Considers topic, tone, template, keywords, and target audience
+- **Fallbacks**: Graceful degradation with manual title templates if AI fails
+
+**API Request Example**:
+```javascript
+POST /api/ai/suggest-titles
+{
+  "topic": "Madhubani Paintings",
+  "tone": "storytelling", 
+  "targetAudience": "intermediate readers",
+  "templateType": "Blog Post",
+  "keywords": "madhubani art, traditional painting, mithila"
+}
+```
+
+**Response Example**:
+```javascript
+{
+  "success": true,
+  "titles": [
+    "The Sacred Art of Madhubani: Complete Cultural Guide",
+    "How to Appreciate Traditional Madhubani Paintings",
+    "5 Hidden Symbols in Madhubani Art You Should Know",
+    "Why Madhubani Paintings Tell Stories: A Cultural Journey", 
+    "Madhubani Art for Beginners: Colors, Patterns, and Meaning",
+    "Traditional Mithila Art: Madhubani Painting Techniques 2024"
+  ],
+  "provider": "anthropic",
+  "fallback": false
+}
+```
+
+#### **Enhanced Writing Tones**
+- **Professional**: Business-focused, authoritative content
+- **Conversational**: Friendly, approachable writing style  
+- **Educational**: Teaching-focused with clear explanations
+- **Inspirational**: Motivating and uplifting content
+- **Humorous**: Light-hearted, entertaining approach
+- **Story Telling**: Narrative-driven content with cultural stories (New)
+
+**Story Telling Tone Features**:
+- Perfect for cultural art content (Madhubani, Pichwai, Kerala Mural)
+- Emphasizes historical context and cultural significance
+- Weaves personal narratives and traditional stories
+- Creates emotional connections with heritage content
+- Ideal for topics like "Sri Krishna Radha Paintings" with storytelling approach
+
 ### AI Service Configuration
 
 **Provider Options**:
-- **Anthropic Claude**: Recommended for creative and analytical content
+- **Anthropic Claude**: Recommended for creative and analytical content (best for storytelling)
 - **OpenAI GPT**: Excellent for technical and structured content
 - **Google Gemini**: Good for research and fact-based content
 

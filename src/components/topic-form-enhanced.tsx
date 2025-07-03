@@ -142,7 +142,7 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
       setTitleError(null)
 
       try {
-        console.log('🎯 Generating title suggestions for:', { title, tone, template })
+        // Generate AI title suggestions
         
         const response = await fetch('/api/ai/suggest-titles', {
           method: 'POST',
@@ -166,12 +166,10 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
 
         if (result.success && result.titles && result.titles.length > 0) {
           setTitleSuggestions(result.titles)
-          console.log('✅ Title suggestions generated:', result.titles)
         } else {
           setTitleSuggestions([])
           if (result.fallback && result.fallback.length > 0) {
             setTitleSuggestions(result.fallback)
-            console.log('📝 Using fallback titles:', result.fallback)
           }
         }
       } catch (error) {
@@ -193,8 +191,6 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
     setSubmitError(null)
 
     try {
-      console.log('💾 Saving topic with data:', data)
-      
       let result;
       if (topicId) {
         // Update existing topic
@@ -208,8 +204,6 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
         setSubmitError(result.error)
         return
       }
-      
-      console.log('✅ Topic saved successfully:', result.data)
       onSuccess?.(result.data)
       
       if (!topicId) {

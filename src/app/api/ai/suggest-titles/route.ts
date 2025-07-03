@@ -15,12 +15,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('🎯 Generating title suggestions for:', {
-      topic,
-      tone: tone || 'professional',
-      targetAudience: targetAudience || 'general readers',
-      templateType: templateType || 'blog post'
-    });
+    // Generate title suggestions using AI service
 
     const aiService = getAIService();
     
@@ -98,8 +93,6 @@ Now generate titles for: "${topic}"`;
         fallback: true
       });
     }
-
-    console.log('✅ Generated titles:', titles);
 
     return NextResponse.json({
       success: true,

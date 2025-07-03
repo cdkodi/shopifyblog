@@ -28,6 +28,21 @@
 - **Cost Tracking**: Usage monitoring and optimization
 - **Service Manager**: Centralized AI provider management
 
+#### **Latest AI Features (December 2024)**
+
+**AI Title Suggestions Service**:
+- **Endpoint**: `/api/ai/suggest-titles`
+- **Purpose**: Generate 6 SEO-optimized article titles from topic inputs
+- **Intelligence**: Context-aware generation using topic, tone, template, keywords
+- **Performance**: 2-second debounce, graceful fallbacks, TypeScript-safe
+- **Integration**: Real-time suggestions in TopicFormEnhanced component
+
+**Enhanced Writing Tones**:
+- **Story Telling**: New tone for cultural/heritage content (Madhubani, Pichwai, etc.)
+- **Contextual Adaptation**: AI adjusts style based on selected tone
+- **Cultural Sensitivity**: Specialized prompts for traditional art content
+- **Template Integration**: Tone influences both title and content generation
+
 ### Deployment & Infrastructure
 - **Vercel**: Serverless hosting with automatic deployments
 - **GitHub Integration**: CI/CD pipeline with branch previews
