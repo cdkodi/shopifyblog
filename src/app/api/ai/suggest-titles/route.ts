@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAIService } from '@/lib/ai';
 
 export async function POST(request: NextRequest) {
+  let body: any = {};
   try {
-    const body = await request.json();
+    body = await request.json();
     const { topic, tone, targetAudience, templateType, keywords } = body;
 
     // Validate required fields
@@ -85,7 +86,7 @@ Now generate titles for: "${topic}"`;
     }
 
     // Parse the AI response to extract titles
-    const content = result.content;
+    const content = result.content || '';
     const titles = extractTitlesFromResponse(content);
 
     if (titles.length === 0) {
@@ -117,7 +118,7 @@ Now generate titles for: "${topic}"`;
         success: false,
         error: `Title suggestion failed: ${errorMessage}`,
         fallback: generateFallbackTitles(
-          (await request.json().catch(() => ({}))).topic || 'Your Topic',
+          'Your Topic',
           'professional',
           'blog post'
         )
