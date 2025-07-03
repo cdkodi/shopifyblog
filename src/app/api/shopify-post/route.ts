@@ -28,6 +28,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Article not found' }, { status: 404 });
     }
 
+    // Minimal valid ContentTemplate (required for type safety, not used by Shopify)
+    const minimalTemplate = {
+      id: 'minimal',
+      name: 'Minimal Template',
+      description: 'Stub template for Shopify publishing',
+      icon: '📄',
+      recommendedProvider: 'anthropic',
+      estimatedCost: 0,
+      targetLength: 1000,
+      seoAdvantages: [],
+      exampleTitles: [],
+      difficulty: 'easy'
+    };
+
     // Map to PublishedContent shape expected by blogIntegration
     const publishedContent = {
       editedContent: {
@@ -41,7 +55,7 @@ export async function POST(req: NextRequest) {
       },
       generatedContent: {
         configuration: {
-          template: '',
+          template: minimalTemplate, // Inject minimal valid template
           topic: '',
           targetKeyword: '',
           relatedKeywords: [],
