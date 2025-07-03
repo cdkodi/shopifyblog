@@ -131,6 +131,9 @@ export function GenerationConfig({
   initialData 
 }: GenerationConfigProps) {
   
+  // Detect if user came from Topics (has pre-selected keywords)
+  const comingFromTopics = !!(initialData?.targetKeyword || (initialData?.relatedKeywords && initialData.relatedKeywords.length > 0));
+  
   const [config, setConfig] = useState<Partial<EnhancedContentConfig>>({
     template: selectedTemplate,
     topic: initialData?.topic || '',
@@ -159,6 +162,7 @@ export function GenerationConfig({
   const [keywordResearch, setKeywordResearch] = useState<any>(null);
   const [loadingKeywords, setLoadingKeywords] = useState(false);
   const [keywordError, setKeywordError] = useState<string | null>(null);
+  const [allowNewResearch, setAllowNewResearch] = useState(!comingFromTopics); // Only auto-research if NOT from Topics
 
   // Auto-save and notify parent of changes
   useEffect(() => {
@@ -167,9 +171,11 @@ export function GenerationConfig({
     }
   }, [config, onConfigChange]);
 
-  // Perform keyword research when topic changes
+  // Perform keyword research when topic changes (only if allowed)
   useEffect(() => {
     const performKeywordResearch = async () => {
+      // Skip if user came from Topics with pre-selected keywords
+      if (!allowNewResearch) return;
       if (!config.topic || config.topic.length < 3) return;
 
       setLoadingKeywords(true);
@@ -207,7 +213,45 @@ export function GenerationConfig({
 
     const debounceTimer = setTimeout(performKeywordResearch, 1000);
     return () => clearTimeout(debounceTimer);
-  }, [config.topic]);
+  }, [config.topic, allowNewResearch]);
+
+  // Function to trigger new keyword research (override Topics keywords)
+  const performNewKeywordResearch = async () => {
+    if (!config.topic || config.topic.length < 3) return;
+
+    setLoadingKeywords(true);
+    setKeywordError(null);
+    setAllowNewResearch(true); // Enable research mode
+
+    try {
+      const response = await fetch(`/api/seo/keywords?topic=${encodeURIComponent(config.topic)}&limit=20`);
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch keyword data');
+      }
+
+      if (result.success && result.data.keywords && result.data.keywords.length > 0) {
+        const keywords = result.data.keywords;
+        setKeywordResearch(keywords);
+        
+        // Override existing keywords with new research
+        const primaryKeyword = keywords[0];
+        if (primaryKeyword) {
+          setConfig(prev => ({
+            ...prev,
+            targetKeyword: primaryKeyword.keyword,
+            relatedKeywords: keywords.slice(1, 6).map((k: any) => k.keyword)
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('New keyword research failed:', error);
+      setKeywordError('Failed to fetch new keyword data. Using current keywords.');
+    } finally {
+      setLoadingKeywords(false);
+    }
+  };
 
   const updateConfig = (updates: Partial<EnhancedContentConfig>) => {
     setConfig(prev => ({ ...prev, ...updates }));
@@ -499,6 +543,150 @@ export function GenerationConfig({
           </CardContent>
         </Card>
       )}
+
+      {/* SEO Keywords Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>SEO Keywords</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            
+            {/* Show inherited keywords from Topics */}
+            {comingFromTopics && !allowNewResearch && (config.targetKeyword || (config.relatedKeywords && config.relatedKeywords.length > 0)) && (
+              <div className="space-y-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-medium text-blue-800">
+                    🎯 Keywords from Topics:
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={performNewKeywordResearch}
+                    disabled={loadingKeywords}
+                    className="text-xs"
+                  >
+                    {loadingKeywords ? "Researching..." : "Research new keywords"}
+                  </Button>
+                </div>
+                
+                {config.targetKeyword && (
+                  <div>
+                    <span className="text-xs text-blue-600">Target Keyword:</span>
+                    <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-800">{config.targetKeyword}</Badge>
+                  </div>
+                )}
+                {config.relatedKeywords && config.relatedKeywords.length > 0 && (
+                  <div>
+                    <span className="text-xs text-blue-600">Related Keywords:</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {config.relatedKeywords.map((keyword, index) => (
+                        <Badge key={index} variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-300">
+                          {keyword}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Show fresh keywords or direct access keywords */}
+            {(!comingFromTopics || allowNewResearch) && (config.targetKeyword || (config.relatedKeywords && config.relatedKeywords.length > 0)) && (
+              <div className="space-y-2">
+                {config.targetKeyword && (
+                  <div>
+                    <span className="text-xs text-muted-foreground">Target Keyword:</span>
+                    <Badge variant="secondary" className="ml-2">{config.targetKeyword}</Badge>
+                  </div>
+                )}
+                {config.relatedKeywords && config.relatedKeywords.length > 0 && (
+                  <div>
+                    <span className="text-xs text-muted-foreground">Related Keywords:</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {config.relatedKeywords.map((keyword, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {keyword}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Keyword research loading and error states */}
+            {loadingKeywords && (
+              <div className="text-sm text-muted-foreground">
+                🔍 Researching keywords for "{config.topic}"...
+              </div>
+            )}
+
+            {keywordError && (
+              <div className="text-sm text-orange-600 bg-orange-50 p-2 rounded">
+                ⚠️ {keywordError}
+              </div>
+            )}
+
+            {/* Keyword research results (only show if actively researching) */}
+            {keywordResearch && !loadingKeywords && allowNewResearch && (
+              <div className="space-y-2">
+                <div className="text-sm text-muted-foreground">
+                  💡 Click keywords to select for SEO optimization:
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {keywordResearch.map((keyword: any, index: number) => {
+                    const isTargetKeyword = config.targetKeyword === keyword.keyword;
+                    const isRelatedKeyword = config.relatedKeywords?.includes(keyword.keyword);
+                    const isSelected = isTargetKeyword || isRelatedKeyword;
+                    
+                    return (
+                      <Badge
+                        key={index}
+                        variant={isSelected ? "default" : "outline"}
+                        className={`cursor-pointer transition-colors ${
+                          isTargetKeyword 
+                            ? "bg-blue-100 text-blue-800 border-blue-300" 
+                            : isSelected 
+                              ? "bg-green-100 text-green-800 border-green-300" 
+                              : "hover:bg-gray-100"
+                        }`}
+                        onClick={() => {
+                          if (config.targetKeyword === keyword.keyword) {
+                            // If this is the target keyword, remove it
+                            updateConfig({ targetKeyword: '' });
+                          } else if ((config.relatedKeywords || []).includes(keyword.keyword)) {
+                            // If it's in related keywords, remove it
+                            updateConfig({ 
+                              relatedKeywords: (config.relatedKeywords || []).filter(k => k !== keyword.keyword)
+                            });
+                          } else if (!config.targetKeyword) {
+                            // If no target keyword set, make this the target keyword
+                            updateConfig({ targetKeyword: keyword.keyword });
+                          } else {
+                            // Add to related keywords
+                            updateConfig({ 
+                              relatedKeywords: [...(config.relatedKeywords || []), keyword.keyword]
+                            });
+                          }
+                        }}
+                      >
+                        {isSelected && "✓ "}{keyword.keyword}
+                        <span className="ml-1 text-xs opacity-70">
+                          ({keyword.search_volume?.toLocaleString() || 'N/A'})
+                        </span>
+                      </Badge>
+                    );
+                  })}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  First click = Target keyword (blue), Additional clicks = Related keywords (green)
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* SEO Preview */}
       {keywordResearch && (

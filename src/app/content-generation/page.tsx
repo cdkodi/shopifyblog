@@ -342,12 +342,29 @@ function ContentGenerationInner() {
                         <span className="text-green-600 text-sm font-medium">🎯</span>
                       </div>
                     </div>
-                    <div className="ml-3">
+                    <div className="ml-3 flex-1">
                       <h3 className="text-sm font-medium text-green-800">
                         Template Pre-selected from Topics: "{selectedTemplate.name}"
                       </h3>
-                      <div className="mt-1 text-sm text-green-600">
+                      <div className="mt-1 text-sm text-green-600 space-y-1">
                         <p>Topic: <span className="font-medium">"{initialConfigData.topic}"</span> • Configuration has been pre-filled based on your topic settings.</p>
+                        {(initialConfigData.targetKeyword || (initialConfigData.relatedKeywords && initialConfigData.relatedKeywords.length > 0)) && (
+                          <div className="flex items-start space-x-2">
+                            <span className="text-blue-600 font-medium">🔑 Keywords inherited:</span>
+                            <div className="flex flex-wrap gap-1">
+                              {initialConfigData.targetKeyword && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800 border border-blue-200">
+                                  {initialConfigData.targetKeyword} (target)
+                                </span>
+                              )}
+                              {initialConfigData.relatedKeywords?.map((keyword: string, index: number) => (
+                                <span key={index} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-50 text-blue-700 border border-blue-200">
+                                  {keyword}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="ml-auto">
