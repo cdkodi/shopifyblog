@@ -1,5 +1,4 @@
 import { PublishedContent } from '@/components/content-generation/content-editor';
-import fetch from 'node-fetch';
 
 export interface BlogPlatform {
   id: string;
