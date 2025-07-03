@@ -65,7 +65,7 @@ Now generate titles for: "${topic}"`;
       template: 'title-generation',
       tone: 'professional',
       length: 'short',
-      keywords: keywords ? keywords.split(',').map(k => k.trim()) : [],
+      keywords: keywords ? keywords.split(',').map((k: string) => k.trim()) : [],
       options: {
         maxTokens: 400,
         temperature: 0.8 // Higher creativity for title generation
