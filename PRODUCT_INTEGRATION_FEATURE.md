@@ -287,3 +287,29 @@ When ready to launch Product Integration:
 **The foundation is solid and ready for launch when needed!** 🚀
 
 All the complex filtering logic, UI components, and database integrations are complete and thoroughly tested. Simply flip the feature flag when you're ready to add product integration to your CMS. 
+
+## Shopify Blog Article Publishing Integration: Options & Conventions
+
+- **Author**: Use `Editor` for all posts (can be made dynamic in the future).
+- **Images**: 
+  - Images must be included as `<img>` tags in the `bodyHtml` field.
+  - If article content is Markdown, convert `![alt](url)` syntax to `<img src="url" alt="alt">` before posting.
+  - Image URLs must be publicly accessible; Shopify does not host images for you.
+- **Featured/Cover Image**: 
+  - Shopify blog articles do not have a separate featured image field.
+  - To display a cover image, place an `<img>` tag at the top of the article HTML.
+- **Field Mapping**: 
+  - `title` → `title`
+  - `content` (HTML) → `bodyHtml`
+  - `target_keywords` (array) → `tags`
+  - `status`/`published_at` → `published` (boolean)
+  - `author` → `Editor`
+- **Manual Trigger**: 
+  - Each post to Shopify is initiated by an admin action (not automated or scheduled).
+- **Error Handling & Logging**: 
+  - All API responses and errors are logged (in DB or logging service).
+  - User feedback (success/failure) is provided in the admin UI.
+- **API**: 
+  - Use Shopify GraphQL Admin API for all new integrations (REST is deprecated).
+- **Blog ID**: 
+  - Must be specified for each post (e.g., `96953336105`).
