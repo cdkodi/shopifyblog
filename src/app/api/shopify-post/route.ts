@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { blogIntegration } from '@/lib/publishing/blog-integration';
 import type { Database } from '@/lib/types/database';
+import type { ContentConfiguration } from '@/components/content-generation/content-configuration';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Minimal valid ContentTemplate (required for type safety, not used by Shopify)
-    const minimalTemplate = {
+    const minimalTemplate: import('@/lib/supabase/content-templates').ContentTemplate = {
       id: 'minimal',
       name: 'Minimal Template',
       description: 'Stub template for Shopify publishing',
@@ -42,7 +43,26 @@ export async function POST(req: NextRequest) {
       difficulty: 'easy'
     };
 
-    // Map to PublishedContent shape expected by blogIntegration
+    // ---
+    // Construct a fully type-safe PublishedContent object.
+    // Many fields below are only required to satisfy the PublishedContent/ContentConfiguration interface for type safety.
+    // Shopify publishing logic ignores these fields, but they are required for the function signature and build to pass.
+    // ---
+    const configuration: ContentConfiguration = {
+      template: minimalTemplate,
+      topic: article.title || '',
+      targetKeyword: '',
+      relatedKeywords: [],
+      title: article.title || '',
+      metaDescription: article.meta_description || '',
+      targetAudience: article.target_audience || '',
+      tone: 'professional',
+      wordCount: article.content ? article.content.split(' ').length : 0,
+      includeImages: false,
+      includeCallToAction: false,
+      aiProvider: 'anthropic',
+    };
+
     const publishedContent = {
       editedContent: {
         title: article.title,
@@ -54,26 +74,26 @@ export async function POST(req: NextRequest) {
         featuredImage: undefined // Not used for Shopify
       },
       generatedContent: {
-        configuration: {
-          template: minimalTemplate, // Inject minimal valid template
-          topic: '',
-          targetKeyword: '',
-          relatedKeywords: [],
-          tone: '',
-          length: '',
-          productIntegration: false,
-          productCollections: [],
-          productIntegrationStyle: '',
-          aiProvider: '',
-          scheduledDate: '',
-          metaDescription: '',
-          tags: [],
-          slug: ''
-        },
+        configuration, // Now explicitly typed
         content: article.content,
-        metadata: { aiProvider: '', cost: 0 }
+        // All fields below are required by GeneratedContent.metadata, but not used by Shopify
+        metadata: {
+          wordCount: article.content ? article.content.split(' ').length : 0, // Calculated from content
+          readingTime: 0, // Not used for Shopify
+          seoScore: 0, // Not used for Shopify
+          generationTime: 0, // Not used for Shopify
+          aiProvider: '', // Not used for Shopify
+          cost: 0 // Not used for Shopify
+        }
       },
-      seoOptimizations: { keywordDensity: 0, readabilityScore: 0, headingsStructure: 0 }
+      // All fields below are required by PublishedContent.seoOptimizations, but not used by Shopify
+      seoOptimizations: {
+        keywordDensity: 0,
+        readabilityScore: 0,
+        headingsStructure: 0,
+        internalLinks: 0,
+        externalLinks: 0
+      }
     };
 
     // Publish to Shopify
