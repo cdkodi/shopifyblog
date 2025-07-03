@@ -104,11 +104,7 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
         if (result.success && result.data.keywords && result.data.keywords.length > 0) {
           const keywords = result.data.keywords.map((k: any) => k.keyword).slice(0, 8)
           setKeywordSuggestions(keywords)
-          
-          // Auto-suggest keywords if field is empty
-          if (!watchedValues.keywords || watchedValues.keywords.trim() === '') {
-            setValue('keywords', keywords.join(', '))
-          }
+          // Note: No longer auto-populating keywords - user has full control
         } else {
           setKeywordSuggestions([])
         }
@@ -328,34 +324,70 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
           {keywordSuggestions.length > 0 && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-medium text-blue-800">💡 Suggested Keywords (click to add):</p>
-                <button
-                  type="button"
-                  onClick={() => setValue('keywords', keywordSuggestions.join(', '))}
-                  className="text-xs text-blue-600 hover:text-blue-800 underline"
-                >
-                  Add all
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {keywordSuggestions.map((keyword, index) => (
+                <p className="text-sm font-medium text-blue-800">💡 Suggested Keywords (click to toggle):</p>
+                <div className="flex gap-2">
                   <button
-                    key={index}
                     type="button"
                     onClick={() => {
                       const currentKeywords = watchedValues.keywords || ''
-                      const keywordList = currentKeywords.split(',').map(k => k.trim()).filter(Boolean)
-                      if (!keywordList.includes(keyword)) {
-                        const newKeywords = [...keywordList, keyword].join(', ')
-                        setValue('keywords', newKeywords)
-                      }
+                      const currentList = currentKeywords.split(',').map(k => k.trim()).filter(Boolean)
+                      const allKeywords = [...new Set([...currentList, ...keywordSuggestions])].join(', ')
+                      setValue('keywords', allKeywords)
                     }}
-                    className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200 transition-colors"
+                    className="text-xs text-blue-600 hover:text-blue-800 underline"
                   >
-                    + {keyword}
+                    Add all
                   </button>
-                ))}
+                  <span className="text-gray-300">•</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const currentKeywords = watchedValues.keywords || ''
+                      const currentList = currentKeywords.split(',').map(k => k.trim()).filter(Boolean)
+                      const remainingKeywords = currentList.filter(k => !keywordSuggestions.includes(k)).join(', ')
+                      setValue('keywords', remainingKeywords)
+                    }}
+                    className="text-xs text-red-600 hover:text-red-800 underline"
+                  >
+                    Clear all
+                  </button>
+                </div>
               </div>
+              <div className="flex flex-wrap gap-2">
+                {keywordSuggestions.map((keyword, index) => {
+                  const currentKeywords = watchedValues.keywords || ''
+                  const keywordList = currentKeywords.split(',').map(k => k.trim()).filter(Boolean)
+                  const isSelected = keywordList.includes(keyword)
+                  
+                  return (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => {
+                        if (isSelected) {
+                          // Remove keyword
+                          const newKeywords = keywordList.filter(k => k !== keyword).join(', ')
+                          setValue('keywords', newKeywords)
+                        } else {
+                          // Add keyword
+                          const newKeywords = [...keywordList, keyword].join(', ')
+                          setValue('keywords', newKeywords)
+                        }
+                      }}
+                      className={`px-2 py-1 rounded text-sm transition-colors ${
+                        isSelected 
+                          ? 'bg-green-100 text-green-800 border border-green-300 hover:bg-green-200' 
+                          : 'bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-200'
+                      }`}
+                    >
+                      {isSelected ? '✓' : '+'} {keyword}
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="text-xs text-blue-600 mt-2">
+                💡 <span className="text-green-600">Green = Selected</span> • <span className="text-blue-600">Blue = Available</span> • Click to toggle
+              </p>
             </div>
           )}
 
