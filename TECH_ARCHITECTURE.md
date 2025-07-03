@@ -36,12 +36,20 @@
 - **Intelligence**: Context-aware generation using topic, tone, template, keywords
 - **Performance**: 2-second debounce, graceful fallbacks, TypeScript-safe
 - **Integration**: Real-time suggestions in TopicFormEnhanced component
+- **Fallback System**: Manual title templates when AI service unavailable
 
 **Enhanced Writing Tones**:
 - **Story Telling**: New tone for cultural/heritage content (Madhubani, Pichwai, etc.)
 - **Contextual Adaptation**: AI adjusts style based on selected tone
 - **Cultural Sensitivity**: Specialized prompts for traditional art content
 - **Template Integration**: Tone influences both title and content generation
+
+**Keyword Inheritance System** (New):
+- **Single DataForSEO Call**: Eliminates duplicate API requests
+- **Seamless UX**: Keywords flow from Topics to Content Generation
+- **Visual Feedback**: Blue-themed UI shows inherited keyword source
+- **Override Capability**: Users can research fresh keywords when needed
+- **Cost Optimization**: 50% reduction in SEO API usage
 
 ### Deployment & Infrastructure
 - **Vercel**: Serverless hosting with automatic deployments
@@ -545,6 +553,114 @@ AI_ENABLE_COST_TRACKING=true
 2. **Branch Previews**: Staging environments for pull requests
 3. **Build Optimization**: Next.js optimization and minification
 4. **Error Monitoring**: Vercel analytics and error tracking
+
+## Keyword Inheritance System
+
+### Overview
+
+The keyword inheritance system solves the critical UX issue where users' keyword selections were being lost due to duplicate DataForSEO API calls when transitioning from Topics to Content Generation.
+
+### Architecture
+
+**Problem Solved**:
+- **Before**: DataForSEO called twice (Topics + Content Generation)
+- **After**: Single DataForSEO call per user journey
+- **UX Improvement**: User selections preserved throughout workflow
+- **Cost Optimization**: Reduced API calls by 50%
+
+### Implementation Components
+
+#### Detection Logic
+```typescript
+// In GenerationConfig component
+const comingFromTopics = !!(initialData?.targetKeyword || 
+  (initialData?.relatedKeywords && initialData.relatedKeywords.length > 0));
+
+const [allowNewResearch, setAllowNewResearch] = useState(!comingFromTopics);
+```
+
+#### State Management
+```typescript
+useEffect(() => {
+  const performKeywordResearch = async () => {
+    // Skip if user came from Topics with pre-selected keywords
+    if (!allowNewResearch) return;
+    if (!config.topic || config.topic.length < 3) return;
+    
+    // Only perform research for direct Content Generation access
+    // ... research logic
+  };
+}, [config.topic, allowNewResearch]);
+```
+
+#### Override Functionality
+```typescript
+const performNewKeywordResearch = async () => {
+  // Allow users to override inherited keywords
+  setAllowNewResearch(true);
+  // ... fresh research logic
+};
+```
+
+### User Experience Flow
+
+1. **Topics Page**: User researches keywords via DataForSEO
+2. **Generate Button**: Keywords passed via URL parameters
+3. **Content Generation**: 
+   - Detects inherited keywords
+   - Shows blue-themed "Keywords from Topics" UI
+   - Skips automatic DataForSEO research
+   - Provides "Research new keywords" override button
+
+### Visual Design System
+
+**Inherited Keywords UI**:
+```tsx
+{comingFromTopics && !allowNewResearch && (
+  <div className="space-y-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+    <div className="flex items-center justify-between">
+      <div className="text-sm font-medium text-blue-800">
+        🎯 Keywords from Topics:
+      </div>
+      <Button onClick={performNewKeywordResearch}>
+        Research new keywords
+      </Button>
+    </div>
+    {/* Keyword display with blue theming */}
+  </div>
+)}
+```
+
+**Page Notifications**:
+- **Step 1**: Shows inherited keywords in topic notification
+- **Step 2**: Enhanced notification with keyword badges
+- **Visual Distinction**: Blue theme for inherited vs standard for fresh
+
+### API Optimization
+
+**Single Call Pattern**:
+- **Condition**: `if (comingFromTopics && hasKeywords) skipResearch()`
+- **URL Parameter Detection**: `keywords` parameter indicates inheritance
+- **State Preservation**: Keywords maintained through component lifecycle
+- **Override Option**: Users can trigger fresh research if needed
+
+### Error Handling
+
+```typescript
+try {
+  // Research logic with fallbacks
+} catch (error) {
+  setKeywordError('Failed to fetch new keyword data. Using current keywords.');
+  // Graceful degradation to inherited keywords
+}
+```
+
+### Performance Benefits
+
+1. **Reduced API Calls**: 50% reduction in DataForSEO usage
+2. **Faster UX**: No waiting for duplicate research
+3. **Cost Savings**: Lower third-party API costs
+4. **Better Caching**: Single research result used across workflow
 
 ## API Documentation
 

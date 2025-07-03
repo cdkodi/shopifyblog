@@ -6,6 +6,38 @@ All notable changes to the Shopify Blog CMS will be documented in this file.
 
 ### 🎯 Major Features Added
 
+#### **Keyword Inheritance System** (Latest)
+- **Single DataForSEO Call**: Eliminates duplicate API requests between Topics and Content Generation
+- **Smart Detection**: Automatically detects when user comes from Topics with pre-selected keywords
+- **Seamless UX**: Keywords flow from Topics → Content Generation without loss
+- **Visual Feedback**: Blue-themed UI clearly indicates inherited keyword source
+- **Override Capability**: "Research new keywords" button for fresh suggestions when needed
+- **Cost Optimization**: 50% reduction in SEO API usage through intelligent call prevention
+- **State Management**: Advanced React state handling for keyword inheritance preservation
+
+**Technical Implementation**:
+```typescript
+// Detection logic
+const comingFromTopics = !!(initialData?.targetKeyword || 
+  (initialData?.relatedKeywords && initialData.relatedKeywords.length > 0));
+
+// Smart research prevention
+const [allowNewResearch, setAllowNewResearch] = useState(!comingFromTopics);
+
+// Override functionality
+const performNewKeywordResearch = async () => {
+  setAllowNewResearch(true);
+  // Fresh DataForSEO research...
+};
+```
+
+**User Experience Benefits**:
+- ✅ **No Lost Selections**: User keyword choices preserved throughout workflow
+- ✅ **Faster Generation**: No waiting for duplicate keyword research
+- ✅ **Clear Source Indication**: Visual distinction between inherited vs fresh keywords
+- ✅ **Flexible Override**: Option to get new suggestions without losing context
+- ✅ **Reduced Confusion**: Eliminates the UX issue where different keywords appeared
+
 #### **AI-Powered Title Suggestions**
 - **New API Endpoint**: `/api/ai/suggest-titles` for generating compelling article titles
 - **Smart Integration**: Real-time title suggestions in topic creation workflow

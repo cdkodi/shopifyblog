@@ -28,6 +28,8 @@
 
 **Start with Topics** → **Research Keywords** → **Generate Content** → **Review & Edit** → **Publish**
 
+**🎯 Optimized Keyword Flow** (New): Keywords researched in Topics automatically carry over to Content Generation, eliminating duplicate research and preserving your selections.
+
 #### Step 1: Topic Management (`/topics`)
 
 **Purpose**: Plan and organize your content strategy with data-driven topic research.
@@ -58,6 +60,7 @@
 - **Auto-Template Selection**: Selected template automatically carries over
 - **Smart Skipping**: Bypasses template selection step in content generation
 - **Contextual Setup**: Topic data pre-fills content configuration
+- **Keyword Inheritance**: Selected keywords automatically carry over (no duplicate research!)
 - **Seamless Workflow**: Topics → Generate → Configure → Create
 
 **AI Title Suggestion Feature** (New):
@@ -98,6 +101,7 @@
 - **Product Integration**: Automatic product suggestions and integration
 - **SEO Optimization**: Built-in keyword integration and meta generation
 - **Configuration Persistence**: Settings automatically saved
+- **Keyword Inheritance**: Smart keyword flow from Topics (no duplicate research!)
 
 **Generation Workflow**:
 
@@ -132,6 +136,22 @@
    - **SEO Preview**: Check meta descriptions and keyword usage
 
 5. **Generate Content**: Click **"Generate Content"** to create full article
+
+**✨ Keyword Inheritance Feature** (New):
+
+When you come from Topics with selected keywords, you'll see:
+
+- **Blue Notification Box**: "🎯 Keywords from Topics:" with your selected keywords
+- **No Duplicate Research**: Automatic keyword research is skipped (saves time and API costs)
+- **Visual Distinction**: Inherited keywords shown with blue styling
+- **Override Option**: "Research new keywords" button if you want fresh suggestions
+- **Seamless Experience**: Your keyword selections from Topics are preserved
+
+**Benefits**:
+- ✅ **Time Saving**: No waiting for duplicate keyword research
+- ✅ **Cost Efficient**: Reduces SEO API usage by 50%
+- ✅ **Better UX**: Your selections are never lost in the workflow
+- ✅ **Clear Source**: Visual indication shows where keywords came from
 
 **Advanced Features**:
 - **Smart Product Discovery**: AI analyzes your topic and automatically suggests relevant products from the Shopify catalog
@@ -330,13 +350,22 @@ node verify-import-success.js
 
 **Enhanced SEO Keywords Interface** (Improved):
 - **DataForSEO Integration**: Real-time keyword research with search volumes
+- **Keyword Inheritance**: Keywords from Topics automatically preserved (New!)
 - **Interactive Keyword Selection**: Click to add/remove keywords easily
 - **Target vs Related Keywords**: Smart categorization of keyword types
 - **Search Volume Display**: See actual search volumes for each keyword
 - **Toggle Functionality**: Click selected keywords to deselect them
 - **Visual Feedback**: Clear indication of selected vs available keywords
+- **Override Research**: Option to get fresh keywords when inheriting from Topics
 
 **How to Use SEO Keywords**:
+
+**When Coming from Topics**:
+1. **Inherited Keywords**: See your Topics keywords in blue "🎯 Keywords from Topics" box
+2. **Ready to Use**: Keywords are automatically configured (no additional research needed)
+3. **Override Option**: Click "Research new keywords" button if you want fresh suggestions
+
+**When Using Direct Content Generation**:
 1. **Auto-Research**: Keywords automatically researched based on your topic
 2. **First Click**: Sets the target keyword (primary SEO focus)
 3. **Additional Clicks**: Add to related keywords list

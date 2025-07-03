@@ -641,16 +641,9 @@ export function GenerationConfig({
                     const isSelected = isTargetKeyword || isRelatedKeyword;
                     
                     return (
-                      <Badge
+                      <button
                         key={index}
-                        variant={isSelected ? "default" : "outline"}
-                        className={`cursor-pointer transition-colors ${
-                          isTargetKeyword 
-                            ? "bg-blue-100 text-blue-800 border-blue-300" 
-                            : isSelected 
-                              ? "bg-green-100 text-green-800 border-green-300" 
-                              : "hover:bg-gray-100"
-                        }`}
+                        type="button"
                         onClick={() => {
                           if (config.targetKeyword === keyword.keyword) {
                             // If this is the target keyword, remove it
@@ -670,12 +663,24 @@ export function GenerationConfig({
                             });
                           }
                         }}
+                        className="focus:outline-none"
                       >
-                        {isSelected && "✓ "}{keyword.keyword}
-                        <span className="ml-1 text-xs opacity-70">
-                          ({keyword.search_volume?.toLocaleString() || 'N/A'})
-                        </span>
-                      </Badge>
+                        <Badge
+                          variant={isSelected ? "default" : "outline"}
+                          className={`cursor-pointer transition-colors ${
+                            isTargetKeyword 
+                              ? "bg-blue-100 text-blue-800 border-blue-300" 
+                              : isSelected 
+                                ? "bg-green-100 text-green-800 border-green-300" 
+                                : "hover:bg-gray-100"
+                          }`}
+                        >
+                          {isSelected && "✓ "}{keyword.keyword}
+                          <span className="ml-1 text-xs opacity-70">
+                            ({keyword.search_volume?.toLocaleString() || 'N/A'})
+                          </span>
+                        </Badge>
+                      </button>
                     );
                   })}
                 </div>
