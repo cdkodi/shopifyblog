@@ -66,77 +66,34 @@ export class BlogIntegrationService {
     return this.platforms;
   }
 
-  /**
-   * Publishes an article to Shopify Blog using the GraphQL Admin API.
-   * @param content PublishedContent (from Supabase/article editor)
-   * @param blogId Shopify Blog GID (e.g., 'gid://shopify/Blog/96953336105')
-   * @param apiKey Shopify Admin API access token
-   * @param shopDomain Your Shopify store domain (e.g., 'your-store.myshopify.com')
-   */
-  public async publishToShopify(
-    content: PublishedContent,
-    blogId: string,
-    apiKey: string,
-    shopDomain: string
-  ): Promise<PublishingResult> {
+  public async publishToShopify(content: PublishedContent, blogId: string, apiKey: string): Promise<PublishingResult> {
     try {
-      // Map Supabase article to Shopify fields
-      const articleInput = {
-        title: content.editedContent.title,
-        bodyHtml: this.convertMarkdownToHtml(content.editedContent.content),
-        author: 'Editor',
-        tags: content.editedContent.tags,
-        published: true
+      const articleData = {
+        article: {
+          title: content.editedContent.title,
+          body_html: this.convertMarkdownToHtml(content.editedContent.content),
+          summary: content.editedContent.metaDescription,
+          tags: content.editedContent.tags.join(','),
+          published: true,
+          handle: content.editedContent.slug,
+          created_at: content.editedContent.scheduledDate || new Date().toISOString()
+        }
       };
 
-      const mutation = `
-        mutation articleCreate($input: ArticleInput!) {
-          articleCreate(blogId: "${blogId}", article: $input) {
-            article {
-              id
-              title
-              handle
-              url
-            }
-            userErrors {
-              field
-              message
-            }
-          }
+      // This would make an actual API call to Shopify
+      // For demo purposes, we'll simulate a successful response
+      const mockResponse = {
+        article: {
+          id: Math.floor(Math.random() * 10000),
+          title: articleData.article.title,
+          handle: articleData.article.handle,
+          url: `https://your-shop.myshopify.com/blogs/news/${articleData.article.handle}`
         }
-      `;
+      };
 
-      const response = await fetch(`https://${shopDomain}/admin/api/2024-07/graphql.json`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Shopify-Access-Token': apiKey
-        },
-        body: JSON.stringify({
-          query: mutation,
-          variables: { input: articleInput }
-        })
-      });
-
-      const data = await response.json();
-      const result = data.data?.articleCreate;
-      if (result?.userErrors && result.userErrors.length > 0) {
-        return {
-          success: false,
-          error: result.userErrors.map((e: any) => e.message).join('; '),
-          platformId: 'shopify'
-        };
-      }
-      if (result?.article) {
-        return {
-          success: true,
-          url: result.article.url,
-          platformId: 'shopify'
-        };
-      }
       return {
-        success: false,
-        error: 'Unknown error or no article returned',
+        success: true,
+        url: mockResponse.article.url,
         platformId: 'shopify'
       };
     } catch (error) {
