@@ -39,7 +39,11 @@ export async function POST(req: NextRequest) {
         scheduledDate: article.scheduled_publish_date || undefined,
         featuredImage: undefined // Not used for Shopify
       },
-      generatedContent: { metadata: { aiProvider: '', cost: 0 } },
+      generatedContent: {
+        configuration: {},
+        content: article.content,
+        metadata: { aiProvider: '', cost: 0 }
+      },
       seoOptimizations: { keywordDensity: 0, readabilityScore: 0, headingsStructure: 0 }
     };
 
