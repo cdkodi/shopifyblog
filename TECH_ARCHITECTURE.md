@@ -798,3 +798,19 @@ npm run dev
 - **Social Media Integration**: Auto-posting to platforms
 - **Email Newsletter**: Content distribution automation
 - **REST API**: External integrations and headless CMS usage
+
+### SEO Score Calculation Logic (2024 Update)
+
+- **Keyword Density**: Now uses a tiered scoring system:
+  - 1-2% = 100 points (optimal)
+  - 0.5-1% = 60-100 points (good)
+  - 2-3% = 50-100 points (slightly over-optimized)
+  - >3% = <50 points (penalized)
+- **Previous Flaw**: Treated density as raw points (e.g., 2.2% = 2.2/100).
+- **Current**: 2.2% = ~50/100, matching SEO best practices.
+
+### Markdown Rendering in Content Preview
+
+- **Function**: `formatInlineMarkdown()`
+- **Features**: Converts markdown to HTML for bold, italics, code, and links.
+- **Impact**: No more double asterisks; content preview matches published look.

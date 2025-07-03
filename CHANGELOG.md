@@ -38,6 +38,13 @@ const performNewKeywordResearch = async () => {
 - ✅ **Flexible Override**: Option to get new suggestions without losing context
 - ✅ **Reduced Confusion**: Eliminates the UX issue where different keywords appeared
 
+#### **SEO Score Calculation & Markdown Formatting Fixes** (Latest)
+- **SEO Keyword Density Scoring**: Fixed major flaw where 2.2% density scored as 2.2 points. Now, 1-2% is optimal (100 points), 0.5-1% = 60-100, 2-3% = 50-100, >3% penalized.
+- **Result**: SEO scores now reflect real best practices (e.g., 2.2% density = ~50 points, not 2.2).
+- **Markdown Rendering**: Added `formatInlineMarkdown()` to convert markdown in content preview to HTML.
+- **Visual Fix**: Double asterisks (`**bold**`) now render as bold text, not raw markdown. Also supports *italics*, `inline code`, and [links](url).
+- **User Impact**: Content previews and SEO scores are now accurate and professional.
+
 #### **AI-Powered Title Suggestions**
 - **New API Endpoint**: `/api/ai/suggest-titles` for generating compelling article titles
 - **Smart Integration**: Real-time title suggestions in topic creation workflow

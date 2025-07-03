@@ -348,6 +348,18 @@ node verify-import-success.js
 - **Reading Time**: Automatic calculation for user experience
 - **Content Analysis**: Word count and structure optimization
 
+**SEO Score Calculation (Improved):**
+- **Keyword Density Scoring**: 1-2% is now recognized as optimal (100 points). Scores scale down for under/over-optimization.
+- **Example**: 2.2% density now scores ~50/100, not 2.2/100.
+- **Benefit**: More accurate SEO feedback and higher, realistic scores for well-optimized content.
+
+**Markdown Formatting in Content Preview:**
+- **Bold**: `**text**` → **text**
+- **Italics**: `*text*` → *text*
+- **Inline Code**: `` `code` `` → `code`
+- **Links**: `[label](url)` → [label](url)
+- **Result**: Content previews look polished and match published output.
+
 **Enhanced SEO Keywords Interface** (Improved):
 - **DataForSEO Integration**: Real-time keyword research with search volumes
 - **Keyword Inheritance**: Keywords from Topics automatically preserved (New!)
