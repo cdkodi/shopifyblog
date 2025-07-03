@@ -24,7 +24,7 @@ interface GenerationConfigProps {
     topic?: string;
     targetKeyword?: string;
     relatedKeywords?: string[];
-    tone?: 'professional' | 'casual' | 'authoritative' | 'friendly' | 'technical';
+    tone?: 'professional' | 'casual' | 'authoritative' | 'friendly' | 'technical' | 'storytelling';
     wordCount?: number;
   };
 }
@@ -37,7 +37,7 @@ export interface EnhancedContentConfig {
   title: string;
   metaDescription: string;
   targetAudience: string;
-  tone: 'professional' | 'casual' | 'authoritative' | 'friendly' | 'technical';
+  tone: 'professional' | 'casual' | 'authoritative' | 'friendly' | 'technical' | 'storytelling';
   wordCount: number;
   includeImages: boolean;
   includeCallToAction: boolean;
@@ -311,6 +311,7 @@ export function GenerationConfig({
                   <SelectItem value="authoritative">Authoritative</SelectItem>
                   <SelectItem value="friendly">Friendly</SelectItem>
                   <SelectItem value="technical">Technical</SelectItem>
+                  <SelectItem value="storytelling">Story Telling</SelectItem>
                 </SelectContent>
               </Select>
             </div>

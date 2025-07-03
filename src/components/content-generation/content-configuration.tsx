@@ -18,7 +18,7 @@ interface ContentConfigurationProps {
     topic?: string;
     targetKeyword?: string;
     relatedKeywords?: string[];
-    tone?: 'professional' | 'casual' | 'authoritative' | 'friendly' | 'technical';
+    tone?: 'professional' | 'casual' | 'authoritative' | 'friendly' | 'technical' | 'storytelling';
     wordCount?: number;
   };
 }
@@ -31,7 +31,7 @@ export interface ContentConfiguration {
   title: string;
   metaDescription: string;
   targetAudience: string;
-  tone: 'professional' | 'casual' | 'authoritative' | 'friendly' | 'technical';
+  tone: 'professional' | 'casual' | 'authoritative' | 'friendly' | 'technical' | 'storytelling';
   wordCount: number;
   includeImages: boolean;
   includeCallToAction: boolean;
@@ -369,6 +369,7 @@ export function ContentConfiguration({ selectedTemplate, onConfigurationComplete
                   <option value="authoritative">Authoritative</option>
                   <option value="friendly">Friendly</option>
                   <option value="technical">Technical</option>
+                  <option value="storytelling">Story Telling</option>
                 </select>
               </div>
 

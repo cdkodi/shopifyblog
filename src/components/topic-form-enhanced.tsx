@@ -58,7 +58,7 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
   useEffect(() => {
     // Simulating API call with mock data
     const mockConfig: ConfigValues = {
-      style_tones: ['Professional', 'Conversational', 'Educational', 'Inspirational', 'Humorous'],
+      style_tones: ['Professional', 'Conversational', 'Educational', 'Inspirational', 'Humorous', 'Story Telling'],
       article_lengths: ['Short (500-800 words)', 'Medium (800-1500 words)', 'Long (1500-3000 words)', 'Extended (3000+ words)'],
       content_templates: ['Blog Post', 'How-to Guide', 'Listicle', 'Review', 'Case Study', 'Tutorial']
     }
