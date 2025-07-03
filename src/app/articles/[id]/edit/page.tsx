@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -166,6 +166,36 @@ export default function ArticleEditPage() {
     handleInputChange('slug', slug);
   };
 
+  // Markdown formatting helpers (copied from content-editor.tsx for consistency)
+  function formatInlineMarkdown(text: string) {
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/`(.*?)`/g, '<code class="bg-gray-100 px-1 rounded">$1</code>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-600 hover:underline">$1</a>');
+  }
+
+  function formatContent(content: string) {
+    return content
+      .split('\n')
+      .map(line => {
+        if (line.startsWith('# ')) {
+          return `<h1 class="text-3xl font-bold mb-4">${formatInlineMarkdown(line.substring(2))}</h1>`;
+        } else if (line.startsWith('## ')) {
+          return `<h2 class="text-2xl font-semibold mb-3">${formatInlineMarkdown(line.substring(3))}</h2>`;
+        } else if (line.startsWith('### ')) {
+          return `<h3 class="text-xl font-medium mb-2">${formatInlineMarkdown(line.substring(4))}</h3>`;
+        } else if (line.trim() === '') {
+          return '<br/>';
+        } else {
+          return `<p class="mb-4">${formatInlineMarkdown(line)}</p>`;
+        }
+      })
+      .join('');
+  }
+
+  const contentPreview = useMemo(() => formatContent(articleData.content), [articleData.content]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
@@ -249,17 +279,22 @@ export default function ArticleEditPage() {
                 <CardTitle>Content</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="title">Title</Label>
-                  <Input
-                    id="title"
-                    value={articleData.title}
-                    onChange={(e) => handleInputChange('title', e.target.value)}
-                    placeholder="Article title"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="title">Title</Label>
+                    <Input
+                      id="title"
+                      value={articleData.title}
+                      onChange={(e) => handleInputChange('title', e.target.value)}
+                      placeholder="Article title"
+                    />
+                  </div>
+                  <div>
+                    <Label>Preview</Label>
+                    <div className="prose prose-blue max-w-none border rounded-md bg-white p-4 min-h-[300px] overflow-auto" dangerouslySetInnerHTML={{ __html: contentPreview }} />
+                  </div>
                 </div>
-                
-                <div>
+                <div className="mt-4">
                   <Label htmlFor="content">Content</Label>
                   <Textarea
                     id="content"
