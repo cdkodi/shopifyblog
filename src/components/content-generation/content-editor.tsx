@@ -72,10 +72,24 @@ export function ContentEditor({ generatedContent, onPublish, onBack }: ContentEd
     const content = editedContent.content.toLowerCase();
     const targetKeyword = generatedContent.configuration.targetKeyword.toLowerCase();
     
-    // Keyword density
+    // Keyword density calculation
     const keywordCount = (content.match(new RegExp(targetKeyword, 'g')) || []).length;
     const totalWords = editedContent.content.split(' ').length;
-    const keywordDensity = (keywordCount / totalWords) * 100;
+    const keywordDensityPercentage = (keywordCount / totalWords) * 100;
+    
+    // Convert keyword density to SEO score (1-2% is optimal = 100 points)
+    let keywordDensityScore = 0;
+    if (keywordDensityPercentage >= 1 && keywordDensityPercentage <= 2) {
+      keywordDensityScore = 100; // Optimal range
+    } else if (keywordDensityPercentage >= 0.5 && keywordDensityPercentage < 1) {
+      keywordDensityScore = 60 + (keywordDensityPercentage - 0.5) * 80; // 60-100 scale
+    } else if (keywordDensityPercentage > 2 && keywordDensityPercentage <= 3) {
+      keywordDensityScore = 100 - ((keywordDensityPercentage - 2) * 50); // 100-50 scale
+    } else if (keywordDensityPercentage > 3) {
+      keywordDensityScore = Math.max(0, 50 - ((keywordDensityPercentage - 3) * 25)); // Penalize over-optimization
+    } else {
+      keywordDensityScore = keywordDensityPercentage * 120; // Under 0.5% gets proportional score
+    }
     
     // Readability (simplified)
     const avgWordsPerSentence = totalWords / (editedContent.content.split(/[.!?]+/).length || 1);
@@ -90,7 +104,8 @@ export function ContentEditor({ generatedContent, onPublish, onBack }: ContentEd
     const externalLinks = (editedContent.content.match(/\[.*?\]\(https?:\/\/.*?\)/g) || []).length;
 
     return {
-      keywordDensity,
+      keywordDensity: keywordDensityPercentage, // Keep original percentage for display
+      keywordDensityScore, // New: actual SEO score for keyword density
       readabilityScore,
       headingsStructure,
       internalLinks,
@@ -133,7 +148,7 @@ export function ContentEditor({ generatedContent, onPublish, onBack }: ContentEd
         slug: editedContent.slug,
         status: 'draft' as const,
         targetKeywords: editedContent.tags,
-        seoScore: Math.round((seoOptimizations.keywordDensity + seoOptimizations.readabilityScore + seoOptimizations.headingsStructure) / 3),
+        seoScore: Math.round((seoOptimizations.keywordDensityScore + seoOptimizations.readabilityScore + seoOptimizations.headingsStructure) / 3),
         scheduledPublishDate: editedContent.scheduledDate || undefined
       };
 
@@ -170,23 +185,32 @@ export function ContentEditor({ generatedContent, onPublish, onBack }: ContentEd
   };
 
   const formatContent = (content: string) => {
-    // Simple content formatting for display
+    // Enhanced content formatting for display with markdown support
     return content
       .split('\n')
       .map(line => {
         if (line.startsWith('# ')) {
-          return `<h1 class="text-3xl font-bold mb-4">${line.substring(2)}</h1>`;
+          return `<h1 class="text-3xl font-bold mb-4">${formatInlineMarkdown(line.substring(2))}</h1>`;
         } else if (line.startsWith('## ')) {
-          return `<h2 class="text-2xl font-semibold mb-3">${line.substring(3)}</h2>`;
+          return `<h2 class="text-2xl font-semibold mb-3">${formatInlineMarkdown(line.substring(3))}</h2>`;
         } else if (line.startsWith('### ')) {
-          return `<h3 class="text-xl font-medium mb-2">${line.substring(4)}</h3>`;
+          return `<h3 class="text-xl font-medium mb-2">${formatInlineMarkdown(line.substring(4))}</h3>`;
         } else if (line.trim() === '') {
           return '<br/>';
         } else {
-          return `<p class="mb-4">${line}</p>`;
+          return `<p class="mb-4">${formatInlineMarkdown(line)}</p>`;
         }
       })
       .join('');
+  };
+
+  const formatInlineMarkdown = (text: string) => {
+    // Convert markdown formatting to HTML
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold: **text** -> <strong>text</strong>
+      .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic: *text* -> <em>text</em>
+      .replace(/`(.*?)`/g, '<code class="bg-gray-100 px-1 rounded">$1</code>') // Inline code
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-600 hover:underline">$1</a>'); // Links
   };
 
   return (
@@ -199,7 +223,7 @@ export function ContentEditor({ generatedContent, onPublish, onBack }: ContentEd
         </div>
         <div className="flex items-center space-x-2">
           <Badge className="bg-green-100 text-green-800">
-            SEO Score: {Math.round((seoOptimizations.keywordDensity + seoOptimizations.readabilityScore + seoOptimizations.headingsStructure) / 3)}/100
+            SEO Score: {Math.round((seoOptimizations.keywordDensityScore + seoOptimizations.readabilityScore + seoOptimizations.headingsStructure) / 3)}/100
           </Badge>
           <Badge className="bg-blue-100 text-blue-800">
             {editedContent.content.split(' ').length} words
