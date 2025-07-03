@@ -40,7 +40,22 @@ export async function POST(req: NextRequest) {
         featuredImage: undefined // Not used for Shopify
       },
       generatedContent: {
-        configuration: {},
+        configuration: {
+          template: '',
+          topic: '',
+          targetKeyword: '',
+          relatedKeywords: [],
+          tone: '',
+          length: '',
+          productIntegration: false,
+          productCollections: [],
+          productIntegrationStyle: '',
+          aiProvider: '',
+          scheduledDate: '',
+          metaDescription: '',
+          tags: [],
+          slug: ''
+        },
         content: article.content,
         metadata: { aiProvider: '', cost: 0 }
       },
