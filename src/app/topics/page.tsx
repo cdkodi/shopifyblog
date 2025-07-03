@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { TopicDashboard } from '../../components/topic-dashboard'
-import { TopicForm } from '../../components/topic-form'
+import { TopicFormEnhanced } from '../../components/topic-form-enhanced'
 import type { Database } from '../../lib/types/database'
 import { dbTopicToFormData } from '../../lib/types/database'
 
@@ -112,7 +112,7 @@ export default function TopicsPage() {
               </button>
             </div>
             
-            <TopicForm
+            <TopicFormEnhanced
               initialData={editingTopic ? dbTopicToFormData(editingTopic) : undefined}
               topicId={editingTopic?.id}
               onSuccess={handleFormSuccess}
