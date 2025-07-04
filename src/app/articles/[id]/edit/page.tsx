@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -166,6 +166,46 @@ export default function ArticleEditPage() {
     handleInputChange('slug', slug);
   };
 
+  // Enhanced markdown formatting for better preview
+  function formatInlineMarkdown(text: string) {
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+      .replace(/`(.*?)`/g, '<code class="bg-gray-100 text-gray-800 px-2 py-1 rounded text-sm font-mono">$1</code>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-600 hover:text-blue-800 underline">$1</a>');
+  }
+
+  function formatContent(content: string) {
+    if (!content.trim()) {
+      return '<p class="text-gray-500 italic">Start writing your article content...</p>';
+    }
+
+    return content
+      .split('\n')
+      .map(line => {
+        const trimmedLine = line.trim();
+        
+        if (trimmedLine === '') {
+          return '<div class="h-4"></div>'; // Spacing between paragraphs
+        } else if (line.startsWith('# ')) {
+          return `<h1 class="text-2xl font-bold text-gray-900 mb-4 mt-6 first:mt-0">${formatInlineMarkdown(line.substring(2))}</h1>`;
+        } else if (line.startsWith('## ')) {
+          return `<h2 class="text-xl font-semibold text-gray-800 mb-3 mt-5 first:mt-0">${formatInlineMarkdown(line.substring(3))}</h2>`;
+        } else if (line.startsWith('### ')) {
+          return `<h3 class="text-lg font-medium text-gray-800 mb-2 mt-4 first:mt-0">${formatInlineMarkdown(line.substring(4))}</h3>`;
+        } else if (line.startsWith('- ') || line.startsWith('* ')) {
+          return `<li class="mb-1 ml-4 list-disc">${formatInlineMarkdown(line.substring(2))}</li>`;
+        } else if (/^\d+\.\s/.test(line)) {
+          return `<li class="mb-1 ml-4 list-decimal">${formatInlineMarkdown(line.replace(/^\d+\.\s/, ''))}</li>`;
+        } else {
+          return `<p class="mb-4 text-gray-700 leading-relaxed">${formatInlineMarkdown(line)}</p>`;
+        }
+      })
+      .join('');
+  }
+
+  const contentPreview = useMemo(() => formatContent(articleData.content), [articleData.content]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
@@ -249,17 +289,32 @@ export default function ArticleEditPage() {
                 <CardTitle>Content</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="title">Title</Label>
-                  <Input
-                    id="title"
-                    value={articleData.title}
-                    onChange={(e) => handleInputChange('title', e.target.value)}
-                    placeholder="Article title"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="title">Title</Label>
+                    <Input
+                      id="title"
+                      value={articleData.title}
+                      onChange={(e) => handleInputChange('title', e.target.value)}
+                      placeholder="Article title"
+                    />
+                  </div>
+                  <div>
+                    <Label>Preview</Label>
+                    <div className="border rounded-md bg-white p-6 min-h-[300px] max-h-[500px] overflow-auto shadow-sm">
+                      {/* Title Preview */}
+                      <h1 className="text-2xl font-bold text-gray-900 mb-6 border-b border-gray-200 pb-3">
+                        {articleData.title || 'Untitled Article'}
+                      </h1>
+                      
+                      {/* Content Preview */}
+                      <div className="prose prose-gray max-w-none prose-headings:font-semibold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-p:text-gray-700 prose-p:leading-relaxed prose-strong:text-gray-900 prose-code:bg-gray-100 prose-code:text-gray-800 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm">
+                        <div dangerouslySetInnerHTML={{ __html: contentPreview }} />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                
-                <div>
+                <div className="mt-4">
                   <Label htmlFor="content">Content</Label>
                   <Textarea
                     id="content"
