@@ -53,6 +53,7 @@ export default function ArticleEditPage() {
   const [hasChanges, setHasChanges] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [newKeyword, setNewKeyword] = useState('');
+  const [activeTab, setActiveTab] = useState<'editor' | 'seo' | 'preview'>('editor');
 
   useEffect(() => {
     loadArticle();
@@ -280,16 +281,51 @@ export default function ArticleEditPage() {
           </div>
         </div>
 
-        {/* Article Form */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Content</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Content Editor Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Content Editor</h2>
+            <p className="text-gray-600 mt-1">Review, edit, and optimize your content before publishing</p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Badge className="bg-green-100 text-green-800">
+              SEO Score: {articleData.seoScore}/100
+            </Badge>
+            <Badge className="bg-blue-100 text-blue-800">
+              {articleData.content.split(' ').length} words
+            </Badge>
+          </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="border-b border-gray-200 mb-6">
+          <nav className="-mb-px flex space-x-8">
+            {['editor', 'seo', 'preview'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab as any)}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === tab
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Editor Tab */}
+        {activeTab === 'editor' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Content Editor */}
+            <div className="lg:col-span-2 space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Content</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <div>
                     <Label htmlFor="title">Title</Label>
                     <Input
@@ -297,169 +333,268 @@ export default function ArticleEditPage() {
                       value={articleData.title}
                       onChange={(e) => handleInputChange('title', e.target.value)}
                       placeholder="Article title"
+                      className="mt-1"
                     />
                   </div>
+
                   <div>
-                    <Label>Preview</Label>
-                    <div className="border rounded-md bg-white p-6 min-h-[300px] max-h-[500px] overflow-auto shadow-sm">
-                      {/* Title Preview */}
-                      <h1 className="text-2xl font-bold text-gray-900 mb-6 border-b border-gray-200 pb-3">
-                        {articleData.title || 'Untitled Article'}
-                      </h1>
-                      
-                      {/* Content Preview */}
-                      <div className="prose prose-gray max-w-none prose-headings:font-semibold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-p:text-gray-700 prose-p:leading-relaxed prose-strong:text-gray-900 prose-code:bg-gray-100 prose-code:text-gray-800 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm">
-                        <div dangerouslySetInnerHTML={{ __html: contentPreview }} />
-                      </div>
+                    <Label htmlFor="slug">URL Slug</Label>
+                    <div className="flex space-x-2 mt-1">
+                      <Input
+                        id="slug"
+                        value={articleData.slug}
+                        onChange={(e) => handleInputChange('slug', e.target.value)}
+                        placeholder="article-slug"
+                      />
+                      <Button onClick={generateSlug} variant="outline" size="sm">
+                        Generate
+                      </Button>
                     </div>
                   </div>
-                </div>
-                <div className="mt-4">
-                  <Label htmlFor="content">Content</Label>
-                  <Textarea
-                    id="content"
-                    value={articleData.content}
-                    onChange={(e) => handleInputChange('content', e.target.value)}
-                    placeholder="Write your article content here..."
-                    rows={20}
-                    className="font-mono text-sm"
-                  />
-                </div>
-              </CardContent>
-            </Card>
 
-            {/* Product Integration - Hidden for Launch */}
-            {ENABLE_PRODUCT_INTEGRATION && (
-              <ProductIntegrationManager
-                articleId={articleId}
-                articleTitle={articleData.title}
-                articleContent={articleData.content}
-                onUpdate={() => {
-                  // Optionally refresh article data or show notification
-                  console.log('Product suggestions updated');
-                }}
-              />
-            )}
-          </div>
+                  <div>
+                    <Label htmlFor="content">Content</Label>
+                    <Textarea
+                      id="content"
+                      value={articleData.content}
+                      onChange={(e) => handleInputChange('content', e.target.value)}
+                      placeholder="Write your article content here..."
+                      className="mt-1 font-mono text-sm"
+                      rows={20}
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      Use markdown for formatting: # for headings, **bold**, *italic*
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Status & Publishing */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Publishing</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="status">Status</Label>
-                  <Select value={articleData.status} onValueChange={(value) => handleInputChange('status', value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="review">In Review</SelectItem>
-                      <SelectItem value="approved">Approved</SelectItem>
-                      <SelectItem value="published">Published</SelectItem>
-                      <SelectItem value="rejected">Rejected</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="scheduled">Scheduled Date</Label>
-                  <Input
-                    id="scheduled"
-                    type="datetime-local"
-                    value={articleData.scheduledPublishDate}
-                    onChange={(e) => handleInputChange('scheduledPublishDate', e.target.value)}
-                  />
-                </div>
-              </CardContent>
-            </Card>
+              {/* Product Integration - Hidden for Launch */}
+              {ENABLE_PRODUCT_INTEGRATION && (
+                <ProductIntegrationManager
+                  articleId={articleId}
+                  articleTitle={articleData.title}
+                  articleContent={articleData.content}
+                  onUpdate={() => {
+                    // Optionally refresh article data or show notification
+                    console.log('Product suggestions updated');
+                  }}
+                />
+              )}
+            </div>
 
-            {/* SEO */}
-            <Card>
-              <CardHeader>
-                <CardTitle>SEO</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="metaDescription">Meta Description</Label>
-                  <Textarea
-                    id="metaDescription"
-                    value={articleData.metaDescription}
-                    onChange={(e) => handleInputChange('metaDescription', e.target.value)}
-                    placeholder="Article meta description"
-                    rows={3}
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="slug">Slug</Label>
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {/* Status & Publishing */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Publishing</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="status">Status</Label>
+                    <Select value={articleData.status} onValueChange={(value) => handleInputChange('status', value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="review">In Review</SelectItem>
+                        <SelectItem value="approved">Approved</SelectItem>
+                        <SelectItem value="published">Published</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="scheduled">Scheduled Date</Label>
+                    <Input
+                      id="scheduled"
+                      type="datetime-local"
+                      value={articleData.scheduledPublishDate}
+                      onChange={(e) => handleInputChange('scheduledPublishDate', e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="metaDescription">Meta Description</Label>
+                    <Textarea
+                      id="metaDescription"
+                      value={articleData.metaDescription}
+                      onChange={(e) => handleInputChange('metaDescription', e.target.value)}
+                      placeholder="Article meta description"
+                      rows={3}
+                      className="mt-1"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      {articleData.metaDescription.length}/160 characters
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Keywords */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Target Keywords</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <div className="flex space-x-2">
                     <Input
-                      id="slug"
-                      value={articleData.slug}
-                      onChange={(e) => handleInputChange('slug', e.target.value)}
-                      placeholder="article-slug"
+                      value={newKeyword}
+                      onChange={(e) => setNewKeyword(e.target.value)}
+                      placeholder="Add keyword"
+                      onKeyPress={(e) => e.key === 'Enter' && handleAddKeyword()}
                     />
-                    <Button onClick={generateSlug} variant="outline" size="sm">
-                      Generate
-                    </Button>
+                    <Button onClick={handleAddKeyword} size="sm">Add</Button>
                   </div>
-                </div>
-                
-                <div>
-                  <Label>SEO Score</Label>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <div className="text-lg font-semibold">{articleData.seoScore}/100</div>
-                    <Input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={articleData.seoScore}
-                      onChange={(e) => handleInputChange('seoScore', parseInt(e.target.value))}
-                      className="flex-1"
-                    />
+                  
+                  <div className="flex flex-wrap gap-2">
+                    {articleData.targetKeywords.map((keyword, index) => (
+                      <div
+                        key={index}
+                        className="cursor-pointer"
+                        onClick={() => handleRemoveKeyword(keyword)}
+                      >
+                        <Badge variant="secondary">
+                          {keyword} ×
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Content Stats */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Content Stats</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span>Word Count:</span>
+                      <span className="font-medium">{articleData.content.split(' ').length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Characters:</span>
+                      <span className="font-medium">{articleData.content.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Reading Time:</span>
+                      <span className="font-medium">{Math.ceil(articleData.content.split(' ').length / 200)} min</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Headings:</span>
+                      <span className="font-medium">{(articleData.content.match(/^#+\s/gm) || []).length}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* SEO Tab */}
+        {activeTab === 'seo' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>SEO Analysis</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span>Keyword Density:</span>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-medium">2.2%</span>
+                      <Badge className="bg-yellow-100 text-yellow-800">
+                        Needs work
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <span>Readability Score:</span>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-medium">58/100</span>
+                      <Badge className="bg-yellow-100 text-yellow-800">
+                        Needs work
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <span>Headings Structure:</span>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-medium">80/100</span>
+                      <Badge className="bg-green-100 text-green-800">
+                        Good
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <span>SEO Score:</span>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-medium">{articleData.seoScore}/100</span>
+                      <Input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={articleData.seoScore}
+                        onChange={(e) => handleInputChange('seoScore', parseInt(e.target.value))}
+                        className="w-24 h-2"
+                      />
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Keywords */}
             <Card>
               <CardHeader>
-                <CardTitle>Target Keywords</CardTitle>
+                <CardTitle>SEO Recommendations</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex space-x-2">
-                  <Input
-                    value={newKeyword}
-                    onChange={(e) => setNewKeyword(e.target.value)}
-                    placeholder="Add keyword"
-                    onKeyPress={(e) => e.key === 'Enter' && handleAddKeyword()}
-                  />
-                  <Button onClick={handleAddKeyword} size="sm">Add</Button>
-                </div>
-                
-                <div className="flex flex-wrap gap-2">
-                  {articleData.targetKeywords.map((keyword, index) => (
-                    <div
-                      key={index}
-                      className="cursor-pointer"
-                      onClick={() => handleRemoveKeyword(keyword)}
-                    >
-                      <Badge variant="secondary">
-                        {keyword} ×
-                      </Badge>
-                    </div>
-                  ))}
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+                    <p className="text-sm text-yellow-800">Consider improving keyword density to 1-2%</p>
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                    <p className="text-sm text-blue-800">Consider adding internal links to related content</p>
+                  </div>
+                  <div className="bg-green-50 border border-green-200 rounded p-3">
+                    <p className="text-sm text-green-800">Good heading structure for SEO</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
-        </div>
+        )}
+
+        {/* Preview Tab */}
+        {activeTab === 'preview' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Content Preview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="border rounded-md bg-white p-6 min-h-[500px] max-h-[700px] overflow-auto shadow-sm">
+                {/* Title Preview */}
+                <h1 className="text-3xl font-bold text-gray-900 mb-6 border-b border-gray-200 pb-4">
+                  {articleData.title || 'Untitled Article'}
+                </h1>
+                
+                {/* Content Preview */}
+                <div className="prose prose-gray max-w-none prose-headings:font-semibold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-p:text-gray-700 prose-p:leading-relaxed prose-strong:text-gray-900 prose-code:bg-gray-100 prose-code:text-gray-800 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm">
+                  <div dangerouslySetInnerHTML={{ __html: contentPreview }} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Delete Confirmation */}
         <AlertDialog open={deleteDialog} onOpenChange={setDeleteDialog}>
