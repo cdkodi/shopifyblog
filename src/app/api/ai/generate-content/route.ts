@@ -26,7 +26,9 @@ export async function POST(request: NextRequest) {
       // New product-aware parameters
       contentTopic,
       includeProducts,
-      productOptions
+      productOptions,
+      // Enhanced config for specialized prompts
+      config
     } = body;
 
     console.log('📝 Request parameters:', {
@@ -69,7 +71,8 @@ export async function POST(request: NextRequest) {
       tone,
       length,
       keywords,
-      options
+      options,
+      config
     };
 
     // Enhance with product context if requested

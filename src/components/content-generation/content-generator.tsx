@@ -80,7 +80,17 @@ export function ContentGenerator({ configuration, onGenerationComplete, onBack }
           options: {
             maxTokens: Math.floor(configuration.wordCount * 1.5), // Rough estimate
             temperature: 0.7
-          }
+          },
+          // Add enhanced config for specialized prompts like Product Showcase
+          config: configuration.template.name === 'Product Showcase' ? {
+            topic: configuration.topic,
+            tone: configuration.tone,
+            wordCount: configuration.wordCount,
+            targetKeyword: configuration.targetKeyword,
+            relatedKeywords: configuration.relatedKeywords,
+            targetAudience: configuration.targetAudience,
+            metaDescription: configuration.metaDescription
+          } : undefined
         })
       });
 

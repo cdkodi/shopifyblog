@@ -26,6 +26,15 @@ export interface AIGenerationRequest {
   tone?: string;
   length?: string;
   keywords?: string[];
+  config?: {
+    topic: string;
+    tone: string;
+    wordCount: number;
+    targetKeyword: string;
+    relatedKeywords: string[];
+    targetAudience: string;
+    metaDescription?: string;
+  };
 }
 
 export interface ProviderError {
