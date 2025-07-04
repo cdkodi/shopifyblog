@@ -83,9 +83,15 @@ export class ProductAwarePromptBuilder {
     productContext: ProductContext,
     request: AIGenerationRequest
   ): string {
-    // Check if this is a Product Showcase template - use enhanced prompt
-    if (request.template === 'Product Showcase' && request.config) {
-      return this.buildProductShowcasePrompt(request.config, productContext)
+    // Check if this template uses specialized enhanced prompting
+    if (request.config) {
+      if (request.template === 'Product Showcase') {
+        return this.buildProductShowcasePrompt(request.config, productContext)
+      } else if (request.template === 'Painting Style') {
+        return this.buildPaintingStylePrompt(request.config, productContext)
+      } else if (request.template === 'Sculpture Style') {
+        return this.buildSculptureStylePrompt(request.config, productContext)
+      }
     }
 
     // Default product integration for other templates
@@ -458,6 +464,447 @@ Remember: The goal is to educate readers about ${config.topic} while inspiring t
 - Integrate product mentions when discussing specific techniques or traditions
 - Balance cultural storytelling with relevant product illustrations
 - Ensure each product mention enhances understanding of the art form's heritage`
+    }
+  }
+
+  /**
+   * Build enhanced Painting Style prompt focusing on artistic techniques and visual storytelling
+   */
+  static buildPaintingStylePrompt(
+    config: {
+      topic: string
+      tone: string
+      wordCount: number
+      targetKeyword: string
+      relatedKeywords: string[]
+      targetAudience: string
+      metaDescription?: string
+    },
+    productContext: ProductContext
+  ): string {
+    const products = productContext.availableProducts
+    const primaryProduct = products[0]
+    
+    // Tone mapping specific to artistic/painting content
+    const paintingToneMapping = {
+      'professional': 'Authoritative and scholarly, rich in art historical knowledge',
+      'storytelling': 'Rich in artistic terminology, visually poetic, and deeply appreciative of traditional techniques',
+      'casual': 'Accessible and engaging, making art appreciation approachable',
+      'friendly': 'Warm and encouraging, inspiring artistic curiosity',
+      'authoritative': 'Expert and definitive, demonstrating deep artistic knowledge'
+    }
+    
+    const voiceStyle = paintingToneMapping[config.tone as keyof typeof paintingToneMapping] || 'Authoritative and scholarly, rich in art historical knowledge'
+    
+    // Build structured painting information
+    const paintingShowcaseDetails = products.map(product => {
+      return `
+**Artwork: ${product.title}**
+- Art Form: ${product.product_type}
+- Collections: ${product.collections.join(', ')}
+- Description: ${product.description}
+- Artistic Context: ${this.generateArtisticContext(product)}
+- Visual Elements: ${this.generateVisualElements(product)}`
+    }).join('\n')
+
+    return `**Act as an expert Art Historian and Visual Arts Specialist.** Your task is to write an in-depth, visually rich article that explores painting techniques, artistic movements, and visual storytelling. The article should educate readers about painting methods while inspiring them to appreciate and collect authentic traditional art.
+
+**1. ## Core Task & Desired Outcome:**
+
+Write a comprehensive article of approximately **${config.wordCount} words** that serves as an artistic deep-dive into painting techniques and styles. The primary goal is to educate readers about the artistic process, visual elements, and cultural significance of painting traditions. The secondary goal is to inspire appreciation for authentic artworks and drive engagement with traditional painting collections.
+
+**2. ## Artistic Focus & Cultural Details:**
+
+* **Primary Painting Style:** **${config.topic}**
+* **Art Historical Context:** **${primaryProduct?.product_type || 'Traditional Painting'}**
+* **Visual Elements Focus:** **Color theory, composition, brushwork, symbolism**
+
+${paintingShowcaseDetails}
+
+* **Target Audience:** **${config.targetAudience}** - Art enthusiasts, collectors, and individuals seeking to understand traditional painting techniques and their cultural significance.
+
+**3. ## SEO & Keyword Strategy:**
+
+* **Primary Keyword:** **${config.targetKeyword}**
+* **Secondary Keywords:** **${config.relatedKeywords.join(', ')}**
+* **Instructions:**
+    * Integrate the **Primary Keyword** naturally into the title, introduction, at least one H2 heading, and conclusion.
+    * Weave **Secondary Keywords** into discussions of artistic techniques, visual elements, and cultural significance.
+    * Create content that naturally ranks for art appreciation and technique-focused search terms.
+
+**4. ## Content Structure & Artistic Tone:**
+
+* **Tone of Voice:** **${voiceStyle}** The writing should be rich in artistic terminology, visually descriptive, and deeply appreciative of traditional techniques.
+* **Format:** Use Markdown for formatting.
+
+    * **Evocative & Scholarly Title (H1):** The title should capture the artistic essence and visual beauty (e.g., "The Visual Poetry of ${config.topic}: Brushstrokes That Tell Ancient Stories" or "Mastering ${config.topic}: Where Color Meets Cultural Heritage").
+    
+    * **Introduction:**
+        * Begin with a vivid description of the visual impact of the art form
+        * Introduce the artistic tradition and its visual language
+        * Set the context for artistic exploration and appreciation
+    
+    * **Body Paragraphs (using H2 and H3 for subheadings):**
+        * **Section 1: The Canvas Speaks (Visual Language & Composition):** Explore the visual elements - color palettes, composition rules, spatial relationships, and how artists create emotional impact through visual storytelling.
+        
+        * **Section 2: Masters of the Brush (Technique & Tradition):** Deep dive into the painting techniques - brushwork styles, pigment preparation, traditional methods passed down through generations, and the skill required to master the art form.
+        
+        * **Section 3: Stories in Paint (Symbolism & Cultural Narratives):** Analyze the symbolic elements, cultural stories depicted, spiritual significance, and how traditional paintings serve as cultural documents.
+        
+        * **Section 4: Bringing Art Home (Collecting & Appreciation):** Guide readers on how to appreciate, display, and care for traditional paintings:
+            * **For Traditional Art:** "Creating an Art Gallery Wall with ${primaryProduct?.title}" or "Displaying ${config.topic} in Contemporary Spaces"
+            * **For Color Harmony:** "Understanding Color Significance in ${config.topic}" or "Creating Visual Flow with Traditional Art"
+            * **For Cultural Appreciation:** "Reading the Stories in Traditional Paintings" or "Connecting with Artistic Heritage Through Visual Art"
+    
+    * **Conclusion:**
+        * Summarize the artistic significance and visual beauty
+        * Reinforce the importance of preserving traditional painting techniques
+        * Include a strong, art-appreciation focused **Call to Action (CTA)**
+
+**5. ## Artwork Integration Guidelines:**
+
+${this.getArtisticIntegrationInstructions(productContext.integrationStyle, products)}
+
+**6. ## Visual & Artistic Elements:**
+
+* **Artistic Accuracy:** Ensure correct terminology and accurate representation of painting techniques
+* **Visual Descriptions:** Use rich, descriptive language that helps readers visualize brushwork, color relationships, and composition
+* **Technical Appreciation:** Explain artistic concepts in accessible terms while maintaining scholarly depth
+* **Cultural Context:** Connect painting techniques to their cultural and historical significance
+
+**7. ## Visual Content Guidance:**
+
+Indicate where high-quality images should go:
+* \`[Placeholder for a high-resolution image showcasing the overall composition and color harmony of the featured painting]\`
+* \`[Placeholder for detailed close-up shots showing brushwork techniques and paint application methods]\`
+* \`[Placeholder for comparison images showing different stylistic approaches within the tradition]\`
+* \`[Placeholder for process images showing traditional pigment preparation or painting techniques, if available]\`
+* \`[Placeholder for gallery-style images showing how the artwork appears in display settings]\`
+
+**8. ## Call to Action (CTA):**
+
+The final CTA should be inspiring and focused on artistic appreciation and cultural preservation:
+* **Examples:** "Explore our authentic ${config.topic} collection and bring timeless artistic beauty to your space." or "Discover the visual poetry of traditional ${config.topic} and find the perfect piece for your art collection." or "Celebrate artistic mastery - browse our curated ${config.topic} gallery."
+
+**9. ## Artwork Integration Syntax:**
+
+When naturally mentioning artworks in your analysis, use this format: [PRODUCT:product-handle]
+Examples:
+- "The masterful brushwork in [PRODUCT:${products[0]?.handle}] demonstrates the traditional ${config.topic} techniques perfected over centuries"
+- "Works like [PRODUCT:${products[1]?.handle}] showcase the sophisticated color theory inherent in authentic ${config.topic} art"
+
+**10. ## What to Emphasize:**
+
+* Focus on artistic techniques and visual elements that make the art form unique
+* Emphasize the skill, training, and cultural knowledge required to create authentic works
+* Connect visual elements to cultural meaning and artistic tradition
+* Highlight the irreplaceable value of traditional artistic knowledge
+* Create appreciation for the artistic process and cultural preservation
+
+Remember: The goal is to educate readers about ${config.topic} while inspiring them to appreciate and support traditional artistic practices that preserve cultural heritage through visual storytelling.`
+  }
+
+  /**
+   * Generate artistic context for painting-related products
+   */
+  private static generateArtisticContext(product: ProductForContentGeneration): string {
+    const title = product.title.toLowerCase()
+    const collections = product.collections.join(' ').toLowerCase()
+    
+    if (title.includes('madhubani') || collections.includes('madhubani')) {
+      return 'Ancient Mithila painting tradition featuring geometric patterns, natural motifs, and religious themes'
+    } else if (title.includes('pichwai') || collections.includes('pichwai')) {
+      return 'Traditional temple painting art depicting Lord Krishna with intricate details and symbolic narratives'
+    } else if (title.includes('kerala') || collections.includes('kerala')) {
+      return 'Classical mural painting from Kerala temples with vibrant colors and mythological stories'
+    } else if (title.includes('warli') || collections.includes('warli')) {
+      return 'Tribal art form from Maharashtra using simple geometric shapes to depict daily life'
+    } else if (title.includes('tanjore') || collections.includes('tanjore')) {
+      return 'Classical South Indian painting with gold foil work and rich cultural symbolism'
+    }
+    return 'Traditional Indian painting art representing rich cultural heritage and artistic traditions'
+  }
+
+  /**
+   * Generate visual elements description for painting products
+   */
+  private static generateVisualElements(product: ProductForContentGeneration): string {
+    const title = product.title.toLowerCase()
+    const collections = product.collections.join(' ').toLowerCase()
+    
+    if (title.includes('madhubani') || collections.includes('madhubani')) {
+      return 'Bold geometric patterns, natural earth pigments, intricate line work, and symbolic motifs'
+    } else if (title.includes('pichwai') || collections.includes('pichwai')) {
+      return 'Rich color palette, detailed figurative work, textile-like patterns, and divine symbolism'
+    } else if (title.includes('kerala') || collections.includes('kerala')) {
+      return 'Vibrant mineral colors, classical proportions, elaborate costume details, and narrative compositions'
+    } else if (title.includes('warli') || collections.includes('warli')) {
+      return 'Monochromatic white on brown, simple geometric forms, rhythmic patterns, and tribal symbolism'
+    }
+    return 'Traditional color palettes, cultural symbolism, authentic brushwork techniques, and compositional harmony'
+  }
+
+  /**
+   * Build enhanced Sculpture Style prompt focusing on three-dimensional artistry and craftsmanship
+   */
+  static buildSculptureStylePrompt(
+    config: {
+      topic: string
+      tone: string
+      wordCount: number
+      targetKeyword: string
+      relatedKeywords: string[]
+      targetAudience: string
+      metaDescription?: string
+    },
+    productContext: ProductContext
+  ): string {
+    const products = productContext.availableProducts
+    const primaryProduct = products[0]
+    
+    // Tone mapping specific to sculpture/craftsmanship content
+    const sculptureToneMapping = {
+      'professional': 'Authoritative and reverent of traditional craftsmanship',
+      'storytelling': 'Rich in tactile descriptions, deeply respectful of artisan skills and cultural traditions',
+      'casual': 'Approachable and inspiring, making sculpture appreciation accessible',
+      'friendly': 'Encouraging and warm, celebrating artisan mastery',
+      'authoritative': 'Expert and definitive, demonstrating deep knowledge of sculptural arts'
+    }
+    
+    const voiceStyle = sculptureToneMapping[config.tone as keyof typeof sculptureToneMapping] || 'Authoritative and reverent of traditional craftsmanship'
+    
+    // Build structured sculpture information
+    const sculptureShowcaseDetails = products.map(product => {
+      return `
+**Sculpture: ${product.title}**
+- Craft Type: ${product.product_type}
+- Collections: ${product.collections.join(', ')}
+- Description: ${product.description}
+- Artistic Context: ${this.generateSculpturalContext(product)}
+- Material & Technique: ${this.generateMaterialContext(product)}`
+    }).join('\n')
+
+    return `**Act as an expert Sculpture Specialist and Traditional Crafts Authority.** Your task is to write a comprehensive, tactilely rich article that explores sculptural techniques, three-dimensional artistry, and the mastery of traditional craftsmanship. The article should educate readers about sculptural processes while inspiring appreciation for authentic handcrafted works.
+
+**1. ## Core Task & Desired Outcome:**
+
+Write an in-depth article of approximately **${config.wordCount} words** that serves as a masterclass in sculptural arts and traditional craftsmanship. The primary goal is to educate readers about three-dimensional artistic processes, material mastery, and the physical skill required for traditional sculpture. The secondary goal is to inspire appreciation for handcrafted sculptures and traditional artisan work.
+
+**2. ## Sculptural Focus & Craft Details:**
+
+* **Primary Sculpture Type:** **${config.topic}**
+* **Traditional Craft:** **${primaryProduct?.product_type || 'Traditional Sculpture'}**
+* **Material Mastery:** **Stone, metal, wood, clay, or mixed media focus**
+
+${sculptureShowcaseDetails}
+
+* **Target Audience:** **${config.targetAudience}** - Craft enthusiasts, collectors of traditional art, and individuals who appreciate the mastery of three-dimensional artistic creation.
+
+**3. ## SEO & Keyword Strategy:**
+
+* **Primary Keyword:** **${config.targetKeyword}**
+* **Secondary Keywords:** **${config.relatedKeywords.join(', ')}**
+* **Instructions:**
+    * Integrate the **Primary Keyword** naturally into the title, introduction, at least one H2 heading, and conclusion.
+    * Weave **Secondary Keywords** into discussions of sculptural techniques, material properties, and craftsmanship mastery.
+    * Create content that naturally ranks for craft appreciation and technique-focused search terms.
+
+**4. ## Content Structure & Artisan Tone:**
+
+* **Tone of Voice:** **${voiceStyle}** The writing should be reverent of traditional craftsmanship, rich in tactile descriptions, and deeply respectful of artisan skills.
+* **Format:** Use Markdown for formatting.
+
+    * **Compelling & Reverent Title (H1):** The title should honor the craftsmanship and dimensional artistry (e.g., "The Sacred Geometry of ${config.topic}: Where Stone Becomes Spirit" or "Masters of ${config.topic}: Three-Dimensional Stories Carved in Time").
+    
+    * **Introduction:**
+        * Begin with the tactile and dimensional impact of the sculpture form
+        * Introduce the traditional craft and its physical demands
+        * Set the context for exploring artisan mastery and cultural significance
+    
+    * **Body Paragraphs (using H2 and H3 for subheadings):**
+        * **Section 1: Form Takes Shape (Dimensional Design & Spatial Harmony):** Explore the principles of three-dimensional design - proportion, balance, negative space, and how sculptors create harmony in physical form.
+        
+        * **Section 2: Masters of Material (Traditional Techniques & Tool Mastery):** Deep dive into the sculptural process - tool usage, material preparation, carving/molding techniques, finishing methods, and the years of training required to master the craft.
+        
+        * **Section 3: Sacred Geometry & Cultural Forms (Symbolism & Spiritual Significance):** Analyze the symbolic meanings embedded in sculptural forms, religious and cultural significance, and how traditional sculptures serve as three-dimensional cultural narratives.
+        
+        * **Section 4: Living with Sculpture (Placement, Care & Appreciation):** Guide readers on selecting, displaying, and maintaining traditional sculptures:
+            * **For Traditional Sculpture:** "Creating Sacred Spaces with ${primaryProduct?.title}" or "Displaying ${config.topic} in Contemporary Settings"
+            * **For Dimensional Impact:** "Understanding Scale and Proportion in ${config.topic}" or "Creating Visual Weight with Traditional Sculpture"
+            * **For Cultural Significance:** "Reading the Stories in Stone and Metal" or "Connecting with Artisan Heritage Through Sculptural Art"
+    
+    * **Conclusion:**
+        * Summarize the craftsmanship mastery and cultural significance
+        * Reinforce the importance of supporting traditional artisan skills
+        * Include a strong, craftsmanship-appreciation focused **Call to Action (CTA)**
+
+**5. ## Sculpture Integration Guidelines:**
+
+${this.getSculpturalIntegrationInstructions(productContext.integrationStyle, products)}
+
+**6. ## Tactile & Dimensional Elements:**
+
+* **Craftsmanship Accuracy:** Ensure correct terminology and accurate representation of sculptural techniques
+* **Material Descriptions:** Use language that conveys the weight, texture, and presence of sculpture
+* **Technical Mastery:** Explain traditional techniques with respect for artisan knowledge and years of training
+* **Cultural Respect:** Connect physical craftsmanship to spiritual and cultural meaning
+
+**7. ## Visual Content Guidance:**
+
+Indicate where high-quality images should go:
+* \`[Placeholder for a high-resolution image showing the sculpture's full dimensional presence and overall form]\`
+* \`[Placeholder for detailed shots highlighting tool marks, surface textures, and craftsmanship details]\`
+* \`[Placeholder for process images showing traditional carving/molding techniques and artisan tools, if available]\`
+* \`[Placeholder for scale reference images showing the sculpture in relation to human size or architectural elements]\`
+* \`[Placeholder for installation images showing how the sculpture integrates with living or display spaces]\`
+
+**8. ## Call to Action (CTA):**
+
+The final CTA should honor traditional craftsmanship and artisan heritage:
+* **Examples:** "Honor traditional artisan mastery - explore our authentic ${config.topic} collection." or "Celebrate sculptural excellence and support traditional crafts with our curated ${config.topic} selection." or "Bring the power of traditional sculpture into your space - discover our ${config.topic} masterpieces."
+
+**9. ## Sculpture Integration Syntax:**
+
+When naturally mentioning sculptures in your discussion, use this format: [PRODUCT:product-handle]
+Examples:
+- "The masterful carving in [PRODUCT:${products[0]?.handle}] demonstrates the traditional ${config.topic} techniques requiring years of dedicated training"
+- "Works like [PRODUCT:${products[1]?.handle}] showcase the sophisticated understanding of form and material inherent in authentic ${config.topic} craftsmanship"
+
+**10. ## What to Emphasize:**
+
+* Focus on the physical skill and years of training required for sculptural mastery
+* Emphasize material properties and how they influence the artistic process
+* Connect traditional techniques to cultural preservation and artisan livelihoods
+* Highlight the irreplaceable value of handcrafted traditional work
+* Create appreciation for the tactile experience and three-dimensional cultural narratives
+
+Remember: The goal is to educate readers about ${config.topic} while inspiring them to appreciate and support traditional artisan practices that preserve cultural heritage through three-dimensional storytelling.`
+  }
+
+  /**
+   * Generate sculptural context for sculpture-related products
+   */
+  private static generateSculpturalContext(product: ProductForContentGeneration): string {
+    const title = product.title.toLowerCase()
+    const collections = product.collections.join(' ').toLowerCase()
+    const productType = product.product_type.toLowerCase()
+    
+    if (title.includes('ganesha') || collections.includes('ganesha')) {
+      return 'Sacred sculpture representing the remover of obstacles, carved with traditional iconographic precision'
+    } else if (title.includes('buddha') || collections.includes('buddha')) {
+      return 'Meditative sculpture embodying spiritual enlightenment and peaceful contemplation'
+    } else if (title.includes('krishna') || collections.includes('krishna')) {
+      return 'Divine sculpture capturing the playful and spiritual essence of the beloved deity'
+    } else if (productType.includes('brass') || title.includes('brass')) {
+      return 'Traditional metal sculpture showcasing ancient Indian metallurgy and casting techniques'
+    } else if (productType.includes('stone') || title.includes('stone')) {
+      return 'Hand-carved stone sculpture representing centuries-old stone carving traditions'
+    } else if (productType.includes('wood') || title.includes('wood')) {
+      return 'Traditional wood sculpture displaying master woodcarving skills and cultural artistry'
+    }
+    return 'Traditional Indian sculpture representing spiritual significance and artisan mastery'
+  }
+
+  /**
+   * Generate material and technique context for sculpture products
+   */
+  private static generateMaterialContext(product: ProductForContentGeneration): string {
+    const title = product.title.toLowerCase()
+    const productType = product.product_type.toLowerCase()
+    
+    if (productType.includes('brass') || title.includes('brass')) {
+      return 'Lost-wax casting technique, traditional brass alloy, hand-finishing and patina work'
+    } else if (productType.includes('bronze') || title.includes('bronze')) {
+      return 'Ancient bronze casting methods, traditional alloy composition, detailed surface finishing'
+    } else if (productType.includes('stone') || title.includes('stone')) {
+      return 'Hand-carving techniques, traditional chiseling methods, natural stone selection and preparation'
+    } else if (productType.includes('wood') || title.includes('wood')) {
+      return 'Traditional woodcarving tools, seasoned wood selection, hand-finishing and preservation'
+    } else if (productType.includes('clay') || title.includes('terracotta')) {
+      return 'Traditional clay preparation, hand-molding techniques, firing and glazing methods'
+    }
+    return 'Traditional artisan techniques, authentic materials, and time-honored craftsmanship methods'
+  }
+
+  /**
+   * Artistic integration instructions for Painting Style
+   */
+  private static getArtisticIntegrationInstructions(style: string, products: ProductForContentGeneration[]): string {
+    const baseInstructions = `
+**Artwork Integration Strategy:**
+- Reference artworks as examples of authentic traditional techniques
+- Use paintings to illustrate specific artistic principles and methods
+- Connect each artwork mention to art historical significance and technical mastery
+- Focus on artistic education rather than commercial promotion
+- Integrate approximately ${products.length} artworks throughout the artistic analysis
+`
+
+    switch (style) {
+      case 'showcase':
+        return baseInstructions + `
+**SHOWCASE STYLE - Featured Artwork Analysis:**
+- Create dedicated subsections analyzing specific pieces as prime examples of technique
+- Include detailed descriptions of brushwork, composition, and color theory visible in each artwork
+- Explain the art historical significance and technical innovations of featured pieces
+- Use artworks to demonstrate key principles of the painting tradition`
+
+      case 'subtle':
+        return baseInstructions + `
+**SUBTLE STYLE - Natural Artistic Flow:**
+- Mention artworks organically as part of the art historical narrative
+- Reference paintings when they genuinely illustrate specific techniques or principles
+- Avoid obvious artwork promotion; let the artistic education lead
+- Focus on the painting tradition with artworks as supporting visual examples`
+
+      case 'contextual':
+      default:
+        return baseInstructions + `
+**CONTEXTUAL STYLE - Art Historical Integration:**
+- Use artworks as authentic examples throughout the artistic education
+- Integrate painting mentions when discussing specific techniques, color theory, or composition
+- Balance art historical education with relevant artwork illustrations
+- Ensure each artwork mention enhances understanding of the painting tradition's technical mastery`
+    }
+  }
+
+  /**
+   * Sculptural integration instructions for Sculpture Style
+   */
+  private static getSculpturalIntegrationInstructions(style: string, products: ProductForContentGeneration[]): string {
+    const baseInstructions = `
+**Sculpture Integration Strategy:**
+- Reference sculptures as examples of authentic traditional craftsmanship
+- Use sculptural works to illustrate specific techniques and material mastery
+- Connect each sculpture mention to cultural significance and artisan skill
+- Focus on craftsmanship appreciation rather than commercial promotion
+- Integrate approximately ${products.length} sculptures throughout the craft analysis
+`
+
+    switch (style) {
+      case 'showcase':
+        return baseInstructions + `
+**SHOWCASE STYLE - Featured Sculpture Analysis:**
+- Create dedicated subsections examining specific pieces as prime examples of technique
+- Include detailed descriptions of carving methods, material handling, and dimensional design
+- Explain the cultural significance and technical mastery of featured sculptures
+- Use sculptures to demonstrate key principles of the three-dimensional craft tradition`
+
+      case 'subtle':
+        return baseInstructions + `
+**SUBTLE STYLE - Natural Craft Flow:**
+- Mention sculptures organically as part of the craftsmanship narrative
+- Reference sculptural works when they genuinely illustrate specific techniques or cultural meanings
+- Avoid obvious sculpture promotion; let the artisan education lead
+- Focus on the sculptural tradition with works as supporting craft examples`
+
+      case 'contextual':
+      default:
+        return baseInstructions + `
+**CONTEXTUAL STYLE - Craft Heritage Integration:**
+- Use sculptures as authentic examples throughout the craftsmanship education
+- Integrate sculpture mentions when discussing specific techniques, materials, or cultural symbolism
+- Balance craft education with relevant sculptural illustrations
+- Ensure each sculpture mention enhances understanding of the tradition's artisan mastery`
     }
   }
 } 
