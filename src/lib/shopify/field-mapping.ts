@@ -1,5 +1,6 @@
 import { Article } from '@/lib/supabase';
 import { ShopifyArticleInput, ShopifyArticle } from './graphql-client';
+import { marked } from 'marked';
 
 /**
  * Our database article type - just use the Article type directly
@@ -35,9 +36,12 @@ export function mapDatabaseToShopifyInput(
     }
   }
 
+  // Convert markdown content to HTML for Shopify
+  const htmlContent = convertMarkdownToHTML(article.content);
+
   const shopifyInput: ShopifyArticleInput = {
     title: article.title,
-    content: article.content,
+    content: htmlContent,
     handle: handle,
     published: options.published ?? (article.status === 'published'),
     tags: tags,
@@ -268,9 +272,12 @@ export function mapCMSToShopify(cmsArticle: CMSArticle): ShopifyArticleInput {
       .replace(/-+/g, '-') // Replace multiple hyphens with single
       .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
 
+  // Convert markdown content to HTML for Shopify
+  const htmlContent = convertMarkdownToHTML(cmsArticle.content);
+
   return {
     title: cmsArticle.title,
-    content: cmsArticle.content,
+    content: htmlContent,
     excerpt: cmsArticle.meta_description || generateExcerpt(cmsArticle.content),
     handle,
     published: cmsArticle.status === 'published',
@@ -419,4 +426,38 @@ export function extractShopifyId(graphqlId: string): number {
  */
 export function createGraphQLId(shopifyId: number, type: 'Article' | 'Blog'): string {
   return `gid://shopify/${type}/${shopifyId}`;
+}
+
+/**
+ * Convert markdown content to HTML for Shopify
+ * Shopify's bodyHtml field requires HTML, not markdown
+ */
+export function convertMarkdownToHTML(markdownContent: string): string {
+  if (!markdownContent) {
+    return '';
+  }
+
+  try {
+    // Use marked with simple configuration
+    // The newer version of marked is more streamlined
+    const html = marked(markdownContent, {
+      gfm: true, // GitHub Flavored Markdown
+      breaks: true, // Convert line breaks to <br>
+    });
+    
+    // Handle both sync and async returns
+    const htmlString = typeof html === 'string' ? html : String(html);
+    
+    console.log('🔄 Converted markdown to HTML:', {
+      originalLength: markdownContent.length,
+      htmlLength: htmlString.length,
+      preview: htmlString.substring(0, 100) + (htmlString.length > 100 ? '...' : '')
+    });
+    
+    return htmlString;
+  } catch (error) {
+    console.error('❌ Failed to convert markdown to HTML:', error);
+    // Fallback: return original content wrapped in paragraphs
+    return `<p>${markdownContent.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>`;
+  }
 } 
