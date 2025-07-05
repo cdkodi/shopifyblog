@@ -112,30 +112,37 @@ class ShopifyGraphQLClient {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // Get all blogs - Note: In newer API versions, blogs might not be directly queryable
-  // Instead, we'll create a blog if none exists and return it
+  // Get all blogs
   async getBlogs(): Promise<ShopifyBlog[]> {
-    // First, try to get a specific blog if we know the ID
-    const defaultBlogId = process.env.SHOPIFY_DEFAULT_BLOG_ID;
-    
-    if (defaultBlogId) {
-      try {
-        const blog = await this.getBlog(`gid://shopify/Blog/${defaultBlogId}`);
-        return [blog];
-      } catch (error) {
-        console.warn('Failed to fetch default blog:', error);
+    const query = `
+      query GetBlogs {
+        blogs(first: 5) {
+          edges {
+            node {
+              id
+              title
+              handle
+              commentable
+              feedburner
+              feedburnerLocation
+              tags
+              templateSuffix
+            }
+          }
+        }
       }
-    }
+    `;
 
-    // If no default blog or it failed, try to create a default blog
-    try {
-      const blog = await this.createBlog('News', 'news');
-      return [blog];
-    } catch (error) {
-      console.error('Failed to create default blog:', error);
-      // Return empty array if all else fails
-      return [];
-    }
+    return this.executeWithRetry(async () => {
+      const response = await this.client.request(query);
+      console.log('GraphQL Response for getBlogs:', JSON.stringify(response, null, 2));
+      
+      if (!response.data || !response.data.blogs) {
+        throw new Error('Invalid response structure: missing blogs data');
+      }
+      
+      return response.data.blogs.edges.map((edge: any) => edge.node);
+    }, 'getBlogs');
   }
 
   // Get a specific blog
