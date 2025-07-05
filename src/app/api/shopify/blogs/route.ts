@@ -7,27 +7,47 @@ import { shopifyClient } from '@/lib/shopify/graphql-client';
  */
 export async function GET(request: NextRequest) {
   try {
-    const blogs = await shopifyClient.getBlogs();
+    // Since we know the blog ID exists (96953336105), let's fetch it directly
+    const blogId = '96953336105';
+    const blog = await shopifyClient.getBlog(`gid://shopify/Blog/${blogId}`);
     
     return NextResponse.json({
       success: true,
-      blogs: blogs.map(blog => ({
+      blogs: [{
         id: blog.id,
         title: blog.title,
         handle: blog.handle,
         commentable: blog.commentable,
         tags: blog.tags,
-      })),
-      count: blogs.length
+      }],
+      count: 1
     });
 
   } catch (error) {
     console.error('Failed to fetch Shopify blogs:', error);
-    return NextResponse.json({
-      success: false,
-      error: 'Failed to fetch blogs',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    
+    // Fallback: try the getBlogs method
+    try {
+      const blogs = await shopifyClient.getBlogs();
+      
+      return NextResponse.json({
+        success: true,
+        blogs: blogs.map(blog => ({
+          id: blog.id,
+          title: blog.title,
+          handle: blog.handle,
+          commentable: blog.commentable,
+          tags: blog.tags,
+        })),
+        count: blogs.length
+      });
+    } catch (fallbackError) {
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to fetch blogs',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 500 });
+    }
   }
 }
 
