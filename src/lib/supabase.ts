@@ -20,6 +20,11 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   }
 })
 
+// Export createClient function for server-side usage
+export function createClient() {
+  return supabase;
+}
+
 // Type helpers for better TypeScript support
 export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']
 export type Enums<T extends keyof Database['public']['Enums']> = Database['public']['Enums'][T]
