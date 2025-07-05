@@ -16,7 +16,7 @@ This document explains how to set up the Shopify GraphQL integration to publish 
    - Click `Create an app`
 
 2. **Configure App Details**
-   - App name: `Blog CMS Integration`
+   - App name: `BlogPostAuto`
    - App developer: Your name/company
 
 3. **Set Admin API Scopes**
