@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getShopifyBlogs, createShopifyBlog } from '@/lib/shopify/blog-mutations';
-import { isShopifyConfigured } from '@/lib/shopify/graphql-client';
+import { shopifyClient } from '@/lib/shopify/graphql-client';
 
 /**
  * GET /api/shopify/blogs
@@ -8,53 +7,27 @@ import { isShopifyConfigured } from '@/lib/shopify/graphql-client';
  */
 export async function GET(request: NextRequest) {
   try {
-    // Check if Shopify is configured
-    if (!isShopifyConfigured()) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Shopify integration not configured',
-          blogs: [] 
-        },
-        { status: 503 }
-      );
-    }
-
-    const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '50', 10);
-
-    console.log('📋 Fetching Shopify blogs...');
-
-    const result = await getShopifyBlogs(limit);
-
-    if (!result.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Failed to fetch blogs',
-          errors: result.errors,
-          blogs: []
-        },
-        { status: 500 }
-      );
-    }
-
+    const blogs = await shopifyClient.getBlogs();
+    
     return NextResponse.json({
       success: true,
-      blogs: result.blogs,
-      count: result.blogs.length
+      blogs: blogs.map(blog => ({
+        id: blog.id,
+        title: blog.title,
+        handle: blog.handle,
+        commentable: blog.commentable,
+        tags: blog.tags,
+      })),
+      count: blogs.length
     });
 
   } catch (error) {
-    console.error('Error in GET /api/shopify/blogs:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Internal server error',
-        blogs: []
-      },
-      { status: 500 }
-    );
+    console.error('Failed to fetch Shopify blogs:', error);
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to fetch blogs',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
 
@@ -64,60 +37,35 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Check if Shopify is configured
-    if (!isShopifyConfigured()) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Shopify integration not configured' 
-        },
-        { status: 503 }
-      );
+    const { title, handle } = await request.json();
+
+    if (!title) {
+      return NextResponse.json({
+        success: false,
+        error: 'Blog title is required'
+      }, { status: 400 });
     }
 
-    const body = await request.json();
-    const { title, handle } = body;
-
-    // Validate required fields
-    if (!title || typeof title !== 'string') {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Title is required and must be a string'
-        },
-        { status: 400 }
-      );
-    }
-
-    console.log('📝 Creating Shopify blog:', { title, handle });
-
-    const result = await createShopifyBlog(title, handle);
-
-    if (!result.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Failed to create blog',
-          errors: result.errors
-        },
-        { status: 500 }
-      );
-    }
-
+    const blog = await shopifyClient.createBlog(title, handle);
+    
     return NextResponse.json({
       success: true,
-      blog: result.blog,
-      message: 'Blog created successfully'
+      message: 'Blog created successfully',
+      blog: {
+        id: blog.id,
+        title: blog.title,
+        handle: blog.handle,
+        commentable: blog.commentable,
+        tags: blog.tags,
+      }
     });
 
   } catch (error) {
-    console.error('Error in POST /api/shopify/blogs:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Internal server error'
-      },
-      { status: 500 }
-    );
+    console.error('Failed to create Shopify blog:', error);
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to create blog',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 } 

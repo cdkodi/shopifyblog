@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { shopifyClient } from '@/lib/shopify/graphql-client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,60 +22,42 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Test connection to Shopify
-    const shopifyUrl = `https://${storeDomain}/admin/api/${apiVersion}/shop.json`;
-    
-    const response = await fetch(shopifyUrl, {
-      method: 'GET',
-      headers: {
-        'X-Shopify-Access-Token': accessToken,
-        'Content-Type': 'application/json',
-      },
-    });
+    // Test connection using GraphQL client
+    const [shopData, blogsData] = await Promise.all([
+      shopifyClient.getShop(),
+      shopifyClient.getBlogs()
+    ]);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      return NextResponse.json({
-        success: false,
-        error: 'Shopify API Error',
-        status: response.status,
-        details: errorText
-      }, { status: response.status });
-    }
-
-    const shopData = await response.json();
-
-    // Test blog access if blog ID is provided
-    let blogData = null;
+    // Test specific blog if blogId is provided
+    let specificBlog = null;
     if (blogId) {
-      const blogUrl = `https://${storeDomain}/admin/api/${apiVersion}/blogs/${blogId}.json`;
-      const blogResponse = await fetch(blogUrl, {
-        method: 'GET',
-        headers: {
-          'X-Shopify-Access-Token': accessToken,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (blogResponse.ok) {
-        blogData = await blogResponse.json();
+      try {
+        specificBlog = await shopifyClient.getBlog(blogId);
+      } catch (error) {
+        console.warn('Failed to fetch specific blog:', error);
       }
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Shopify connection successful!',
+      message: 'Shopify GraphQL connection successful!',
       shop: {
-        name: shopData.shop.name,
-        domain: shopData.shop.domain,
-        email: shopData.shop.email,
-        currency: shopData.shop.currency,
-        timezone: shopData.shop.timezone
+        name: shopData.name,
+        domain: shopData.domain,
+        email: shopData.email,
+        currency: shopData.currency,
+        timezone: shopData.timezone,
+        plan: shopData.plan.displayName
       },
-      blog: blogData ? {
-        id: blogData.blog.id,
-        title: blogData.blog.title,
-        handle: blogData.blog.handle
+      blogs: blogsData.map(blog => ({
+        id: blog.id,
+        title: blog.title,
+        handle: blog.handle
+      })),
+      defaultBlog: specificBlog ? {
+        id: specificBlog.id,
+        title: specificBlog.title,
+        handle: specificBlog.handle
       } : null,
       config: {
         storeDomain,
@@ -85,10 +68,10 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Shopify connection test failed:', error);
+    console.error('Shopify GraphQL connection test failed:', error);
     return NextResponse.json({
       success: false,
-      error: 'Connection test failed',
+      error: 'GraphQL connection test failed',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }

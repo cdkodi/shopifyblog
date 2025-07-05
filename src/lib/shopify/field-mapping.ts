@@ -1,4 +1,5 @@
 import { Article } from '@/lib/types/database';
+import { ShopifyArticleInput, ShopifyArticle } from './graphql-client';
 
 /**
  * Shopify Article interface based on GraphQL API
@@ -285,4 +286,201 @@ export const FIELD_MAPPING_CONFIG = {
     reading_time: 'Calculated from word count (200 WPM)',
     updated_at: 'Set to current timestamp',
   }
-}; 
+};
+
+// CMS Article type (from our database)
+export interface CMSArticle {
+  id: string;
+  title: string;
+  content: string;
+  meta_description?: string;
+  slug?: string;
+  status?: string;
+  target_keywords?: string[] | any;
+  shopify_article_id?: number;
+  shopify_blog_id?: number;
+  created_at?: string;
+  updated_at?: string;
+  published_at?: string;
+}
+
+/**
+ * Convert CMS article to Shopify article input format
+ */
+export function mapCMSToShopify(cmsArticle: CMSArticle): ShopifyArticleInput {
+  // Parse target_keywords if it's a JSON string
+  let tags: string[] = [];
+  if (cmsArticle.target_keywords) {
+    try {
+      if (typeof cmsArticle.target_keywords === 'string') {
+        tags = JSON.parse(cmsArticle.target_keywords);
+      } else if (Array.isArray(cmsArticle.target_keywords)) {
+        tags = cmsArticle.target_keywords;
+      }
+    } catch (error) {
+      console.warn('Failed to parse target_keywords:', error);
+      tags = [];
+    }
+  }
+
+  // Generate handle from title if slug is not provided
+  const handle = cmsArticle.slug || 
+    cmsArticle.title
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single
+      .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+
+  return {
+    title: cmsArticle.title,
+    content: cmsArticle.content,
+    excerpt: cmsArticle.meta_description || generateExcerpt(cmsArticle.content),
+    handle,
+    published: cmsArticle.status === 'published',
+    tags,
+    authorDisplayName: 'Culturati Team', // Default author
+    summary: cmsArticle.meta_description || generateSummary(cmsArticle.content),
+  };
+}
+
+/**
+ * Convert Shopify article to CMS article format
+ */
+export function mapShopifyToCMS(shopifyArticle: ShopifyArticle): Partial<CMSArticle> {
+  return {
+    title: shopifyArticle.title,
+    content: shopifyArticle.content,
+    meta_description: shopifyArticle.excerpt || shopifyArticle.summary,
+    slug: shopifyArticle.handle,
+    status: shopifyArticle.published ? 'published' : 'draft',
+    target_keywords: shopifyArticle.tags,
+    shopify_article_id: parseInt(shopifyArticle.id.replace('gid://shopify/Article/', '')),
+    shopify_blog_id: parseInt(shopifyArticle.blogId.replace('gid://shopify/Blog/', '')),
+    published_at: shopifyArticle.publishedAt,
+  };
+}
+
+/**
+ * Generate excerpt from content (first 160 characters)
+ */
+function generateExcerpt(content: string): string {
+  // Remove markdown formatting and HTML tags
+  const cleanContent = content
+    .replace(/#{1,6}\s/g, '') // Remove markdown headers
+    .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold formatting
+    .replace(/\*(.*?)\*/g, '$1') // Remove italic formatting
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/\n+/g, ' ') // Replace newlines with spaces
+    .trim();
+
+  if (cleanContent.length <= 160) {
+    return cleanContent;
+  }
+
+  // Find the last complete sentence within 160 characters
+  const truncated = cleanContent.substring(0, 160);
+  const lastSentence = truncated.lastIndexOf('.');
+  const lastSpace = truncated.lastIndexOf(' ');
+
+  if (lastSentence > 100) {
+    return truncated.substring(0, lastSentence + 1);
+  } else if (lastSpace > 100) {
+    return truncated.substring(0, lastSpace) + '...';
+  } else {
+    return truncated + '...';
+  }
+}
+
+/**
+ * Generate summary from content (first 300 characters)
+ */
+function generateSummary(content: string): string {
+  const cleanContent = content
+    .replace(/#{1,6}\s/g, '')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/<[^>]*>/g, '')
+    .replace(/\n+/g, ' ')
+    .trim();
+
+  if (cleanContent.length <= 300) {
+    return cleanContent;
+  }
+
+  const truncated = cleanContent.substring(0, 300);
+  const lastSentence = truncated.lastIndexOf('.');
+  const lastSpace = truncated.lastIndexOf(' ');
+
+  if (lastSentence > 200) {
+    return truncated.substring(0, lastSentence + 1);
+  } else if (lastSpace > 200) {
+    return truncated.substring(0, lastSpace) + '...';
+  } else {
+    return truncated + '...';
+  }
+}
+
+/**
+ * Validate CMS article before publishing to Shopify
+ */
+export function validateCMSArticle(article: CMSArticle): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  if (!article.title || article.title.trim().length === 0) {
+    errors.push('Title is required');
+  }
+
+  if (!article.content || article.content.trim().length === 0) {
+    errors.push('Content is required');
+  }
+
+  if (article.title && article.title.length > 255) {
+    errors.push('Title must be 255 characters or less');
+  }
+
+  if (article.content && article.content.length > 100000) {
+    errors.push('Content must be 100,000 characters or less');
+  }
+
+  // Validate slug format if provided
+  if (article.slug) {
+    const slugRegex = /^[a-z0-9-]+$/;
+    if (!slugRegex.test(article.slug)) {
+      errors.push('Slug must contain only lowercase letters, numbers, and hyphens');
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+/**
+ * Create a Shopify-compatible handle from any string
+ */
+export function createShopifyHandle(input: string): string {
+  return input
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single
+    .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
+    .substring(0, 255); // Shopify handle limit
+}
+
+/**
+ * Extract Shopify ID from GraphQL ID
+ */
+export function extractShopifyId(graphqlId: string): number {
+  const match = graphqlId.match(/\/(\d+)$/);
+  return match ? parseInt(match[1]) : 0;
+}
+
+/**
+ * Create GraphQL ID from Shopify ID
+ */
+export function createGraphQLId(shopifyId: number, type: 'Article' | 'Blog'): string {
+  return `gid://shopify/${type}/${shopifyId}`;
+} 

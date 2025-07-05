@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  verifyShopifyWebhook, 
-  handleArticleWebhook, 
-  handleBlogWebhook,
-  isValidWebhookEvent,
-  ShopifyWebhookEvent,
-  ShopifyArticleWebhookPayload,
-  ShopifyBlogWebhookPayload
-} from '@/lib/shopify/webhook-handler';
+import { createClient } from '@/lib/supabase';
+import { mapShopifyToCMS } from '@/lib/shopify/field-mapping';
+import crypto from 'crypto';
+
+// Webhook events we handle
+const SUPPORTED_TOPICS = [
+  'articles/create',
+  'articles/update',
+  'articles/delete',
+  'blogs/create',
+  'blogs/update',
+  'blogs/delete'
+];
 
 /**
  * POST /api/webhooks/shopify
@@ -15,106 +19,252 @@ import {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Get the raw body for signature verification
-    const rawBody = await request.text();
-    
-    // Get webhook headers
+    // Verify webhook signature
     const signature = request.headers.get('x-shopify-hmac-sha256');
     const topic = request.headers.get('x-shopify-topic');
     const shopDomain = request.headers.get('x-shopify-shop-domain');
+
+    if (!signature || !topic) {
+      return NextResponse.json({
+        success: false,
+        error: 'Missing required headers'
+      }, { status: 400 });
+    }
+
+    // Get raw body for signature verification
+    const body = await request.text();
     
-    // Validate required headers
-    if (!signature || !topic || !shopDomain) {
-      console.error('Missing required webhook headers:', { signature: !!signature, topic, shopDomain });
-      return NextResponse.json(
-        { error: 'Missing required webhook headers' },
-        { status: 400 }
-      );
-    }
-
-    // Verify webhook signature
-    const webhookSecret = process.env.SHOPIFY_WEBHOOK_SECRET;
-    if (!webhookSecret) {
-      console.error('SHOPIFY_WEBHOOK_SECRET not configured');
-      return NextResponse.json(
-        { error: 'Webhook secret not configured' },
-        { status: 500 }
-      );
-    }
-
-    const isValid = verifyShopifyWebhook(rawBody, signature, webhookSecret);
-    if (!isValid) {
+    // Verify webhook authenticity
+    if (!verifyWebhookSignature(body, signature)) {
       console.error('Invalid webhook signature');
-      return NextResponse.json(
-        { error: 'Invalid webhook signature' },
-        { status: 401 }
-      );
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid signature'
+      }, { status: 401 });
     }
 
-    // Validate event type
-    if (!isValidWebhookEvent(topic)) {
-      console.log(`Unsupported webhook event: ${topic}`);
-      return NextResponse.json(
-        { message: `Unsupported event: ${topic}` },
-        { status: 200 }
-      );
-    }
-
-    // Parse the payload
-    let payload: any;
-    try {
-      payload = JSON.parse(rawBody);
-    } catch (error) {
-      console.error('Invalid JSON payload:', error);
-      return NextResponse.json(
-        { error: 'Invalid JSON payload' },
-        { status: 400 }
-      );
-    }
-
-    console.log(`📦 Received Shopify webhook: ${topic}`, {
-      shopDomain,
-      payloadKeys: Object.keys(payload)
-    });
-
-    // Handle the webhook based on event type
-    let result;
-    
-    if (topic.startsWith('articles/')) {
-      result = await handleArticleWebhook(topic as ShopifyWebhookEvent, payload as ShopifyArticleWebhookPayload);
-    } else if (topic.startsWith('blogs/')) {
-      result = await handleBlogWebhook(topic as ShopifyWebhookEvent, payload as ShopifyBlogWebhookPayload);
-    } else {
-      return NextResponse.json(
-        { message: `Unsupported event category: ${topic}` },
-        { status: 200 }
-      );
-    }
-
-    // Return appropriate response
-    if (result.success) {
+    // Check if we support this topic
+    if (!SUPPORTED_TOPICS.includes(topic)) {
+      console.log(`Unsupported webhook topic: ${topic}`);
       return NextResponse.json({
         success: true,
-        message: result.message
+        message: 'Topic not supported, ignored'
       });
+    }
+
+    // Parse webhook data
+    const webhookData = JSON.parse(body);
+    
+    console.log(`Processing Shopify webhook: ${topic} from ${shopDomain}`);
+
+    // Handle different webhook topics
+    switch (topic) {
+      case 'articles/create':
+        await handleArticleCreate(webhookData);
+        break;
+      case 'articles/update':
+        await handleArticleUpdate(webhookData);
+        break;
+      case 'articles/delete':
+        await handleArticleDelete(webhookData);
+        break;
+      case 'blogs/create':
+        await handleBlogCreate(webhookData);
+        break;
+      case 'blogs/update':
+        await handleBlogUpdate(webhookData);
+        break;
+      case 'blogs/delete':
+        await handleBlogDelete(webhookData);
+        break;
+      default:
+        console.log(`Unhandled topic: ${topic}`);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Webhook ${topic} processed successfully`
+    });
+
+  } catch (error) {
+    console.error('Webhook processing failed:', error);
+    return NextResponse.json({
+      success: false,
+      error: 'Webhook processing failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
+  }
+}
+
+// Verify webhook signature using HMAC-SHA256
+function verifyWebhookSignature(body: string, signature: string): boolean {
+  const webhookSecret = process.env.SHOPIFY_WEBHOOK_SECRET;
+  
+  if (!webhookSecret) {
+    console.warn('SHOPIFY_WEBHOOK_SECRET not configured, skipping signature verification');
+    return true; // Allow webhooks if secret is not configured (development mode)
+  }
+
+  const hmac = crypto.createHmac('sha256', webhookSecret);
+  hmac.update(body, 'utf8');
+  const calculatedSignature = hmac.digest('base64');
+
+  return crypto.timingSafeEqual(
+    Buffer.from(signature, 'base64'),
+    Buffer.from(calculatedSignature, 'base64')
+  );
+}
+
+// Handle article creation in Shopify
+async function handleArticleCreate(articleData: any) {
+  const supabase = createClient();
+  
+  try {
+    // Check if we already have this article (to avoid duplicates)
+    const { data: existingArticle } = await supabase
+      .from('articles')
+      .select('id')
+      .eq('shopify_article_id', articleData.id)
+      .single();
+
+    if (existingArticle) {
+      console.log(`Article ${articleData.id} already exists in database`);
+      return;
+    }
+
+    // Convert Shopify article to CMS format
+    const cmsArticle = mapShopifyToCMS({
+      ...articleData,
+      blogId: `gid://shopify/Blog/${articleData.blog_id}`
+    });
+
+    // Insert new article into our database
+    const { error } = await supabase
+      .from('articles')
+      .insert({
+        ...cmsArticle,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+    if (error) {
+      console.error('Failed to create article from webhook:', error);
     } else {
-      console.error(`Webhook processing failed for ${topic}:`, result.errors);
-      return NextResponse.json(
-        {
-          success: false,
-          error: result.message,
-          details: result.errors
-        },
-        { status: 500 }
-      );
+      console.log(`Article ${articleData.id} created from Shopify webhook`);
     }
 
   } catch (error) {
-    console.error('Error processing Shopify webhook:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Error handling article create webhook:', error);
+  }
+}
+
+// Handle article updates in Shopify
+async function handleArticleUpdate(articleData: any) {
+  const supabase = createClient();
+  
+  try {
+    // Find the article in our database
+    const { data: existingArticle } = await supabase
+      .from('articles')
+      .select('id')
+      .eq('shopify_article_id', articleData.id)
+      .single();
+
+    if (!existingArticle) {
+      console.log(`Article ${articleData.id} not found in database, creating new one`);
+      await handleArticleCreate(articleData);
+      return;
+    }
+
+    // Convert Shopify article to CMS format
+    const cmsArticle = mapShopifyToCMS({
+      ...articleData,
+      blogId: `gid://shopify/Blog/${articleData.blog_id}`
+    });
+
+    // Update the article in our database
+    const { error } = await supabase
+      .from('articles')
+      .update({
+        ...cmsArticle,
+        updated_at: new Date().toISOString()
+      })
+      .eq('shopify_article_id', articleData.id);
+
+    if (error) {
+      console.error('Failed to update article from webhook:', error);
+    } else {
+      console.log(`Article ${articleData.id} updated from Shopify webhook`);
+    }
+
+  } catch (error) {
+    console.error('Error handling article update webhook:', error);
+  }
+}
+
+// Handle article deletion in Shopify
+async function handleArticleDelete(articleData: any) {
+  const supabase = createClient();
+  
+  try {
+    // Find and update the article in our database
+    const { error } = await supabase
+      .from('articles')
+      .update({
+        shopify_article_id: null,
+        shopify_blog_id: null,
+        status: 'draft',
+        updated_at: new Date().toISOString()
+      })
+      .eq('shopify_article_id', articleData.id);
+
+    if (error) {
+      console.error('Failed to handle article deletion webhook:', error);
+    } else {
+      console.log(`Article ${articleData.id} marked as unpublished from Shopify webhook`);
+    }
+
+  } catch (error) {
+    console.error('Error handling article delete webhook:', error);
+  }
+}
+
+// Handle blog creation in Shopify
+async function handleBlogCreate(blogData: any) {
+  console.log(`Blog created in Shopify: ${blogData.id} - ${blogData.title}`);
+  // We don't store blogs in our database currently, just log it
+}
+
+// Handle blog updates in Shopify
+async function handleBlogUpdate(blogData: any) {
+  console.log(`Blog updated in Shopify: ${blogData.id} - ${blogData.title}`);
+  // We don't store blogs in our database currently, just log it
+}
+
+// Handle blog deletion in Shopify
+async function handleBlogDelete(blogData: any) {
+  const supabase = createClient();
+  
+  try {
+    // Mark all articles from this blog as unpublished
+    const { error } = await supabase
+      .from('articles')
+      .update({
+        shopify_article_id: null,
+        shopify_blog_id: null,
+        status: 'draft',
+        updated_at: new Date().toISOString()
+      })
+      .eq('shopify_blog_id', blogData.id);
+
+    if (error) {
+      console.error('Failed to handle blog deletion webhook:', error);
+    } else {
+      console.log(`All articles from blog ${blogData.id} marked as unpublished`);
+    }
+
+  } catch (error) {
+    console.error('Error handling blog delete webhook:', error);
   }
 }
 

@@ -1,151 +1,375 @@
-import { createAdminApiClient, AdminApiClient } from '@shopify/admin-api-client';
+import { createAdminApiClient } from '@shopify/admin-api-client';
 
-// Environment configuration
-const SHOPIFY_CONFIG = {
-  storeDomain: process.env.SHOPIFY_STORE_DOMAIN || '',
-  accessToken: process.env.SHOPIFY_ACCESS_TOKEN || '',
-  apiVersion: '2025-07' as const, // Latest stable version
-};
-
-// Validate configuration
-if (!SHOPIFY_CONFIG.storeDomain || !SHOPIFY_CONFIG.accessToken) {
-  console.warn('⚠️ Shopify configuration missing. Blog publishing will be disabled.');
+// Types for our GraphQL operations
+export interface ShopifyBlog {
+  id: string;
+  title: string;
+  handle: string;
+  commentable: string;
+  feedburner: string;
+  feedburnerLocation: string;
+  tags: string;
+  templateSuffix: string;
 }
 
-// GraphQL client instance
-let graphqlClient: AdminApiClient | null = null;
+export interface ShopifyArticle {
+  id: string;
+  title: string;
+  content: string;
+  excerpt: string;
+  handle: string;
+  published: boolean;
+  tags: string[];
+  blogId: string;
+  authorDisplayName: string;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt: string;
+  summary: string;
+}
 
-/**
- * Get or create the Shopify GraphQL client
- */
-export function getShopifyGraphQLClient(): AdminApiClient | null {
-  if (!SHOPIFY_CONFIG.storeDomain || !SHOPIFY_CONFIG.accessToken) {
-    console.warn('Shopify client not configured');
-    return null;
-  }
+export interface ShopifyArticleInput {
+  title: string;
+  content: string;
+  excerpt?: string;
+  handle?: string;
+  published?: boolean;
+  tags?: string[];
+  authorDisplayName?: string;
+  summary?: string;
+}
 
-  if (!graphqlClient) {
-    try {
-      graphqlClient = createAdminApiClient({
-        storeDomain: SHOPIFY_CONFIG.storeDomain,
-        accessToken: SHOPIFY_CONFIG.accessToken,
-        apiVersion: SHOPIFY_CONFIG.apiVersion,
-      });
-      
-      console.log('✅ Shopify GraphQL client initialized');
-    } catch (error) {
-      console.error('❌ Failed to initialize Shopify GraphQL client:', error);
-      return null;
+class ShopifyGraphQLClient {
+  private client: any;
+  private maxRetries: number = 3;
+  private baseDelay: number = 1000; // 1 second
+
+  constructor() {
+    const storeDomain = process.env.SHOPIFY_STORE_DOMAIN;
+    const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+    const apiVersion = process.env.SHOPIFY_API_VERSION || '2024-07';
+
+    if (!storeDomain || !accessToken) {
+      throw new Error('Missing required Shopify environment variables');
     }
+
+    this.client = createAdminApiClient({
+      storeDomain,
+      accessToken,
+      apiVersion,
+    });
   }
 
-  return graphqlClient;
-}
+  private async executeWithRetry<T>(
+    operation: () => Promise<T>,
+    operationName: string
+  ): Promise<T> {
+    let lastError: Error;
 
-/**
- * Execute a GraphQL query with error handling and retry logic
- */
-export async function executeShopifyQuery<T = any>(
-  query: string,
-  variables: Record<string, any> = {},
-  options: {
-    retries?: number;
-    retryDelay?: number;
-  } = {}
-): Promise<{
-  data: T | null;
-  errors: any[] | null;
-  extensions: any | null;
-  success: boolean;
-}> {
-  const client = getShopifyGraphQLClient();
-  
-  if (!client) {
-    return {
-      data: null,
-      errors: [{ message: 'Shopify client not configured' }],
-      extensions: null,
-      success: false,
-    };
-  }
-
-  const { retries = 3, retryDelay = 1000 } = options;
-  let lastError: any = null;
-
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      console.log(`🔄 Executing Shopify GraphQL query (attempt ${attempt + 1}/${retries + 1})`);
-      
-      const response = await client.request(query, { variables });
-      
-      // Check for GraphQL errors (Shopify returns 200 OK even with errors)
-      if (response.errors && response.errors.length > 0) {
-        console.error('❌ GraphQL errors:', response.errors);
+    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error as Error;
         
         // Check if it's a rate limit error
-        const isRateLimit = response.errors.some((error: any) => 
-          error.extensions?.code === 'THROTTLED' || 
-          error.message?.includes('rate limit')
-        );
-        
-        if (isRateLimit && attempt < retries) {
-          const delay = retryDelay * Math.pow(2, attempt); // Exponential backoff
-          console.log(`⏳ Rate limited, retrying in ${delay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
+        if (this.isRateLimitError(error)) {
+          const delay = this.calculateBackoffDelay(attempt);
+          console.warn(`Rate limited on ${operationName}, attempt ${attempt}/${this.maxRetries}. Retrying in ${delay}ms...`);
+          await this.sleep(delay);
           continue;
         }
-        
-        return {
-          data: response.data,
-          errors: response.errors,
-          extensions: response.extensions,
-          success: false,
-        };
-      }
 
-      console.log('✅ GraphQL query executed successfully');
-      return {
-        data: response.data,
-        errors: null,
-        extensions: response.extensions,
-        success: true,
-      };
-
-    } catch (error) {
-      lastError = error;
-      console.error(`❌ GraphQL query failed (attempt ${attempt + 1}):`, error);
-      
-      if (attempt < retries) {
-        const delay = retryDelay * Math.pow(2, attempt);
-        console.log(`⏳ Retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        // For non-rate-limit errors, don't retry
+        throw error;
       }
     }
+
+    throw new Error(`${operationName} failed after ${this.maxRetries} attempts: ${lastError.message}`);
   }
 
-  return {
-    data: null,
-    errors: [{ message: lastError?.message || 'Unknown error occurred' }],
-    extensions: null,
-    success: false,
-  };
+  private isRateLimitError(error: any): boolean {
+    return error?.response?.status === 429 || 
+           error?.message?.includes('rate limit') ||
+           error?.message?.includes('throttled');
+  }
+
+  private calculateBackoffDelay(attempt: number): number {
+    // Exponential backoff with jitter
+    const delay = this.baseDelay * Math.pow(2, attempt - 1);
+    const jitter = Math.random() * 0.1 * delay;
+    return Math.floor(delay + jitter);
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // Get all blogs
+  async getBlogs(): Promise<ShopifyBlog[]> {
+    const query = `
+      query getBlogs {
+        blogs(first: 50) {
+          edges {
+            node {
+              id
+              title
+              handle
+              commentable
+              feedburner
+              feedburnerLocation
+              tags
+              templateSuffix
+            }
+          }
+        }
+      }
+    `;
+
+    return this.executeWithRetry(async () => {
+      const response = await this.client.request(query);
+      return response.data.blogs.edges.map((edge: any) => edge.node);
+    }, 'getBlogs');
+  }
+
+  // Get a specific blog
+  async getBlog(blogId: string): Promise<ShopifyBlog> {
+    const query = `
+      query getBlog($id: ID!) {
+        blog(id: $id) {
+          id
+          title
+          handle
+          commentable
+          feedburner
+          feedburnerLocation
+          tags
+          templateSuffix
+        }
+      }
+    `;
+
+    return this.executeWithRetry(async () => {
+      const response = await this.client.request(query, { variables: { id: blogId } });
+      return response.data.blog;
+    }, 'getBlog');
+  }
+
+  // Create a new blog
+  async createBlog(title: string, handle?: string): Promise<ShopifyBlog> {
+    const mutation = `
+      mutation blogCreate($blog: BlogInput!) {
+        blogCreate(blog: $blog) {
+          blog {
+            id
+            title
+            handle
+            commentable
+            feedburner
+            feedburnerLocation
+            tags
+            templateSuffix
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `;
+
+    const blogInput = {
+      title,
+      handle: handle || title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+    };
+
+    return this.executeWithRetry(async () => {
+      const response = await this.client.request(mutation, { variables: { blog: blogInput } });
+      
+      if (response.data.blogCreate.userErrors.length > 0) {
+        throw new Error(`Blog creation failed: ${response.data.blogCreate.userErrors.map((e: any) => e.message).join(', ')}`);
+      }
+
+      return response.data.blogCreate.blog;
+    }, 'createBlog');
+  }
+
+  // Get articles from a blog
+  async getArticles(blogId: string, limit: number = 50): Promise<ShopifyArticle[]> {
+    const query = `
+      query getArticles($blogId: ID!, $first: Int!) {
+        blog(id: $blogId) {
+          articles(first: $first) {
+            edges {
+              node {
+                id
+                title
+                content
+                excerpt
+                handle
+                published
+                tags
+                authorDisplayName
+                createdAt
+                updatedAt
+                publishedAt
+                summary
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    return this.executeWithRetry(async () => {
+      const response = await this.client.request(query, { 
+        variables: { blogId, first: limit } 
+      });
+      return response.data.blog.articles.edges.map((edge: any) => ({
+        ...edge.node,
+        blogId
+      }));
+    }, 'getArticles');
+  }
+
+  // Create a new article
+  async createArticle(blogId: string, article: ShopifyArticleInput): Promise<ShopifyArticle> {
+    const mutation = `
+      mutation articleCreate($article: ArticleInput!) {
+        articleCreate(article: $article) {
+          article {
+            id
+            title
+            content
+            excerpt
+            handle
+            published
+            tags
+            authorDisplayName
+            createdAt
+            updatedAt
+            publishedAt
+            summary
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `;
+
+    const articleInput = {
+      ...article,
+      blogId,
+      handle: article.handle || article.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+    };
+
+    return this.executeWithRetry(async () => {
+      const response = await this.client.request(mutation, { variables: { article: articleInput } });
+      
+      if (response.data.articleCreate.userErrors.length > 0) {
+        throw new Error(`Article creation failed: ${response.data.articleCreate.userErrors.map((e: any) => e.message).join(', ')}`);
+      }
+
+      return {
+        ...response.data.articleCreate.article,
+        blogId
+      };
+    }, 'createArticle');
+  }
+
+  // Update an existing article
+  async updateArticle(articleId: string, article: Partial<ShopifyArticleInput>): Promise<ShopifyArticle> {
+    const mutation = `
+      mutation articleUpdate($id: ID!, $article: ArticleInput!) {
+        articleUpdate(id: $id, article: $article) {
+          article {
+            id
+            title
+            content
+            excerpt
+            handle
+            published
+            tags
+            authorDisplayName
+            createdAt
+            updatedAt
+            publishedAt
+            summary
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `;
+
+    return this.executeWithRetry(async () => {
+      const response = await this.client.request(mutation, { 
+        variables: { id: articleId, article } 
+      });
+      
+      if (response.data.articleUpdate.userErrors.length > 0) {
+        throw new Error(`Article update failed: ${response.data.articleUpdate.userErrors.map((e: any) => e.message).join(', ')}`);
+      }
+
+      return response.data.articleUpdate.article;
+    }, 'updateArticle');
+  }
+
+  // Delete an article
+  async deleteArticle(articleId: string): Promise<boolean> {
+    const mutation = `
+      mutation articleDelete($id: ID!) {
+        articleDelete(id: $id) {
+          deletedArticleId
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `;
+
+    return this.executeWithRetry(async () => {
+      const response = await this.client.request(mutation, { variables: { id: articleId } });
+      
+      if (response.data.articleDelete.userErrors.length > 0) {
+        throw new Error(`Article deletion failed: ${response.data.articleDelete.userErrors.map((e: any) => e.message).join(', ')}`);
+      }
+
+      return !!response.data.articleDelete.deletedArticleId;
+    }, 'deleteArticle');
+  }
+
+  // Get shop information
+  async getShop() {
+    const query = `
+      query getShop {
+        shop {
+          id
+          name
+          email
+          domain
+          currency
+          timezone
+          plan {
+            displayName
+            partnerDevelopment
+            shopifyPlus
+          }
+        }
+      }
+    `;
+
+    return this.executeWithRetry(async () => {
+      const response = await this.client.request(query);
+      return response.data.shop;
+    }, 'getShop');
+  }
 }
 
-/**
- * Check if Shopify client is properly configured
- */
-export function isShopifyConfigured(): boolean {
-  return !!(SHOPIFY_CONFIG.storeDomain && SHOPIFY_CONFIG.accessToken);
-}
-
-/**
- * Get Shopify configuration (without exposing sensitive data)
- */
-export function getShopifyConfig() {
-  return {
-    storeDomain: SHOPIFY_CONFIG.storeDomain,
-    hasAccessToken: !!SHOPIFY_CONFIG.accessToken,
-    apiVersion: SHOPIFY_CONFIG.apiVersion,
-    isConfigured: isShopifyConfigured(),
-  };
-} 
+// Export singleton instance
+export const shopifyClient = new ShopifyGraphQLClient(); 

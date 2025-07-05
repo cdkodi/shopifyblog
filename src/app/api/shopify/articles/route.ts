@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  publishArticleToShopify, 
-  updateShopifyArticle, 
-  deleteShopifyArticle,
-  getShopifyArticle 
-} from '@/lib/shopify/blog-mutations';
-import { isShopifyConfigured } from '@/lib/shopify/graphql-client';
-import { supabase } from '@/lib/supabase';
-import { mapShopifyToDatabase } from '@/lib/shopify/field-mapping';
+import { shopifyClient } from '@/lib/shopify/graphql-client';
+import { mapCMSToShopify, validateCMSArticle, extractShopifyId, createGraphQLId } from '@/lib/shopify/field-mapping';
+import { createClient } from '@/lib/supabase';
 
 /**
  * POST /api/shopify/articles
@@ -15,114 +9,87 @@ import { mapShopifyToDatabase } from '@/lib/shopify/field-mapping';
  */
 export async function POST(request: NextRequest) {
   try {
-    // Check if Shopify is configured
-    if (!isShopifyConfigured()) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Shopify integration not configured' 
-        },
-        { status: 503 }
-      );
-    }
+    const { articleId, blogId } = await request.json();
 
-    const body = await request.json();
-    const { articleId, blogId, published = true, publishedAt } = body;
-
-    // Validate required fields
     if (!articleId || !blogId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Article ID and Blog ID are required'
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        success: false,
+        error: 'Article ID and Blog ID are required'
+      }, { status: 400 });
     }
 
-    console.log('📝 Publishing article to Shopify:', { articleId, blogId, published });
-
-    // Get the article from our database
-    const { data: article, error: fetchError } = await supabase
+    // Get article from database
+    const supabase = createClient();
+    const { data: article, error: dbError } = await supabase
       .from('articles')
       .select('*')
       .eq('id', articleId)
       .single();
 
-    if (fetchError || !article) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Article not found in database'
-        },
-        { status: 404 }
-      );
+    if (dbError || !article) {
+      return NextResponse.json({
+        success: false,
+        error: 'Article not found in database'
+      }, { status: 404 });
     }
 
-    // Check if article is already published to Shopify
-    if (article.shopify_article_id) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Article is already published to Shopify',
-          shopifyArticleId: article.shopify_article_id
-        },
-        { status: 409 }
-      );
+    // Validate article
+    const validation = validateCMSArticle(article);
+    if (!validation.valid) {
+      return NextResponse.json({
+        success: false,
+        error: 'Article validation failed',
+        details: validation.errors
+      }, { status: 400 });
     }
 
-    // Publish to Shopify
-    const result = await publishArticleToShopify(article, blogId, {
-      published,
-      publishedAt
-    });
+    // Convert to Shopify format
+    const shopifyArticleInput = mapCMSToShopify(article);
 
-    if (!result.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Failed to publish article to Shopify',
-          errors: result.errors
-        },
-        { status: 500 }
-      );
-    }
+    // Create article in Shopify
+    const shopifyArticle = await shopifyClient.createArticle(blogId, shopifyArticleInput);
 
-    // Update our database with Shopify article ID
-    const shopifyArticleId = result.article?.id ? 
-      parseInt(result.article.id.split('/').pop() || '0', 10) : null;
+    // Update database with Shopify IDs
+    const shopifyArticleId = extractShopifyId(shopifyArticle.id);
+    const shopifyBlogId = extractShopifyId(blogId);
 
-    if (shopifyArticleId) {
-      const { error: updateError } = await supabase
-        .from('articles')
-        .update({
-          shopify_article_id: shopifyArticleId,
-          shopify_blog_id: parseInt(blogId.split('/').pop() || '0', 10),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', articleId);
+    const { error: updateError } = await supabase
+      .from('articles')
+      .update({
+        shopify_article_id: shopifyArticleId,
+        shopify_blog_id: shopifyBlogId,
+        status: 'published',
+        published_at: new Date().toISOString()
+      })
+      .eq('id', articleId);
 
-      if (updateError) {
-        console.error('Error updating article with Shopify ID:', updateError);
-      }
+    if (updateError) {
+      console.error('Failed to update article with Shopify IDs:', updateError);
+      // Article was created in Shopify but database update failed
+      // We should still return success but log the issue
     }
 
     return NextResponse.json({
       success: true,
-      article: result.article,
+      message: 'Article published to Shopify successfully',
+      shopifyArticle: {
+        id: shopifyArticle.id,
+        title: shopifyArticle.title,
+        handle: shopifyArticle.handle,
+        published: shopifyArticle.published,
+        createdAt: shopifyArticle.createdAt
+      },
       shopifyArticleId,
-      message: 'Article published successfully to Shopify'
+      shopifyBlogId
     });
 
   } catch (error) {
-    console.error('Error in POST /api/shopify/articles:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Internal server error'
-      },
-      { status: 500 }
-    );
+    console.error('Failed to publish article to Shopify:', error);
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to publish article',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
 
@@ -132,81 +99,55 @@ export async function POST(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    // Check if Shopify is configured
-    if (!isShopifyConfigured()) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Shopify integration not configured' 
-        },
-        { status: 503 }
-      );
+    const { articleId } = await request.json();
+
+    if (!articleId) {
+      return NextResponse.json({
+        success: false,
+        error: 'Article ID is required'
+      }, { status: 400 });
     }
 
-    const body = await request.json();
-    const { articleId, blogId, published, publishedAt } = body;
-
-    // Validate required fields
-    if (!articleId || !blogId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Article ID and Blog ID are required'
-        },
-        { status: 400 }
-      );
-    }
-
-    console.log('📝 Updating article in Shopify:', { articleId, blogId });
-
-    // Get the article from our database
-    const { data: article, error: fetchError } = await supabase
+    // Get article from database
+    const supabase = createClient();
+    const { data: article, error: dbError } = await supabase
       .from('articles')
       .select('*')
       .eq('id', articleId)
       .single();
 
-    if (fetchError || !article) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Article not found in database'
-        },
-        { status: 404 }
-      );
+    if (dbError || !article) {
+      return NextResponse.json({
+        success: false,
+        error: 'Article not found in database'
+      }, { status: 404 });
     }
 
-    // Check if article has a Shopify ID
     if (!article.shopify_article_id) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Article is not published to Shopify yet'
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        success: false,
+        error: 'Article is not published to Shopify yet'
+      }, { status: 400 });
     }
 
-    // Update in Shopify
-    const result = await updateShopifyArticle(
-      article.shopify_article_id,
-      article,
-      blogId,
-      { published, publishedAt }
-    );
-
-    if (!result.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Failed to update article in Shopify',
-          errors: result.errors
-        },
-        { status: 500 }
-      );
+    // Validate article
+    const validation = validateCMSArticle(article);
+    if (!validation.valid) {
+      return NextResponse.json({
+        success: false,
+        error: 'Article validation failed',
+        details: validation.errors
+      }, { status: 400 });
     }
 
-    // Update our database with latest data
+    // Convert to Shopify format
+    const shopifyArticleInput = mapCMSToShopify(article);
+
+    // Update article in Shopify
+    const shopifyGraphQLId = createGraphQLId(article.shopify_article_id, 'Article');
+    const shopifyArticle = await shopifyClient.updateArticle(shopifyGraphQLId, shopifyArticleInput);
+
+    // Update timestamp in database
     const { error: updateError } = await supabase
       .from('articles')
       .update({
@@ -215,24 +156,28 @@ export async function PUT(request: NextRequest) {
       .eq('id', articleId);
 
     if (updateError) {
-      console.error('Error updating article timestamp:', updateError);
+      console.error('Failed to update article timestamp:', updateError);
     }
 
     return NextResponse.json({
       success: true,
-      article: result.article,
-      message: 'Article updated successfully in Shopify'
+      message: 'Article updated in Shopify successfully',
+      shopifyArticle: {
+        id: shopifyArticle.id,
+        title: shopifyArticle.title,
+        handle: shopifyArticle.handle,
+        published: shopifyArticle.published,
+        updatedAt: shopifyArticle.updatedAt
+      }
     });
 
   } catch (error) {
-    console.error('Error in PUT /api/shopify/articles:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Internal server error'
-      },
-      { status: 500 }
-    );
+    console.error('Failed to update article in Shopify:', error);
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to update article',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
 
@@ -242,101 +187,74 @@ export async function PUT(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    // Check if Shopify is configured
-    if (!isShopifyConfigured()) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Shopify integration not configured' 
-        },
-        { status: 503 }
-      );
-    }
-
     const { searchParams } = new URL(request.url);
     const articleId = searchParams.get('articleId');
 
     if (!articleId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Article ID is required'
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        success: false,
+        error: 'Article ID is required'
+      }, { status: 400 });
     }
 
-    console.log('🗑️ Deleting article from Shopify:', { articleId });
-
-    // Get the article from our database
-    const { data: article, error: fetchError } = await supabase
+    // Get article from database
+    const supabase = createClient();
+    const { data: article, error: dbError } = await supabase
       .from('articles')
       .select('*')
       .eq('id', articleId)
       .single();
 
-    if (fetchError || !article) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Article not found in database'
-        },
-        { status: 404 }
-      );
+    if (dbError || !article) {
+      return NextResponse.json({
+        success: false,
+        error: 'Article not found in database'
+      }, { status: 404 });
     }
 
-    // Check if article has a Shopify ID
     if (!article.shopify_article_id) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Article is not published to Shopify'
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        success: false,
+        error: 'Article is not published to Shopify'
+      }, { status: 400 });
     }
 
-    // Delete from Shopify
-    const result = await deleteShopifyArticle(article.shopify_article_id);
+    // Delete article from Shopify
+    const shopifyGraphQLId = createGraphQLId(article.shopify_article_id, 'Article');
+    const deleted = await shopifyClient.deleteArticle(shopifyGraphQLId);
 
-    if (!result.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Failed to delete article from Shopify',
-          errors: result.errors
-        },
-        { status: 500 }
-      );
+    if (!deleted) {
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to delete article from Shopify'
+      }, { status: 500 });
     }
 
-    // Update our database to remove Shopify references
+    // Clear Shopify IDs in database
     const { error: updateError } = await supabase
       .from('articles')
       .update({
         shopify_article_id: null,
         shopify_blog_id: null,
-        updated_at: new Date().toISOString()
+        status: 'draft'
       })
       .eq('id', articleId);
 
     if (updateError) {
-      console.error('Error updating article after Shopify deletion:', updateError);
+      console.error('Failed to clear Shopify IDs from article:', updateError);
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Article deleted successfully from Shopify'
+      message: 'Article deleted from Shopify successfully'
     });
 
   } catch (error) {
-    console.error('Error in DELETE /api/shopify/articles:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Internal server error'
-      },
-      { status: 500 }
-    );
+    console.error('Failed to delete article from Shopify:', error);
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to delete article',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 } 
