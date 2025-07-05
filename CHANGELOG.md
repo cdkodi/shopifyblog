@@ -6,6 +6,71 @@ All notable changes to the Shopify Blog CMS will be documented in this file.
 
 ### 🎯 Major Features Added
 
+#### **Shopify Blog Publishing Integration** (Latest)
+- **Hybrid GraphQL/REST Architecture**: Optimal approach using GraphQL for reading, REST for mutations
+- **Complete Blog Management**: List, create, and manage Shopify blogs from CMS
+- **Article Publishing**: Direct publish/update/delete articles to Shopify store
+- **Real-time Sync Status**: Visual indicators for published vs unpublished articles
+- **Error Handling**: Comprehensive retry logic with exponential backoff
+- **Field Mapping**: Automatic conversion between CMS and Shopify formats
+- **Debug Tools**: Built-in testing endpoints for troubleshooting
+
+**Technical Implementation**:
+```typescript
+// Hybrid approach - GraphQL for reading, REST for mutations
+class ShopifyGraphQLClient {
+  // ✅ GraphQL for reading operations
+  async getBlogs(): Promise<ShopifyBlog[]>
+  async getArticles(blogId: string): Promise<ShopifyArticle[]>
+  
+  // ✅ REST API for mutation operations  
+  async createArticle(blogId: string, article: ShopifyArticleInput): Promise<ShopifyArticle>
+  async updateArticle(articleId: string, article: Partial<ShopifyArticleInput>): Promise<ShopifyArticle>
+  async deleteArticle(articleId: string): Promise<boolean>
+}
+```
+
+**Database Schema Updates**:
+```sql
+-- Added Shopify integration fields
+ALTER TABLE articles ADD COLUMN shopify_article_id BIGINT;
+ALTER TABLE articles ADD COLUMN shopify_blog_id BIGINT;
+
+-- Performance indexes
+CREATE INDEX idx_articles_shopify_article_id ON articles(shopify_article_id);
+CREATE INDEX idx_articles_shopify_blog_id ON articles(shopify_blog_id);
+
+-- Sync status view
+CREATE VIEW articles_with_shopify_status AS
+SELECT *, 
+  CASE WHEN shopify_article_id IS NOT NULL THEN 'published' ELSE 'not_published' END as shopify_status
+FROM articles;
+```
+
+**API Endpoints**:
+- `/api/shopify/blogs` - List and create blogs
+- `/api/shopify/articles` - Publish, update, delete articles with database sync
+- `/api/shopify/debug` - Environment and connection testing
+- `/api/shopify/test-blogs` - Blog functionality testing with fallbacks
+- `/api/shopify/test-articles` - Article operations testing
+- `/api/shopify/test-connection` - Basic connectivity verification
+
+**Frontend Integration**:
+- **Shopify Integration Panel**: Embedded in article edit page
+- **Blog Selection**: Dropdown with auto-loading of available blogs
+- **Publish Actions**: One-click publish/update/delete with loading states
+- **Status Indicators**: Clear badges showing sync status
+- **Error Handling**: User-friendly error messages with retry options
+- **Direct Links**: Quick access to Shopify admin for published articles
+
+**Key Features**:
+- ✅ **Production Ready**: Deployed and tested with real Shopify store
+- ✅ **Fallback Mechanisms**: Graceful degradation when GraphQL queries fail
+- ✅ **Rate Limit Handling**: Automatic retry with exponential backoff
+- ✅ **Field Validation**: Comprehensive data validation and sanitization
+- ✅ **Webhook Support**: Optional bidirectional sync (configurable)
+- ✅ **TypeScript Safe**: Full type safety throughout integration
+
 #### **Keyword Inheritance System** (Latest)
 - **Single DataForSEO Call**: Eliminates duplicate API requests between Topics and Content Generation
 - **Smart Detection**: Automatically detects when user comes from Topics with pre-selected keywords
@@ -102,6 +167,14 @@ For topic "Madhubani Paintings":
 - **Feature Flags**: Easy toggle for phased deployment
 
 ### 🐛 Bug Fixes
+
+#### **Shopify Integration**
+- **500 Error Resolution**: Fixed article publishing failures due to non-existent GraphQL mutations
+- **API Version Updates**: Upgraded to 2024-10 API version for better compatibility
+- **GraphQL Query Optimization**: Simplified blog queries to avoid field permission issues
+- **Fallback Implementation**: Added graceful degradation when GraphQL queries fail
+- **Field Mapping**: Corrected content field mapping from `content` to `bodyHtml`
+- **Error Handling**: Comprehensive retry logic for rate limits and temporary failures
 
 #### **Build & Deployment**
 - **Vercel Build Errors**: Fixed TypeScript compilation failures

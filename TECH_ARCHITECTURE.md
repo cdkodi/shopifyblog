@@ -368,6 +368,121 @@ Instructions: Naturally incorporate these products where relevant...`;
 
 ## Shopify Integration
 
+### Hybrid GraphQL/REST Architecture
+
+**Status**: ✅ Production Ready  
+**Approach**: Hybrid GraphQL/REST implementation  
+**Rationale**: GraphQL Admin API doesn't support blog article mutations  
+
+#### Implementation Strategy
+
+```typescript
+/**
+ * Shopify GraphQL Client with Hybrid Approach
+ * 
+ * Uses GraphQL for reading data (blogs, articles) - supported by Admin API
+ * Uses REST API for mutations (create, update, delete articles) - required
+ * 
+ * See: https://shopify.dev/docs/api/admin-graphql/latest/queries/blogs
+ */
+class ShopifyGraphQLClient {
+  // ✅ GraphQL for reading operations
+  async getBlogs(): Promise<ShopifyBlog[]>
+  async getArticles(blogId: string): Promise<ShopifyArticle[]>
+  
+  // ✅ REST API for mutation operations  
+  async createArticle(blogId: string, article: ShopifyArticleInput): Promise<ShopifyArticle>
+  async updateArticle(articleId: string, article: Partial<ShopifyArticleInput>): Promise<ShopifyArticle>
+  async deleteArticle(articleId: string): Promise<boolean>
+}
+```
+
+#### API Integration Points
+
+**GraphQL Endpoints** (Reading):
+- `/admin/api/2024-10/graphql.json` - Blog and article queries
+- Supported operations: `blogs`, `blog`, `articles`, `article`
+- Error handling with exponential backoff retry logic
+
+**REST Endpoints** (Mutations):
+- `/admin/api/2024-10/blogs/{blog_id}/articles.json` - Article creation
+- `/admin/api/2024-10/articles/{article_id}.json` - Article updates/deletion
+- Field mapping between CMS and Shopify formats
+
+#### Database Schema Updates
+
+```sql
+-- Shopify integration fields added to articles table
+ALTER TABLE articles ADD COLUMN shopify_article_id BIGINT;
+ALTER TABLE articles ADD COLUMN shopify_blog_id BIGINT;
+
+-- Performance indexes
+CREATE INDEX idx_articles_shopify_article_id ON articles(shopify_article_id);
+CREATE INDEX idx_articles_shopify_blog_id ON articles(shopify_blog_id);
+
+-- Computed view for sync status
+CREATE VIEW articles_with_shopify_status AS
+SELECT 
+  *,
+  CASE 
+    WHEN shopify_article_id IS NOT NULL THEN 'published'
+    ELSE 'not_published'
+  END as shopify_status,
+  CASE 
+    WHEN shopify_article_id IS NOT NULL THEN true
+    ELSE false
+  END as is_published_to_shopify
+FROM articles;
+```
+
+#### Frontend Integration
+
+**Shopify Integration Component**:
+- Blog selection dropdown with auto-loading
+- Publish/Update/Delete functionality with loading states  
+- Real-time status indicators (Published/Not Published badges)
+- Error/success messaging with dismissible alerts
+- Direct links to Shopify admin
+- Integrated into article edit page
+
+**API Routes**:
+- `/api/shopify/blogs` - List and create blogs
+- `/api/shopify/articles` - Publish, update, delete articles
+- `/api/shopify/test-connection` - Connection testing
+- `/api/shopify/debug` - Environment and connection debugging
+- `/api/shopify/test-blogs` - Blog-specific testing endpoint
+
+#### Error Handling & Resilience
+
+**Retry Logic**:
+```typescript
+private async executeWithRetry<T>(
+  operation: () => Promise<T>,
+  operationName: string
+): Promise<T> {
+  let lastError: Error;
+  
+  for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (this.isRateLimitError(error) && attempt < this.maxRetries) {
+        const delay = this.calculateBackoffDelay(attempt);
+        await this.sleep(delay);
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+```
+
+**Fallback Mechanisms**:
+- GraphQL query failures fall back to known blog information
+- Rate limit detection with automatic retry
+- Comprehensive error logging and user feedback
+- Graceful degradation when Shopify is unavailable
+
 ### Database Import Scripts
 
 Located in `shopify-scripts/` directory:
@@ -536,6 +651,12 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ANTHROPIC_API_KEY=your_anthropic_key
 OPENAI_API_KEY=your_openai_key
 GOOGLE_API_KEY=your_google_key
+
+# Shopify Integration
+SHOPIFY_STORE_DOMAIN=your-store.myshopify.com
+SHOPIFY_ACCESS_TOKEN=your_shopify_access_token
+SHOPIFY_API_VERSION=2024-10
+SHOPIFY_DEFAULT_BLOG_ID=your_blog_id
 
 # SEO Service (Optional)
 DATAFORSEO_EMAIL=your_email

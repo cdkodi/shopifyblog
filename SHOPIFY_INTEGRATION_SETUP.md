@@ -1,6 +1,12 @@
-# Shopify GraphQL Integration Setup
+# Shopify Integration Setup (Hybrid GraphQL/REST)
 
-This document explains how to set up the Shopify GraphQL integration to publish articles from your CMS directly to your Shopify store blog.
+This document explains how to set up the Shopify integration to publish articles from your CMS directly to your Shopify store blog.
+
+## Architecture Overview
+
+**Implementation**: Hybrid GraphQL/REST approach  
+**Rationale**: Shopify's GraphQL Admin API supports reading blogs/articles but not creating/updating articles  
+**Solution**: Use GraphQL for queries, REST API for mutations
 
 ## Prerequisites
 
@@ -36,10 +42,11 @@ Add these environment variables to your `.env.local` file:
 # Shopify Configuration
 SHOPIFY_STORE_DOMAIN=your-store.myshopify.com
 SHOPIFY_ACCESS_TOKEN=shpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-SHOPIFY_WEBHOOK_SECRET=your_webhook_secret_here
-
-# Optional: Default Blog ID
+SHOPIFY_API_VERSION=2024-10
 SHOPIFY_DEFAULT_BLOG_ID=123456789
+
+# Optional: Webhook Configuration
+SHOPIFY_WEBHOOK_SECRET=your_webhook_secret_here
 ```
 
 ### Getting Your Store Domain
@@ -99,29 +106,38 @@ CREATE INDEX IF NOT EXISTS idx_articles_shopify_blog_id ON articles(shopify_blog
 ## Step 5: Test the Integration
 
 1. **Check Configuration**
-   - Visit `/api/webhooks/shopify` (GET request)
-   - Verify configuration status
+   - Visit `/api/shopify/debug` (GET request)
+   - Verify environment variables and connection status
 
 2. **Test Blog Fetching**
-   - Visit `/api/shopify/blogs` (GET request)
-   - Should return your Shopify blogs
+   - Visit `/api/shopify/test-blogs` (GET request)
+   - Should return detailed blog information and test results
+   - Fallback to known blog if GraphQL query fails
 
 3. **Test Article Publishing**
    - Create a test article in your CMS
    - Use the Shopify Integration panel to publish
    - Verify it appears in your Shopify admin
 
+4. **Debug Endpoints Available**
+   - `/api/shopify/debug` - Environment and connection testing
+   - `/api/shopify/test-blogs` - Blog-specific functionality testing
+   - `/api/shopify/test-articles` - Article operations testing
+   - `/api/shopify/test-connection` - Basic connectivity verification
+
 ## Features
 
 ### ✅ What's Included
 
-- **Modern GraphQL API**: Uses latest Shopify Admin API (2025-07)
+- **Hybrid API Approach**: GraphQL for reading, REST for mutations (2024-10)
 - **Field Mapping**: Automatic conversion between CMS and Shopify fields
 - **Error Handling**: Comprehensive error handling with retry logic
-- **Rate Limiting**: Built-in rate limit detection and backoff
-- **Webhook Support**: Real-time sync with Shopify changes
+- **Rate Limiting**: Built-in rate limit detection and exponential backoff
+- **Fallback Mechanisms**: Graceful degradation when GraphQL queries fail
+- **Webhook Support**: Real-time sync with Shopify changes (optional)
 - **Status Tracking**: Visual indicators for sync status
 - **Blog Selection**: Choose which Shopify blog to publish to
+- **Debug Endpoints**: Built-in testing and debugging tools
 
 ### 📊 Field Mapping
 
@@ -169,9 +185,29 @@ Articles can have these sync statuses:
 ### Debug Information
 
 Check these endpoints for debugging:
-- `GET /api/webhooks/shopify` - Webhook configuration
-- `GET /api/shopify/blogs` - Available blogs
+- `GET /api/shopify/debug` - Complete environment and connection testing
+- `GET /api/shopify/test-blogs` - Blog functionality with fallback testing
+- `GET /api/shopify/test-articles` - Article operations testing
+- `GET /api/shopify/blogs` - Production blog listing
+- `GET /api/webhooks/shopify` - Webhook configuration (if enabled)
 - Check browser console for detailed error messages
+
+### Hybrid Approach Specifics
+
+**GraphQL Limitations**:
+- Blog article mutations (`articleCreate`, `articleUpdate`, `articleDelete`) don't exist in GraphQL Admin API
+- Only reading operations (`blogs`, `articles`) are supported via GraphQL
+- This is a Shopify platform limitation, not an implementation issue
+
+**Fallback Behavior**:
+- If GraphQL blog queries fail, system falls back to known blog information
+- REST API is always used for article creation/updates/deletion
+- Error messages clearly indicate which API layer failed
+
+**API Version Management**:
+- Uses 2024-10 API version for both GraphQL and REST endpoints
+- Consistent authentication headers across both API types
+- Automatic retry logic handles rate limits and temporary failures
 
 ### Logs
 

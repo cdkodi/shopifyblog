@@ -194,10 +194,79 @@ When you come from Topics with selected keywords, you'll see:
 - **Visual Feedback**: Shows "You have unsaved changes" indicator
 - **Smart Prevention**: Reduces API calls and prevents accidental overwrites
 
+**Shopify Blog Publishing Integration** (New):
+
+**Purpose**: Publish articles directly to your Shopify store blog with one-click publishing.
+
+**Features**:
+- **Direct Publishing**: Send articles to Shopify blog without leaving the CMS
+- **Blog Selection**: Choose which Shopify blog to publish to
+- **Sync Status**: Real-time indicators showing publish status
+- **Update Management**: Update published articles seamlessly
+- **Error Handling**: Clear error messages and retry functionality
+
+**How to Use Shopify Integration**:
+
+1. **Setup Required**: Ensure Shopify integration is configured (see setup documentation)
+2. **Edit Article**: Open any article in the article editor
+3. **Shopify Panel**: Find the "Shopify Integration" section in the sidebar
+4. **Select Blog**: Choose your target Shopify blog from the dropdown
+5. **Publish**: Click "Publish to Shopify" button
+6. **Monitor Status**: Watch for success confirmation and status updates
+
+**Shopify Integration Panel**:
+- **Blog Selection**: Dropdown showing all available Shopify blogs
+- **Status Indicators**: 
+  - 🟢 **Published**: Article is live on Shopify
+  - 🔴 **Not Published**: Article exists only in CMS
+  - 🟡 **Syncing**: Update in progress
+- **Actions Available**:
+  - **Publish**: Send new article to Shopify
+  - **Update**: Push changes to existing Shopify article
+  - **Delete**: Remove article from Shopify (keeps CMS copy)
+- **Direct Links**: Quick access to Shopify admin for published articles
+
+**Field Mapping** (CMS → Shopify):
+- **Title** → **Title**: Direct mapping
+- **Content** → **Body HTML**: Markdown converted to HTML
+- **Meta Description** → **Excerpt/Summary**: SEO description
+- **Slug** → **Handle**: URL-friendly identifier
+- **Keywords** → **Tags**: Comma-separated tags
+- **Status** → **Published**: Boolean conversion
+- **Published Date** → **Published At**: ISO format
+
+**Publishing Workflow**:
+1. **Create/Edit Article**: Complete your article in the CMS
+2. **Review Content**: Ensure article is ready for publication
+3. **Select Blog**: Choose target Shopify blog
+4. **Publish**: Click publish button and wait for confirmation
+5. **Verify**: Check Shopify admin to confirm article appears
+6. **Update**: Make changes in CMS and click "Update" to sync
+
+**Error Handling**:
+- **Connection Issues**: Automatic retry with exponential backoff
+- **Rate Limits**: Built-in handling for Shopify API rate limits
+- **Validation Errors**: Clear messages for missing required fields
+- **Fallback Options**: Graceful degradation when services are unavailable
+
+**Best Practices**:
+- Always review articles before publishing to Shopify
+- Use meaningful slugs for better SEO
+- Include meta descriptions for better search visibility
+- Test with draft articles before publishing live content
+- Monitor Shopify admin for successful publication
+
+**Troubleshooting**:
+- **"Failed to load blogs"**: Check Shopify integration configuration
+- **"Publishing failed"**: Verify all required fields are filled
+- **"Connection timeout"**: Check internet connection and retry
+- **"Rate limit exceeded"**: Wait a moment and try again (automatic retry)
+
 **How to Edit Articles**:
 1. **Select Article**: Choose from article library
 2. **Edit Content**: Modify title, content, and meta information
-3. **Product Integration**:
+3. **Shopify Publishing**: Use the integration panel to publish/update
+4. **Product Integration**:
    - Click **"Generate Suggestions"** for AI-powered recommendations
    - Review suggested products with relevance scores
    - **Approve** or **Reject** suggestions
