@@ -112,37 +112,19 @@ class ShopifyGraphQLClient {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // Get all blogs
+  // Get all blogs - Admin API doesn't have blogs at root level
+  // Instead, we'll fetch the known blog by ID
   async getBlogs(): Promise<ShopifyBlog[]> {
-    const query = `
-      query GetBlogs {
-        blogs(first: 5) {
-          edges {
-            node {
-              id
-              title
-              handle
-              commentable
-              feedburner
-              feedburnerLocation
-              tags
-              templateSuffix
-            }
-          }
-        }
-      }
-    `;
-
-    return this.executeWithRetry(async () => {
-      const response = await this.client.request(query);
-      console.log('GraphQL Response for getBlogs:', JSON.stringify(response, null, 2));
-      
-      if (!response.data || !response.data.blogs) {
-        throw new Error('Invalid response structure: missing blogs data');
-      }
-      
-      return response.data.blogs.edges.map((edge: any) => edge.node);
-    }, 'getBlogs');
+    const knownBlogId = '96953336105'; // Your blog ID
+    
+    try {
+      const blog = await this.getBlog(`gid://shopify/Blog/${knownBlogId}`);
+      return [blog];
+    } catch (error) {
+      console.error('Failed to fetch blog by ID:', error);
+      // Return empty array if blog doesn't exist
+      return [];
+    }
   }
 
   // Get a specific blog
