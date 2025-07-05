@@ -1,6 +1,7 @@
 import { Article } from '@/lib/supabase';
 import { ShopifyArticleInput, ShopifyArticle } from './graphql-client';
 import { marked } from 'marked';
+import { optimizeContentForShopify } from './content-parser';
 
 /**
  * Our database article type - just use the Article type directly
