@@ -1,63 +1,16 @@
-import { Article } from '@/lib/types/database';
+import { Article } from '@/lib/supabase';
 import { ShopifyArticleInput, ShopifyArticle } from './graphql-client';
 
 /**
- * Shopify Article interface based on GraphQL API
+ * Our database article type - just use the Article type directly
  */
-export interface ShopifyArticle {
-  id?: string;
-  title: string;
-  content: string;
-  excerpt?: string;
-  handle?: string;
-  publishedAt?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  tags: string[];
-  summary?: string;
-  seo?: {
-    title?: string;
-    description?: string;
-  };
-  blog?: {
-    id: string;
-  };
-}
-
-/**
- * Shopify Article Input for mutations
- */
-export interface ShopifyArticleInput {
-  title: string;
-  content: string;
-  excerpt?: string;
-  handle?: string;
-  published?: boolean;
-  publishedAt?: string;
-  tags?: string[];
-  summary?: string;
-  seo?: {
-    title?: string;
-    description?: string;
-  };
-  blogId: string;
-}
-
-/**
- * Our database article with additional fields
- */
-export interface DatabaseArticle extends Article {
-  target_keywords?: any;
-  shopify_blog_id?: number | null;
-  shopify_article_id?: number | null;
-}
+export type DatabaseArticle = Article;
 
 /**
  * Convert our database article to Shopify article input format
  */
 export function mapDatabaseToShopifyInput(
   article: DatabaseArticle,
-  blogId: string,
   options: {
     published?: boolean;
     publishedAt?: string;
@@ -82,37 +35,18 @@ export function mapDatabaseToShopifyInput(
     }
   }
 
-  // Prepare SEO data
-  const seo: { title?: string; description?: string } = {};
-  if (article.meta_description) {
-    seo.description = article.meta_description;
-  }
-  // Use article title as SEO title if no specific SEO title is provided
-  seo.title = article.title;
-
   const shopifyInput: ShopifyArticleInput = {
     title: article.title,
     content: article.content,
     handle: handle,
-    blogId: blogId,
     published: options.published ?? (article.status === 'published'),
     tags: tags,
-    seo: seo,
   };
 
   // Add excerpt/summary if available
   if (article.meta_description) {
     shopifyInput.excerpt = article.meta_description;
     shopifyInput.summary = article.meta_description;
-  }
-
-  // Add publish date if specified or if article is published
-  if (options.publishedAt) {
-    shopifyInput.publishedAt = options.publishedAt;
-  } else if (article.published_at) {
-    shopifyInput.publishedAt = article.published_at;
-  } else if (article.scheduled_publish_date) {
-    shopifyInput.publishedAt = article.scheduled_publish_date;
   }
 
   return shopifyInput;
@@ -128,7 +62,7 @@ export function mapShopifyToDatabase(
   const databaseArticle: Partial<DatabaseArticle> = {
     title: shopifyArticle.title,
     content: shopifyArticle.content,
-    meta_description: shopifyArticle.excerpt || shopifyArticle.summary || shopifyArticle.seo?.description,
+    meta_description: shopifyArticle.excerpt || shopifyArticle.summary,
     slug: shopifyArticle.handle,
     updated_at: new Date().toISOString(),
   };
@@ -142,15 +76,15 @@ export function mapShopifyToDatabase(
     }
   }
 
-  if (shopifyArticle.blog?.id) {
-    const numericBlogId = extractNumericId(shopifyArticle.blog.id);
+  if (shopifyArticle.blogId) {
+    const numericBlogId = extractNumericId(shopifyArticle.blogId);
     if (numericBlogId) {
       databaseArticle.shopify_blog_id = numericBlogId;
     }
   }
 
   // Handle publication status
-  if (shopifyArticle.publishedAt) {
+  if (shopifyArticle.published && shopifyArticle.publishedAt) {
     databaseArticle.status = 'published';
     databaseArticle.published_at = shopifyArticle.publishedAt;
   } else {
@@ -236,9 +170,7 @@ export function validateShopifyArticleInput(input: ShopifyArticleInput): {
     errors.push('Content is required');
   }
 
-  if (!input.blogId || input.blogId.trim().length === 0) {
-    errors.push('Blog ID is required');
-  }
+
 
   if (input.title && input.title.length > 255) {
     errors.push('Title must be 255 characters or less');
@@ -295,13 +227,17 @@ export interface CMSArticle {
   content: string;
   meta_description?: string | null;
   slug?: string | null;
-  status?: string;
-  target_keywords?: string[] | any;
+  status?: string | null;
+  target_keywords?: any; // JSON field can be string[] or any JSON
   shopify_article_id?: number | null;
   shopify_blog_id?: number | null;
   created_at?: string | null;
   updated_at?: string | null;
   published_at?: string | null;
+  scheduled_publish_date?: string | null;
+  reading_time?: number | null;
+  word_count?: number | null;
+  seo_score?: number | null;
 }
 
 /**

@@ -20,8 +20,8 @@ interface ShopifyIntegrationProps {
   articleId: string;
   articleTitle: string;
   isPublished: boolean;
-  shopifyArticleId?: number;
-  shopifyBlogId?: number;
+  shopifyArticleId?: number | null;
+  shopifyBlogId?: number | null;
   onStatusChange?: (status: 'published' | 'draft', shopifyData?: any) => void;
 }
 

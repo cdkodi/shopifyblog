@@ -11,15 +11,19 @@ interface Article {
   id: string;
   title: string;
   content: string;
-  meta_description?: string;
-  status: 'draft' | 'review' | 'approved' | 'published' | 'rejected';
-  target_keywords?: string[];
-  word_count?: number;
-  reading_time?: number;
-  seo_score?: number;
-  created_at: string;
-  updated_at: string;
-  published_at?: string;
+  meta_description?: string | null;
+  status: string | null;
+  target_keywords?: any; // JSON field
+  word_count?: number | null;
+  reading_time?: number | null;
+  seo_score?: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+  published_at?: string | null;
+  slug?: string | null;
+  shopify_article_id?: number | null;
+  shopify_blog_id?: number | null;
+  scheduled_publish_date?: string | null;
 }
 
 interface ArticleStats {
@@ -112,7 +116,7 @@ export function ArticleReviewDashboard() {
     }
   };
 
-  const updateArticleStatus = async (articleId: string, newStatus: Article['status']) => {
+  const updateArticleStatus = async (articleId: string, newStatus: string) => {
     try {
       const { error } = await supabase
         .from('articles')
@@ -136,7 +140,8 @@ export function ArticleReviewDashboard() {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | null) => {
+    if (!status) return 'bg-gray-100 text-gray-800';
     const colors = {
       draft: 'bg-gray-100 text-gray-800',
       review: 'bg-yellow-100 text-yellow-800',
@@ -147,14 +152,15 @@ export function ArticleReviewDashboard() {
     return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800';
   };
 
-  const getSEOScoreColor = (score?: number) => {
+  const getSEOScoreColor = (score?: number | null) => {
     if (!score) return 'text-gray-400';
     if (score >= 80) return 'text-green-600';
     if (score >= 60) return 'text-yellow-600';
     return 'text-red-600';
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -306,7 +312,7 @@ export function ArticleReviewDashboard() {
                         </Link>
                       </h3>
                       <Badge className={getStatusColor(article.status)}>
-                        {article.status.replace('_', ' ')}
+                        {article.status ? article.status.replace('_', ' ') : 'Unknown'}
                       </Badge>
                     </div>
                     

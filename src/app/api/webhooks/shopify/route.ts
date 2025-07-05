@@ -138,14 +138,29 @@ async function handleArticleCreate(articleData: any) {
       blogId: `gid://shopify/Blog/${articleData.blog_id}`
     });
 
+    // Ensure required fields are present
+    const articleInsert = {
+      title: cmsArticle.title || articleData.title || 'Untitled',
+      content: cmsArticle.content || articleData.content || '',
+      meta_description: cmsArticle.meta_description,
+      slug: cmsArticle.slug,
+      status: cmsArticle.status,
+      target_keywords: cmsArticle.target_keywords,
+      shopify_article_id: cmsArticle.shopify_article_id,
+      shopify_blog_id: cmsArticle.shopify_blog_id,
+      published_at: cmsArticle.published_at,
+      scheduled_publish_date: cmsArticle.scheduled_publish_date,
+      reading_time: cmsArticle.reading_time,
+      word_count: cmsArticle.word_count,
+      seo_score: cmsArticle.seo_score,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
     // Insert new article into our database
     const { error } = await supabase
       .from('articles')
-      .insert({
-        ...cmsArticle,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
+      .insert(articleInsert);
 
     if (error) {
       console.error('Failed to create article from webhook:', error);

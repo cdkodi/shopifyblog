@@ -45,6 +45,12 @@ class ShopifyGraphQLClient {
   private baseDelay: number = 1000; // 1 second
 
   constructor() {
+    // Client will be initialized lazily when first used
+  }
+
+  private initializeClient() {
+    if (this.client) return;
+
     const storeDomain = process.env.SHOPIFY_STORE_DOMAIN;
     const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
     const apiVersion = process.env.SHOPIFY_API_VERSION || '2024-07';
@@ -64,7 +70,8 @@ class ShopifyGraphQLClient {
     operation: () => Promise<T>,
     operationName: string
   ): Promise<T> {
-    let lastError: Error;
+    this.initializeClient();
+    let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
@@ -85,7 +92,7 @@ class ShopifyGraphQLClient {
       }
     }
 
-    throw new Error(`${operationName} failed after ${this.maxRetries} attempts: ${lastError.message}`);
+    throw new Error(`${operationName} failed after ${this.maxRetries} attempts: ${lastError?.message || 'Unknown error'}`);
   }
 
   private isRateLimitError(error: any): boolean {

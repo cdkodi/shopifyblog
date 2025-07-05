@@ -1,11 +1,9 @@
-import { executeShopifyQuery } from './graphql-client';
+import { shopifyClient, ShopifyArticle, ShopifyArticleInput } from './graphql-client';
 import { 
   mapDatabaseToShopifyInput, 
   mapShopifyToDatabase, 
   validateShopifyArticleInput,
   DatabaseArticle,
-  ShopifyArticle,
-  ShopifyArticleInput,
   extractNumericId,
   createShopifyGraphQLId
 } from './field-mapping';
@@ -243,30 +241,20 @@ export async function getShopifyBlogs(limit: number = 50): Promise<{
   errors: string[];
 }> {
   try {
-    const response = await executeShopifyQuery(GET_BLOGS_QUERY, {
-      first: limit
-    });
+    const blogs = await shopifyClient.getBlogs();
 
-    if (!response.success || !response.data?.blogs) {
-      return {
-        success: false,
-        blogs: [],
-        errors: response.errors?.map(e => e.message) || ['Failed to fetch blogs']
-      };
-    }
-
-    const blogs = response.data.blogs.edges.map((edge: any) => ({
-      id: edge.node.id,
-      numericId: extractNumericId(edge.node.id) || 0,
-      title: edge.node.title,
-      handle: edge.node.handle,
-      createdAt: edge.node.createdAt,
-      updatedAt: edge.node.updatedAt,
+    const formattedBlogs = blogs.map((blog: any) => ({
+      id: blog.id,
+      numericId: extractNumericId(blog.id) || 0,
+      title: blog.title,
+      handle: blog.handle,
+      createdAt: new Date().toISOString(), // Default since not available in API
+      updatedAt: new Date().toISOString(), // Default since not available in API
     }));
 
     return {
       success: true,
-      blogs,
+      blogs: formattedBlogs,
       errors: []
     };
   } catch (error) {
@@ -291,32 +279,8 @@ export async function createShopifyBlog(
   errors: string[];
 }> {
   try {
-    const blogInput = {
-      title,
-      handle: handle || title.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')
-    };
-
-    const response = await executeShopifyQuery(CREATE_BLOG_MUTATION, {
-      blog: blogInput
-    });
-
-    if (!response.success || !response.data?.blogCreate) {
-      return {
-        success: false,
-        blog: null,
-        errors: response.errors?.map(e => e.message) || ['Failed to create blog']
-      };
-    }
-
-    const { blog, userErrors } = response.data.blogCreate;
-
-    if (userErrors && userErrors.length > 0) {
-      return {
-        success: false,
-        blog: null,
-        errors: userErrors.map((error: any) => `${error.field}: ${error.message}`)
-      };
-    }
+    const blogHandle = handle || title.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+    const blog = await shopifyClient.createBlog(title, blogHandle);
 
     return {
       success: true,
@@ -325,8 +289,8 @@ export async function createShopifyBlog(
         numericId: extractNumericId(blog.id),
         title: blog.title,
         handle: blog.handle,
-        createdAt: blog.createdAt,
-        updatedAt: blog.updatedAt,
+        createdAt: new Date().toISOString(), // Default since not available in API
+        updatedAt: new Date().toISOString(), // Default since not available in API
       },
       errors: []
     };
@@ -361,7 +325,7 @@ export async function publishArticleToShopify(
 }> {
   try {
     // Map database article to Shopify format
-    const shopifyInput = mapDatabaseToShopifyInput(article, blogId, options);
+    const shopifyInput = mapDatabaseToShopifyInput(article, options);
     
     // Validate input
     const validation = validateShopifyArticleInput(shopifyInput);
@@ -375,45 +339,23 @@ export async function publishArticleToShopify(
 
     console.log('📝 Publishing article to Shopify:', {
       title: shopifyInput.title,
-      blogId: shopifyInput.blogId,
+      blogId: blogId,
       published: shopifyInput.published
     });
 
-    // Prepare GraphQL input
+    // Prepare article input for shopifyClient
     const articleInput = {
       title: shopifyInput.title,
       content: shopifyInput.content,
       excerpt: shopifyInput.excerpt,
       handle: shopifyInput.handle,
       published: shopifyInput.published,
-      publishedAt: shopifyInput.publishedAt,
       tags: shopifyInput.tags,
       summary: shopifyInput.summary,
-      seo: shopifyInput.seo,
-      blogId: shopifyInput.blogId
+      authorDisplayName: 'Admin'
     };
 
-    const response = await executeShopifyQuery(CREATE_ARTICLE_MUTATION, {
-      article: articleInput
-    });
-
-    if (!response.success || !response.data?.articleCreate) {
-      return {
-        success: false,
-        article: null,
-        errors: response.errors?.map(e => e.message) || ['Failed to create article']
-      };
-    }
-
-    const { article: createdArticle, userErrors } = response.data.articleCreate;
-
-    if (userErrors && userErrors.length > 0) {
-      return {
-        success: false,
-        article: null,
-        errors: userErrors.map((error: any) => `${error.field}: ${error.message}`)
-      };
-    }
+    const createdArticle = await shopifyClient.createArticle(blogId, articleInput);
 
     console.log('✅ Article published successfully to Shopify');
 
@@ -450,7 +392,7 @@ export async function updateShopifyArticle(
 }> {
   try {
     const graphqlId = createShopifyGraphQLId('Article', shopifyArticleId);
-    const shopifyInput = mapDatabaseToShopifyInput(article, blogId, options);
+    const shopifyInput = mapDatabaseToShopifyInput(article, options);
     
     const validation = validateShopifyArticleInput(shopifyInput);
     if (!validation.isValid) {
@@ -472,35 +414,12 @@ export async function updateShopifyArticle(
       excerpt: shopifyInput.excerpt,
       handle: shopifyInput.handle,
       published: shopifyInput.published,
-      publishedAt: shopifyInput.publishedAt,
       tags: shopifyInput.tags,
       summary: shopifyInput.summary,
-      seo: shopifyInput.seo,
-      blogId: shopifyInput.blogId
+      authorDisplayName: 'Admin'
     };
 
-    const response = await executeShopifyQuery(UPDATE_ARTICLE_MUTATION, {
-      id: graphqlId,
-      article: articleInput
-    });
-
-    if (!response.success || !response.data?.articleUpdate) {
-      return {
-        success: false,
-        article: null,
-        errors: response.errors?.map(e => e.message) || ['Failed to update article']
-      };
-    }
-
-    const { article: updatedArticle, userErrors } = response.data.articleUpdate;
-
-    if (userErrors && userErrors.length > 0) {
-      return {
-        success: false,
-        article: null,
-        errors: userErrors.map((error: any) => `${error.field}: ${error.message}`)
-      };
-    }
+    const updatedArticle = await shopifyClient.updateArticle(graphqlId, articleInput);
 
     console.log('✅ Article updated successfully in Shopify');
 
@@ -533,31 +452,13 @@ export async function deleteShopifyArticle(
 
     console.log('🗑️ Deleting article from Shopify:', graphqlId);
 
-    const response = await executeShopifyQuery(DELETE_ARTICLE_MUTATION, {
-      id: graphqlId
-    });
-
-    if (!response.success || !response.data?.articleDelete) {
-      return {
-        success: false,
-        errors: response.errors?.map(e => e.message) || ['Failed to delete article']
-      };
-    }
-
-    const { userErrors } = response.data.articleDelete;
-
-    if (userErrors && userErrors.length > 0) {
-      return {
-        success: false,
-        errors: userErrors.map((error: any) => `${error.field}: ${error.message}`)
-      };
-    }
+    const deleted = await shopifyClient.deleteArticle(graphqlId);
 
     console.log('✅ Article deleted successfully from Shopify');
 
     return {
-      success: true,
-      errors: []
+      success: deleted,
+      errors: deleted ? [] : ['Failed to delete article']
     };
   } catch (error) {
     console.error('Error deleting article from Shopify:', error);
@@ -579,24 +480,11 @@ export async function getShopifyArticle(
   errors: string[];
 }> {
   try {
-    const graphqlId = createShopifyGraphQLId('Article', shopifyArticleId);
-
-    const response = await executeShopifyQuery(GET_ARTICLE_QUERY, {
-      id: graphqlId
-    });
-
-    if (!response.success || !response.data?.article) {
-      return {
-        success: false,
-        article: null,
-        errors: response.errors?.map(e => e.message) || ['Article not found']
-      };
-    }
-
+    // This function is not currently implemented with the new client
     return {
-      success: true,
-      article: response.data.article,
-      errors: []
+      success: false,
+      article: null,
+      errors: ['getShopifyArticle not implemented with current client']
     };
   } catch (error) {
     console.error('Error fetching article from Shopify:', error);
@@ -620,20 +508,7 @@ export async function getBlogArticles(
   errors: string[];
 }> {
   try {
-    const response = await executeShopifyQuery(GET_BLOG_ARTICLES_QUERY, {
-      blogId,
-      first: limit
-    });
-
-    if (!response.success || !response.data?.blog?.articles) {
-      return {
-        success: false,
-        articles: [],
-        errors: response.errors?.map(e => e.message) || ['Failed to fetch articles']
-      };
-    }
-
-    const articles = response.data.blog.articles.edges.map((edge: any) => edge.node);
+    const articles = await shopifyClient.getArticles(blogId, limit);
 
     return {
       success: true,

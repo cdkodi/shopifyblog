@@ -194,10 +194,17 @@ async function handleArticleCreate(
     const { data, error } = await supabase
       .from('articles')
       .insert({
-        ...databaseArticle,
+        title: payload.title,
+        content: payload.content,
+        meta_description: payload.excerpt || payload.summary,
+        slug: payload.handle,
+        status: payload.published_at ? 'published' : 'draft',
+        published_at: payload.published_at || null,
         shopify_article_id: payload.id,
         shopify_blog_id: payload.blog_id,
+        target_keywords: payload.tags ? JSON.stringify(payload.tags.split(',').map(t => t.trim())) : null,
         created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       })
       .select()
       .single();

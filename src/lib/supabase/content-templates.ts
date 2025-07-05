@@ -29,18 +29,18 @@ export class ContentTemplateService {
       if (!templatesError && templates && templates.length > 0) {
         // Map database fields to our interface
         const mappedTemplates = templates.map(template => ({
-          id: template.id || template.template_id,
-          name: template.name || template.template_name,
-          description: template.description,
-          icon: template.icon || '📄',
-          recommendedProvider: template.recommended_provider || 'anthropic',
-          estimatedCost: template.estimated_cost || 0.01,
-          targetLength: template.target_length || 1500,
-          seoAdvantages: template.seo_advantages || [],
-          exampleTitles: template.example_titles || [],
-          difficulty: template.difficulty || 'medium',
-          category: template.category,
-          isActive: template.is_active
+          id: template.id,
+          name: template.name,
+          description: template.content_type || 'Content template',
+          icon: '📄',
+          recommendedProvider: 'anthropic' as const,
+          estimatedCost: 0.01,
+          targetLength: 1500,
+          seoAdvantages: [],
+          exampleTitles: [],
+          difficulty: 'medium' as const,
+          category: template.content_type || undefined,
+          isActive: template.is_active || false
         }));
 
         return { data: mappedTemplates, error: null };

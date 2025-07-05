@@ -10,28 +10,28 @@ import { ShopifyProductService } from '@/lib/supabase/shopify-products';
 
 interface ProductSuggestion {
   id: string;
-  article_id: string;
-  product_id: string;
-  suggestion_type: 'auto' | 'manual' | 'editor_added';
-  relevance_score: number;
-  position_in_content?: number;
-  link_text?: string;
-  utm_campaign?: string;
-  is_approved: boolean;
-  created_at: string;
+  article_id: string | null;
+  product_id: string | null;
+  suggestion_type: string | null;
+  relevance_score: number | null;
+  position_in_content?: number | null;
+  link_text?: string | null;
+  utm_campaign?: string | null;
+  is_approved: boolean | null;
+  created_at: string | null;
   // Joined product data
   product: {
     id: string;
     title: string;
     handle: string;
-    description?: string;
-    product_type?: string;
-    collections: string[];
-    tags: string[];
-    price_min?: number;
-    price_max?: number;
-    shopify_url?: string;
-  };
+    description?: string | null;
+    product_type?: string | null;
+    collections: any;
+    tags: any;
+    price_min?: number | null;
+    price_max?: number | null;
+    shopify_url?: string | null;
+  } | null;
 }
 
 interface ProductIntegrationManagerProps {
@@ -359,13 +359,15 @@ export function ProductIntegrationManager({
     }
   };
 
-  const getRelevanceColor = (score: number) => {
+  const getRelevanceColor = (score: number | null) => {
+    if (!score) return 'text-gray-600 bg-gray-50';
     if (score >= 80) return 'text-green-600 bg-green-50';
     if (score >= 60) return 'text-yellow-600 bg-yellow-50';
     return 'text-red-600 bg-red-50';
   };
 
-  const getSuggestionTypeColor = (type: string) => {
+  const getSuggestionTypeColor = (type: string | null) => {
+    if (!type) return 'bg-gray-100 text-gray-800';
     const colors = {
       auto: 'bg-blue-100 text-blue-800',
       manual: 'bg-purple-100 text-purple-800',
@@ -405,6 +407,8 @@ export function ProductIntegrationManager({
     let htmlContent = '';
 
     sortedSuggestions.forEach((suggestion, index) => {
+      if (!suggestion.product) return;
+      
       const position = suggestion.position_in_content || (index + 1);
       const paragraphIndex = Math.min(position - 1, paragraphs.length - 1);
       
@@ -422,8 +426,8 @@ export function ProductIntegrationManager({
       <div style="margin-top: 20px; padding: 15px; background: #f3f4f6; border-radius: 8px;">
         <h3 style="margin: 0 0 10px 0; color: #374151; font-size: 16px;">Product Links Added:</h3>
         <ul style="margin: 0; padding-left: 20px;">
-          ${approvedSuggestions.map(s => 
-            `<li style="margin-bottom: 5px;">${s.product.title} (Position ${s.position_in_content})</li>`
+          ${approvedSuggestions.filter(s => s.product).map(s => 
+            `<li style="margin-bottom: 5px;">${s.product!.title} (Position ${s.position_in_content})</li>`
           ).join('')}
         </ul>
       </div>
@@ -598,7 +602,7 @@ export function ProductIntegrationManager({
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <h4 className="font-medium text-gray-900">
-                        {suggestion.product.title}
+                        {suggestion.product?.title || 'Unknown Product'}
                       </h4>
                       <Badge className={getSuggestionTypeColor(suggestion.suggestion_type)}>
                         {suggestion.suggestion_type === 'auto' ? 'strict-match' : suggestion.suggestion_type}
@@ -616,20 +620,20 @@ export function ProductIntegrationManager({
                     </div>
                     
                     <p className="text-sm text-gray-600 mb-2">
-                      {suggestion.product.description?.substring(0, 100)}...
+                      {suggestion.product?.description?.substring(0, 100)}...
                     </p>
                     
                     <div className="flex items-center gap-4 text-xs text-gray-500">
                       <span>🔗 {suggestion.link_text}</span>
                       <span>📍 After paragraph {suggestion.position_in_content}</span>
-                      {suggestion.product.price_min && (
+                      {suggestion.product?.price_min && (
                         <span>💰 ₹{suggestion.product.price_min}</span>
                       )}
                     </div>
                     
-                    {suggestion.product.tags && suggestion.product.tags.length > 0 && (
+                    {suggestion.product?.tags && suggestion.product.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
-                        {suggestion.product.tags.slice(0, 3).map((tag, idx) => (
+                        {suggestion.product.tags.slice(0, 3).map((tag: any, idx: number) => (
                           <Badge key={idx} variant="outline" className="text-xs">
                             {tag}
                           </Badge>
@@ -669,11 +673,11 @@ export function ProductIntegrationManager({
                       Remove
                     </Button>
                     
-                    {suggestion.product.shopify_url && (
+                    {suggestion.product?.shopify_url && (
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        onClick={() => window.open(suggestion.product.shopify_url, '_blank')}
+                        onClick={() => window.open(suggestion.product!.shopify_url || '#', '_blank')}
                       >
                         View Product
                       </Button>
