@@ -293,15 +293,15 @@ export interface CMSArticle {
   id: string;
   title: string;
   content: string;
-  meta_description?: string;
-  slug?: string;
+  meta_description?: string | null;
+  slug?: string | null;
   status?: string;
   target_keywords?: string[] | any;
-  shopify_article_id?: number;
-  shopify_blog_id?: number;
-  created_at?: string;
-  updated_at?: string;
-  published_at?: string;
+  shopify_article_id?: number | null;
+  shopify_blog_id?: number | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  published_at?: string | null;
 }
 
 /**
