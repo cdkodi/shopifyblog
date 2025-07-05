@@ -13,6 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ArrowLeftIcon, SaveIcon, TrashIcon } from 'lucide-react';
 import { ArticleService, ArticleFormData } from '@/lib/supabase/articles';
 import { ProductIntegrationManager } from '@/components/articles/product-integration-manager';
+import { ShopifyIntegration } from '@/components/articles/shopify-integration';
 import type { Database } from '@/lib/types/database';
 
 type Article = Database['public']['Tables']['articles']['Row'];
@@ -492,6 +493,16 @@ export default function ArticleEditPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Shopify Integration */}
+              <ShopifyIntegration
+                articleId={articleId}
+                articleTitle={articleData.title}
+                articleStatus={articleData.status}
+                shopifyArticleId={article?.shopify_article_id}
+                shopifyBlogId={article?.shopify_blog_id}
+                onStatusChange={loadArticle}
+              />
             </div>
           </div>
         )}
