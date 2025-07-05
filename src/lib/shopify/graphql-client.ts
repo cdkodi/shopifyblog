@@ -1,5 +1,15 @@
 import { createAdminApiClient } from '@shopify/admin-api-client';
 
+/**
+ * Shopify GraphQL Client with Hybrid Approach
+ * 
+ * This client uses a hybrid approach for blog and article management:
+ * - GraphQL for reading data (blogs, articles) - supported by Admin API
+ * - REST API for mutations (create, update, delete articles) - required since GraphQL doesn't support article mutations
+ * 
+ * See: https://shopify.dev/docs/api/admin-graphql/latest/queries/blogs
+ */
+
 // Types for our GraphQL operations
 export interface ShopifyBlog {
   id: string;
@@ -112,23 +122,37 @@ class ShopifyGraphQLClient {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // Get all blogs - Admin API doesn't have blogs at root level
-  // Instead, we'll return the known blog information
+  // Get all blogs using proper GraphQL query
   async getBlogs(): Promise<ShopifyBlog[]> {
-    const knownBlogId = '96953336105'; // Your blog ID
-    
-    // Since we know the blog exists, return it directly
-    // This avoids the GraphQL query issues we're experiencing
-    return [{
-      id: `gid://shopify/Blog/${knownBlogId}`,
-      title: 'Blog', // Default title, will be updated when we can query it
-      handle: 'news',
-      commentable: 'no',
-      feedburner: '',
-      feedburnerLocation: '',
-      tags: '',
-      templateSuffix: '',
-    }];
+    const query = `
+      query BlogList {
+        blogs(first: 50) {
+          nodes {
+            id
+            handle
+            title
+            commentPolicy
+            createdAt
+            templateSuffix
+            tags
+          }
+        }
+      }
+    `;
+
+    return this.executeWithRetry(async () => {
+      const response = await this.client.request(query);
+      return response.data.blogs.nodes.map((blog: any) => ({
+        id: blog.id,
+        title: blog.title,
+        handle: blog.handle,
+        commentable: blog.commentPolicy === 'OPEN' ? 'yes' : 'no',
+        feedburner: '',
+        feedburnerLocation: '',
+        tags: Array.isArray(blog.tags) ? blog.tags.join(', ') : blog.tags || '',
+        templateSuffix: blog.templateSuffix || ''
+      }));
+    }, 'getBlogs');
   }
 
   // Get a specific blog
@@ -199,21 +223,20 @@ class ShopifyGraphQLClient {
       query getArticles($blogId: ID!, $first: Int!) {
         blog(id: $blogId) {
           articles(first: $first) {
-            edges {
-              node {
-                id
-                title
-                content
-                excerpt
-                handle
-                published
-                tags
-                authorDisplayName
-                createdAt
-                updatedAt
-                publishedAt
-                summary
+            nodes {
+              id
+              title
+              content
+              excerpt
+              handle
+              publishedAt
+              tags
+              author {
+                displayName
               }
+              createdAt
+              updatedAt
+              summary
             }
           }
         }
@@ -224,128 +247,184 @@ class ShopifyGraphQLClient {
       const response = await this.client.request(query, { 
         variables: { blogId, first: limit } 
       });
-      return response.data.blog.articles.edges.map((edge: any) => ({
-        ...edge.node,
-        blogId
+      return response.data.blog.articles.nodes.map((article: any) => ({
+        id: article.id,
+        title: article.title,
+        content: article.content,
+        excerpt: article.excerpt,
+        handle: article.handle,
+        published: !!article.publishedAt,
+        tags: article.tags || [],
+        blogId: blogId,
+        authorDisplayName: article.author?.displayName || 'Admin',
+        createdAt: article.createdAt,
+        updatedAt: article.updatedAt,
+        publishedAt: article.publishedAt,
+        summary: article.summary,
       }));
     }, 'getArticles');
   }
 
-  // Create a new article
+  // Create a new article using REST API (GraphQL doesn't support article creation)
   async createArticle(blogId: string, article: ShopifyArticleInput): Promise<ShopifyArticle> {
-    const mutation = `
-      mutation CreateArticle($input: ArticleInput!) {
-        articleCreate(input: $input) {
-          article {
-            id
-            title
-            content
-            excerpt
-            handle
-            published
-            tags
-            authorDisplayName
-            createdAt
-            updatedAt
-            publishedAt
-            summary
-          }
-          userErrors {
-            field
-            message
-          }
-        }
-      }
-    `;
+    const storeDomain = process.env.SHOPIFY_STORE_DOMAIN;
+    const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+    const apiVersion = process.env.SHOPIFY_API_VERSION || '2024-10';
+    
+    if (!storeDomain || !accessToken) {
+      throw new Error('Missing Shopify configuration');
+    }
 
-    const articleInput = {
-      blogId,
-      title: article.title,
-      bodyHtml: article.content,
-      author: article.authorDisplayName || 'Admin',
-      handle: article.handle || article.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-      excerpt: article.excerpt,
-      summary: article.summary,
-      tags: article.tags,
-      published: article.published || false,
+    // Extract numeric blog ID from GraphQL ID
+    const numericBlogId = blogId.replace('gid://shopify/Blog/', '');
+    
+    const articleData = {
+      article: {
+        title: article.title,
+        body_html: article.content,
+        author: article.authorDisplayName || 'Admin',
+        handle: article.handle || article.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+        excerpt: article.excerpt,
+        summary: article.summary,
+        tags: Array.isArray(article.tags) ? article.tags.join(', ') : article.tags,
+        published: article.published || false,
+      }
     };
 
     return this.executeWithRetry(async () => {
-      const response = await this.client.request(mutation, { variables: { input: articleInput } });
-      
-      if (response.data.articleCreate.userErrors.length > 0) {
-        throw new Error(`Article creation failed: ${response.data.articleCreate.userErrors.map((e: any) => e.message).join(', ')}`);
+      const response = await fetch(
+        `https://${storeDomain}/admin/api/${apiVersion}/blogs/${numericBlogId}/articles.json`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Shopify-Access-Token': accessToken,
+          },
+          body: JSON.stringify(articleData),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`Article creation failed: ${response.status} ${response.statusText} - ${errorData}`);
       }
 
+      const result = await response.json();
+      const createdArticle = result.article;
+      
+      // Convert REST response to our interface format
       return {
-        ...response.data.articleCreate.article,
-        blogId
+        id: `gid://shopify/Article/${createdArticle.id}`,
+        title: createdArticle.title,
+        content: createdArticle.body_html,
+        excerpt: createdArticle.excerpt,
+        handle: createdArticle.handle,
+        published: createdArticle.published,
+        tags: createdArticle.tags ? createdArticle.tags.split(', ') : [],
+        blogId: blogId,
+        authorDisplayName: createdArticle.author,
+        createdAt: createdArticle.created_at,
+        updatedAt: createdArticle.updated_at,
+        publishedAt: createdArticle.published_at,
+        summary: createdArticle.summary,
       };
     }, 'createArticle');
   }
 
-  // Update an existing article
+  // Update an existing article using REST API
   async updateArticle(articleId: string, article: Partial<ShopifyArticleInput>): Promise<ShopifyArticle> {
-    const mutation = `
-      mutation articleUpdate($id: ID!, $article: ArticleInput!) {
-        articleUpdate(id: $id, article: $article) {
-          article {
-            id
-            title
-            content
-            excerpt
-            handle
-            published
-            tags
-            authorDisplayName
-            createdAt
-            updatedAt
-            publishedAt
-            summary
-          }
-          userErrors {
-            field
-            message
-          }
-        }
-      }
-    `;
+    const storeDomain = process.env.SHOPIFY_STORE_DOMAIN;
+    const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+    const apiVersion = process.env.SHOPIFY_API_VERSION || '2024-10';
+    
+    if (!storeDomain || !accessToken) {
+      throw new Error('Missing Shopify configuration');
+    }
+
+    // Extract numeric article ID from GraphQL ID
+    const numericArticleId = articleId.replace('gid://shopify/Article/', '');
+    
+    const articleData: any = { article: {} };
+    
+    if (article.title) articleData.article.title = article.title;
+    if (article.content) articleData.article.body_html = article.content;
+    if (article.authorDisplayName) articleData.article.author = article.authorDisplayName;
+    if (article.handle) articleData.article.handle = article.handle;
+    if (article.excerpt) articleData.article.excerpt = article.excerpt;
+    if (article.summary) articleData.article.summary = article.summary;
+    if (article.tags) articleData.article.tags = Array.isArray(article.tags) ? article.tags.join(', ') : article.tags;
+    if (article.published !== undefined) articleData.article.published = article.published;
 
     return this.executeWithRetry(async () => {
-      const response = await this.client.request(mutation, { 
-        variables: { id: articleId, article } 
-      });
-      
-      if (response.data.articleUpdate.userErrors.length > 0) {
-        throw new Error(`Article update failed: ${response.data.articleUpdate.userErrors.map((e: any) => e.message).join(', ')}`);
+      const response = await fetch(
+        `https://${storeDomain}/admin/api/${apiVersion}/articles/${numericArticleId}.json`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Shopify-Access-Token': accessToken,
+          },
+          body: JSON.stringify(articleData),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`Article update failed: ${response.status} ${response.statusText} - ${errorData}`);
       }
 
-      return response.data.articleUpdate.article;
+      const result = await response.json();
+      const updatedArticle = result.article;
+      
+      // Convert REST response to our interface format
+      return {
+        id: `gid://shopify/Article/${updatedArticle.id}`,
+        title: updatedArticle.title,
+        content: updatedArticle.body_html,
+        excerpt: updatedArticle.excerpt,
+        handle: updatedArticle.handle,
+        published: updatedArticle.published,
+        tags: updatedArticle.tags ? updatedArticle.tags.split(', ') : [],
+        blogId: `gid://shopify/Blog/${updatedArticle.blog_id}`,
+        authorDisplayName: updatedArticle.author,
+        createdAt: updatedArticle.created_at,
+        updatedAt: updatedArticle.updated_at,
+        publishedAt: updatedArticle.published_at,
+        summary: updatedArticle.summary,
+      };
     }, 'updateArticle');
   }
 
-  // Delete an article
+  // Delete an article using REST API
   async deleteArticle(articleId: string): Promise<boolean> {
-    const mutation = `
-      mutation articleDelete($id: ID!) {
-        articleDelete(id: $id) {
-          deletedArticleId
-          userErrors {
-            field
-            message
-          }
-        }
-      }
-    `;
+    const storeDomain = process.env.SHOPIFY_STORE_DOMAIN;
+    const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+    const apiVersion = process.env.SHOPIFY_API_VERSION || '2024-10';
+    
+    if (!storeDomain || !accessToken) {
+      throw new Error('Missing Shopify configuration');
+    }
+
+    // Extract numeric article ID from GraphQL ID
+    const numericArticleId = articleId.replace('gid://shopify/Article/', '');
 
     return this.executeWithRetry(async () => {
-      const response = await this.client.request(mutation, { variables: { id: articleId } });
-      
-      if (response.data.articleDelete.userErrors.length > 0) {
-        throw new Error(`Article deletion failed: ${response.data.articleDelete.userErrors.map((e: any) => e.message).join(', ')}`);
+      const response = await fetch(
+        `https://${storeDomain}/admin/api/${apiVersion}/articles/${numericArticleId}.json`,
+        {
+          method: 'DELETE',
+          headers: {
+            'X-Shopify-Access-Token': accessToken,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`Article deletion failed: ${response.status} ${response.statusText} - ${errorData}`);
       }
 
-      return !!response.data.articleDelete.deletedArticleId;
+      return true;
     }, 'deleteArticle');
   }
 
