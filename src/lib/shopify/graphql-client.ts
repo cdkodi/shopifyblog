@@ -135,6 +135,12 @@ class ShopifyGraphQLClient {
 
     return this.executeWithRetry(async () => {
       const response = await this.client.request(query);
+      console.log('GraphQL Response for getBlogs:', JSON.stringify(response, null, 2));
+      
+      if (!response.data || !response.data.blogs) {
+        throw new Error('Invalid response structure: missing blogs data');
+      }
+      
       return response.data.blogs.edges.map((edge: any) => edge.node);
     }, 'getBlogs');
   }
