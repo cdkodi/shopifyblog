@@ -170,7 +170,7 @@ export function ContentConfiguration({ selectedTemplate, onConfigurationComplete
     const templateTitles = {
       'how-to-guide': [
         `How to ${config.topic}`,
-        `Complete Guide to ${config.topic}`,
+        `Essential Guide to ${config.topic}`,
         `Step-by-Step ${config.topic} Tutorial`,
         `${config.topic}: A Beginner's Guide`
       ],
@@ -184,7 +184,7 @@ export function ContentConfiguration({ selectedTemplate, onConfigurationComplete
         `${config.topic} Buying Guide`,
         `How to Choose the Right ${config.topic}`,
         `${config.topic}: What to Look For`,
-        `Complete ${config.topic} Purchase Guide`
+        `${config.topic} Purchase Guide`
       ],
       'case-study': [
         `${config.topic}: A Success Story`,
@@ -201,10 +201,10 @@ export function ContentConfiguration({ selectedTemplate, onConfigurationComplete
     };
 
     const suggestions = templateTitles[selectedTemplate.id as keyof typeof templateTitles] || [
-      `${config.topic}: Complete Guide`,
-      `Everything About ${config.topic}`,
-      `${config.topic} Explained`,
-      `Understanding ${config.topic}`
+      `${config.topic}: Essential Guide`,
+      `Understanding ${config.topic}`,
+      `${config.topic}: Cultural Heritage and Modern Appeal`,
+      `The Art of ${config.topic}: Traditional Techniques`
     ];
 
     setSuggestedTitles(suggestions);

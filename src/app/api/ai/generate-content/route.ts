@@ -77,9 +77,9 @@ Target Audience: ${config.targetAudience}
 
 Please provide your response in this exact format:
 
-TITLE: [Create an engaging, SEO-optimized title]
+TITLE: [Create a specific, engaging title that focuses on cultural significance, artistic techniques, or historical importance. AVOID generic patterns like "Complete Guide to..." or "Ultimate Guide to...". Instead use patterns like "The Art of...", "Cultural Heritage of...", "Traditional Techniques of...", or "Why [Topic] Continues to Inspire..."]
 
-META_DESCRIPTION: [Write a compelling 150-160 character meta description that includes the target keyword and encourages clicks]
+META_DESCRIPTION: [Write a compelling 150-160 character meta description that focuses on cultural heritage, artistic significance, and traditional craftsmanship. AVOID starting with "Learn about..." or "Discover everything about...". Instead use patterns like "Explore the rich cultural heritage of...", "Discover the artistic significance of...", or "Understand the traditional techniques behind..."]
 
 CONTENT:
 [Write the main article content here - ${config.wordCount} words]
@@ -92,7 +92,10 @@ Requirements:
 - Include practical information and cultural context
 - Make it engaging and informative for ${config.targetAudience}
 - Structure with clear headings and subheadings
-- Include a compelling introduction and conclusion`;
+- Include a compelling introduction and conclusion
+- AVOID generic titles that start with "Complete Guide to", "Ultimate Guide to", "Everything About"
+- AVOID generic meta descriptions that start with "Learn about", "Discover everything about"
+- Focus on the unique cultural and artistic aspects of the topic`;
     } else {
       // Standard template prompt
       promptContent = `Create a comprehensive ${keywords?.length > 0 ? 'SEO-optimized' : ''} article with the following specifications:
@@ -104,9 +107,9 @@ Template: ${template}
 
 Please provide your response in this exact format:
 
-TITLE: [Create an engaging, SEO-optimized title that includes the main keyword]
+TITLE: [Create a specific, engaging title that focuses on cultural significance, artistic techniques, or historical importance. AVOID generic patterns like "Complete Guide to..." or "Ultimate Guide to...". Instead use patterns like "The Art of...", "Cultural Heritage of...", "Traditional Techniques of...", or "Why [Topic] Continues to Inspire..."]
 
-META_DESCRIPTION: [Write a compelling 150-160 character meta description that includes the target keyword and encourages clicks]
+META_DESCRIPTION: [Write a compelling 150-160 character meta description that focuses on cultural heritage, artistic significance, and traditional craftsmanship. AVOID starting with "Learn about..." or "Discover everything about...". Instead use patterns like "Explore the rich cultural heritage of...", "Discover the artistic significance of...", or "Understand the traditional techniques behind..."]
 
 CONTENT:
 [Write the main article content here]
@@ -119,7 +122,10 @@ Requirements:
 - Focus on providing value to readers
 - Include practical information and actionable insights
 - Make it comprehensive and well-structured
-- Ensure the meta description is compelling and includes the main keyword`;
+- Ensure the meta description is compelling and includes the main keyword
+- AVOID generic titles that start with "Complete Guide to", "Ultimate Guide to", "Everything About"
+- AVOID generic meta descriptions that start with "Learn about", "Discover everything about"
+- Focus on the unique cultural and artistic aspects of the topic`;
     }
 
     // Prepare the base generation request

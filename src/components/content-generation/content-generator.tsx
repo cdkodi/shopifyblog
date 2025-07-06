@@ -175,7 +175,7 @@ export function ContentGenerator({ configuration, onGenerationComplete, onBack }
         content: {
           title: parsedTitle,
           mainContent: parsedContent,
-          metaDescription: parsedMetaDescription || `Learn about ${configuration.topic}`,
+          metaDescription: parsedMetaDescription || `Discover the rich cultural heritage and artistic significance of ${configuration.topic}. Expert insights into traditional techniques and modern relevance.`,
           imageSuggestions: [`Image about ${configuration.topic}`, `Infographic for ${configuration.targetKeyword}`],
           callToAction: configuration.includeCallToAction ? `Ready to learn more about ${configuration.topic}?` : undefined
         },

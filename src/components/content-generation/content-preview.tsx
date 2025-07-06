@@ -262,13 +262,13 @@ export function ContentPreview({ config, selectedProducts, isDevMode = true }: C
             <div className="space-y-3">
               <div>
                 <h4 className="text-blue-600 text-lg hover:underline cursor-pointer">
-                  {config.title || `Complete Guide to ${config.topic}`}
+                  {config.title || `${config.topic}: Cultural Heritage and Modern Appeal`}
                 </h4>
                 <p className="text-green-600 text-sm">
                   https://culturati.in/blogs/news/{(config.topic || '').toLowerCase().replace(/\s+/g, '-')}
                 </p>
                 <p className="text-gray-600 text-sm">
-                  {config.metaDescription || `Learn about ${config.topic}. Expert insights, techniques, and cultural significance. ${config.includeProducts ? 'Featuring authentic traditional products from Culturati.' : ''}`}
+                  {config.metaDescription || `Discover the rich cultural heritage and artistic significance of ${config.topic}. Expert insights into traditional techniques and modern relevance. ${config.includeProducts ? 'Featuring authentic traditional products from Culturati.' : ''}`}
                 </p>
               </div>
               
