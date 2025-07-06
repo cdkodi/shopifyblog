@@ -144,15 +144,18 @@ export class ShopifyFilesService {
 
         if (Array.isArray(rawProduct.images)) {
           for (const imageUrl of rawProduct.images) {
-            suggestions.push({
-              url: imageUrl,
-              alt: `${rawProduct.title} - ${rawProduct.product_type}`,
-              source: 'product',
-              relevance: relevanceScore,
-              context: rawProduct.product_type,
-              productTitle: rawProduct.title,
-              productType: rawProduct.product_type
-            });
+            // Type guard to ensure imageUrl is a string
+            if (typeof imageUrl === 'string') {
+              suggestions.push({
+                url: imageUrl,
+                alt: `${rawProduct.title || 'Product'} - ${rawProduct.product_type || 'Item'}`,
+                source: 'product',
+                relevance: relevanceScore,
+                context: rawProduct.product_type || undefined,
+                productTitle: rawProduct.title || undefined,
+                productType: rawProduct.product_type || undefined
+              });
+            }
           }
         }
       }
@@ -191,14 +194,17 @@ export class ShopifyFilesService {
       for (const product of products || []) {
         if (Array.isArray(product.images)) {
           for (const imageUrl of product.images) {
-            images.push({
-              url: imageUrl,
-              alt: `${product.title} - ${product.product_type}`,
-              source: 'product',
-              context: product.product_type,
-              productTitle: product.title,
-              productType: product.product_type
-            });
+            // Type guard to ensure imageUrl is a string
+            if (typeof imageUrl === 'string') {
+              images.push({
+                url: imageUrl,
+                alt: `${product.title || 'Product'} - ${product.product_type || 'Item'}`,
+                source: 'product',
+                context: product.product_type || undefined,
+                productTitle: product.title || undefined,
+                productType: product.product_type || undefined
+              });
+            }
           }
         }
       }
