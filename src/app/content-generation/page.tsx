@@ -33,15 +33,43 @@ function ContentGenerationInner() {
   const [comingFromTopics, setComingFromTopics] = useState(false);
 
   // Template name mapping from Topics form to actual template names
-  const mapTopicTemplateToActualTemplate = (topicTemplate: string): string => {
+  const mapTopicTemplateToActualTemplate = (topicTemplate: string, topicContent?: string): string => {
     const mapping: Record<string, string> = {
-      'Blog Post': 'Industry Trends', // Map generic blog post to trends
       'How-to Guide': 'How-To Guide', // Fix casing
       'Listicle': 'Product Showcase', // Map listicle to product showcase
       'Review': 'Review',
       'Case Study': 'Case Study', 
       'Tutorial': 'Tutorial'
     };
+
+    // Handle "Blog Post" with context-aware mapping
+    if (topicTemplate === 'Blog Post') {
+      if (!topicContent) {
+        return 'Industry Trends'; // Default fallback
+      }
+      
+      const content = topicContent.toLowerCase();
+      
+      // Context-aware mapping based on topic content
+      if (content.includes('how to') || content.includes('guide') || content.includes('step')) {
+        return 'How-To Guide';
+      } else if (content.includes('best') || content.includes('top') || content.includes('product') || content.includes('review')) {
+        return 'Product Showcase';
+      } else if (content.includes('vs') || content.includes('versus') || content.includes('comparison') || content.includes('compare')) {
+        return 'Comparison';
+      } else if (content.includes('buy') || content.includes('choose') || content.includes('select') || content.includes('purchase')) {
+        return 'Buying Guide';
+      } else if (content.includes('trend') || content.includes('future') || content.includes('2024') || content.includes('2025')) {
+        return 'Industry Trends';
+      } else if (content.includes('news') || content.includes('update') || content.includes('announcement')) {
+        return 'News & Updates';
+      } else if (content.includes('analysis') || content.includes('study') || content.includes('research')) {
+        return 'Analysis';
+      } else {
+        return 'Industry Trends'; // Default for generic blog posts
+      }
+    }
+    
     return mapping[topicTemplate] || topicTemplate;
   };
 
@@ -138,7 +166,7 @@ function ContentGenerationInner() {
         console.log('📚 Available templates:', templates.map(t => t.name));
 
         // Map topic template name to actual template name
-        const mappedTemplateName = mapTopicTemplateToActualTemplate(initialConfigData.suggestedTemplate);
+        const mappedTemplateName = mapTopicTemplateToActualTemplate(initialConfigData.suggestedTemplate, initialConfigData.topic);
         console.log('🗺️ Mapped template name:', `"${initialConfigData.suggestedTemplate}" → "${mappedTemplateName}"`);
         
         // Find matching template
