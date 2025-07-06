@@ -455,7 +455,7 @@ function ContentGenerationInner() {
                         targetKeyword: enhancedConfig.targetKeyword,
                         relatedKeywords: enhancedConfig.relatedKeywords,
                         title: enhancedConfig.title || `Complete Guide to ${enhancedConfig.topic}`,
-                        metaDescription: enhancedConfig.metaDescription || `Discover everything about ${enhancedConfig.topic}`,
+                        metaDescription: enhancedConfig.metaDescription || '',
                         targetAudience: enhancedConfig.targetAudience,
                         tone: enhancedConfig.tone,
                         wordCount: enhancedConfig.wordCount,

@@ -64,9 +64,67 @@ export async function POST(request: NextRequest) {
     
     console.log('AI service instance created successfully');
 
+    // Create the prompt based on template and configuration
+    let promptContent = '';
+    
+    if (template === 'product-showcase' && config) {
+      // Enhanced Product Showcase prompt
+      promptContent = `Create an engaging ${config.wordCount}-word article about ${config.topic} in a ${config.tone} tone.
+
+Target Keyword: ${config.targetKeyword}
+Related Keywords: ${config.relatedKeywords?.join(', ')}
+Target Audience: ${config.targetAudience}
+
+Please provide your response in this exact format:
+
+TITLE: [Create an engaging, SEO-optimized title]
+
+META_DESCRIPTION: [Write a compelling 150-160 character meta description that includes the target keyword and encourages clicks]
+
+CONTENT:
+[Write the main article content here - ${config.wordCount} words]
+
+Requirements:
+- Include the target keyword "${config.targetKeyword}" naturally 2-3 times
+- Use related keywords: ${config.relatedKeywords?.join(', ')}
+- Write in ${config.tone} tone
+- Focus on cultural significance and traditional craftsmanship
+- Include practical information and cultural context
+- Make it engaging and informative for ${config.targetAudience}
+- Structure with clear headings and subheadings
+- Include a compelling introduction and conclusion`;
+    } else {
+      // Standard template prompt
+      promptContent = `Create a comprehensive ${keywords?.length > 0 ? 'SEO-optimized' : ''} article with the following specifications:
+
+Topic: ${prompt}
+Target Keywords: ${keywords?.join(', ') || 'None specified'}
+Tone: ${tone || 'professional'}
+Template: ${template}
+
+Please provide your response in this exact format:
+
+TITLE: [Create an engaging, SEO-optimized title that includes the main keyword]
+
+META_DESCRIPTION: [Write a compelling 150-160 character meta description that includes the target keyword and encourages clicks]
+
+CONTENT:
+[Write the main article content here]
+
+Requirements:
+- Create an engaging, informative article
+- Include the target keywords naturally throughout the content
+- Use proper headings and subheadings for better readability
+- Write in the specified tone
+- Focus on providing value to readers
+- Include practical information and actionable insights
+- Make it comprehensive and well-structured
+- Ensure the meta description is compelling and includes the main keyword`;
+    }
+
     // Prepare the base generation request
     const baseRequest: AIGenerationRequest = {
-      prompt,
+      prompt: promptContent,
       template,
       tone,
       length,

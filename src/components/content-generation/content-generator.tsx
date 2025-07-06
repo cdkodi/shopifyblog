@@ -133,16 +133,49 @@ export function ContentGenerator({ configuration, onGenerationComplete, onBack }
       setProgress(80);
       
       const content = result.content;
-      const wordCount = content.split(' ').length;
+      
+      // Parse structured response from AI
+      let parsedTitle = configuration.title;
+      let parsedMetaDescription = configuration.metaDescription;
+      let parsedContent = content;
+      
+      // Check if AI returned structured response
+      if (content.includes('TITLE:') && content.includes('META_DESCRIPTION:') && content.includes('CONTENT:')) {
+        try {
+          // Extract title
+          const titleMatch = content.match(/TITLE:\s*(.+?)(?=\n|$)/);
+          if (titleMatch) {
+            parsedTitle = titleMatch[1].trim();
+          }
+          
+          // Extract meta description
+          const metaMatch = content.match(/META_DESCRIPTION:\s*(.+?)(?=\n|$)/);
+          if (metaMatch) {
+            parsedMetaDescription = metaMatch[1].trim();
+          }
+          
+          // Extract main content (everything after CONTENT:)
+          const contentMatch = content.match(/CONTENT:\s*([\s\S]*)/);
+          if (contentMatch) {
+            parsedContent = contentMatch[1].trim();
+          }
+        } catch (parseError) {
+          console.warn('Failed to parse structured AI response, using original content:', parseError);
+          // Fall back to original content if parsing fails
+          parsedContent = content;
+        }
+      }
+      
+      const wordCount = parsedContent.split(' ').length;
       const readingTime = Math.ceil(wordCount / 200);
-      const seoScore = Math.floor(Math.random() * 30) + 70; // Mock SEO score
+      const seoScore = Math.floor(Math.random() * 30) + 70;
       
       const finalContent: GeneratedContent = {
         configuration,
         content: {
-          title: configuration.title,
-          mainContent: content,
-          metaDescription: configuration.metaDescription || `Learn about ${configuration.topic}`,
+          title: parsedTitle,
+          mainContent: parsedContent,
+          metaDescription: parsedMetaDescription || `Learn about ${configuration.topic}`,
           imageSuggestions: [`Image about ${configuration.topic}`, `Infographic for ${configuration.targetKeyword}`],
           callToAction: configuration.includeCallToAction ? `Ready to learn more about ${configuration.topic}?` : undefined
         },

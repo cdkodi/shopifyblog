@@ -268,7 +268,7 @@ export function ContentPreview({ config, selectedProducts, isDevMode = true }: C
                   https://culturati.in/blogs/news/{(config.topic || '').toLowerCase().replace(/\s+/g, '-')}
                 </p>
                 <p className="text-gray-600 text-sm">
-                  {config.metaDescription || `Discover everything about ${config.topic}. Expert insights, techniques, and cultural significance. ${config.includeProducts ? 'Featuring authentic traditional products from Culturati.' : ''}`}
+                  {config.metaDescription || `Learn about ${config.topic}. Expert insights, techniques, and cultural significance. ${config.includeProducts ? 'Featuring authentic traditional products from Culturati.' : ''}`}
                 </p>
               </div>
               

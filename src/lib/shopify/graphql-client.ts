@@ -49,7 +49,7 @@ export interface ShopifyArticleInput {
   summary?: string;
 }
 
-class ShopifyGraphQLClient {
+export class ShopifyGraphQLClient {
   private client: any;
   private maxRetries: number = 3;
   private baseDelay: number = 1000; // 1 second
@@ -325,12 +325,12 @@ class ShopifyGraphQLClient {
       const result = await response.json();
       const createdArticle = result.article;
       
-      // If we have an excerpt, set it as SEO metafield for better meta description support
+      // Set SEO meta description using description_tag metafield
       if (article.excerpt) {
         try {
-          await this.setArticleSEOMetafield(createdArticle.id, article.excerpt);
+          await this.setArticleSEOMetaDescription(createdArticle.id, article.excerpt);
         } catch (error) {
-          console.warn('Failed to set SEO metafield, but article was created successfully:', error);
+          console.warn('Failed to set SEO meta description, but article was created successfully:', error);
         }
       }
       
@@ -353,20 +353,20 @@ class ShopifyGraphQLClient {
     }, 'createArticle');
   }
 
-  // Set SEO metafield for article
-  private async setArticleSEOMetafield(articleId: number, description: string): Promise<void> {
+  // Set SEO meta description using description_tag metafield in global namespace
+  private async setArticleSEOMetaDescription(articleId: number, description: string): Promise<void> {
     const storeDomain = process.env.SHOPIFY_STORE_DOMAIN;
     const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
     const apiVersion = process.env.SHOPIFY_API_VERSION || '2024-10';
     
     if (!storeDomain || !accessToken) {
-      throw new Error('Missing Shopify configuration for SEO metafield');
+      throw new Error('Missing Shopify configuration for SEO meta description');
     }
     
     const metafieldData = {
       metafield: {
-        namespace: 'seo',
-        key: 'description',
+        namespace: 'global',
+        key: 'description_tag',
         value: description,
         type: 'single_line_text_field',
         owner_resource: 'article',
@@ -388,8 +388,10 @@ class ShopifyGraphQLClient {
 
     if (!response.ok) {
       const errorData = await response.text();
-      throw new Error(`SEO metafield creation failed: ${response.status} ${response.statusText} - ${errorData}`);
+      throw new Error(`SEO meta description metafield creation failed: ${response.status} ${response.statusText} - ${errorData}`);
     }
+
+    console.log('✅ SEO meta description set successfully using description_tag metafield');
   }
 
   // Update an existing article using REST API
@@ -446,9 +448,9 @@ class ShopifyGraphQLClient {
       // If we have an excerpt, set it as SEO metafield for better meta description support
       if (article.excerpt) {
         try {
-          await this.setArticleSEOMetafield(updatedArticle.id, article.excerpt);
+          await this.setArticleSEOMetaDescription(updatedArticle.id, article.excerpt);
         } catch (error) {
-          console.warn('Failed to set SEO metafield, but article was updated successfully:', error);
+          console.warn('Failed to set SEO meta description, but article was updated successfully:', error);
         }
       }
       
@@ -536,6 +538,60 @@ class ShopifyGraphQLClient {
     return this.executeWithRetry(async () => {
       return await this.client.request(query, variables);
     }, 'genericRequest');
+  }
+
+  // Update article meta description using GraphQL articleUpdate mutation
+  async updateArticleMetaDescription(articleId: string, description: string): Promise<boolean> {
+    const mutation = `
+      mutation articleUpdate($id: ID!, $article: ArticleInput!) {
+        articleUpdate(id: $id, article: $article) {
+          article {
+            id
+            title
+            metafields(namespace: "global", key: "description_tag", first: 1) {
+              edges {
+                node {
+                  value
+                }
+              }
+            }
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `;
+
+    const variables = {
+      id: articleId,
+      article: {
+        metafields: [
+          {
+            namespace: 'global',
+            key: 'description_tag',
+            value: description,
+            type: 'single_line_text_field'
+          }
+        ]
+      }
+    };
+
+    try {
+      const result = await this.request(mutation, { variables });
+      
+      if (result.data?.articleUpdate?.userErrors?.length > 0) {
+        console.error('GraphQL errors updating meta description:', result.data.articleUpdate.userErrors);
+        return false;
+      }
+
+      console.log('✅ SEO meta description updated successfully via GraphQL');
+      return true;
+    } catch (error) {
+      console.error('Failed to update meta description via GraphQL:', error);
+      return false;
+    }
   }
 }
 

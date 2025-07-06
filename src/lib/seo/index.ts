@@ -170,7 +170,7 @@ Please ensure the content naturally incorporates the target keywords and answers
   }
 
   private generateMetaDescription(keyword: KeywordData): string {
-    return `Discover everything about ${keyword.keyword}. Expert insights, tips, and actionable advice. Read our comprehensive guide now.`;
+    return `Learn about ${keyword.keyword} with expert insights, tips, and actionable advice. Comprehensive guide with cultural significance and practical information.`;
   }
 }
 
