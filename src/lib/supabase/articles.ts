@@ -18,6 +18,7 @@ export interface ArticleFormData {
   seoScore?: number
   wordCount?: number
   readingTime?: number
+  sourceTopicId?: string
 }
 
 export interface ArticleFilterData {
@@ -44,6 +45,7 @@ export class ArticleService {
         seo_score: data.seoScore || null,
         word_count: data.wordCount || this.calculateWordCount(data.content),
         reading_time: data.readingTime || this.calculateReadingTime(data.content),
+        source_topic_id: data.sourceTopicId || null,
         updated_at: new Date().toISOString()
       }
 

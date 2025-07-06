@@ -14,6 +14,7 @@ import { ArrowLeftIcon, SaveIcon, TrashIcon } from 'lucide-react';
 import { ArticleService, ArticleFormData } from '@/lib/supabase/articles';
 import { ProductIntegrationManager } from '@/components/articles/product-integration-manager';
 import { ShopifyIntegration } from '@/components/shopify/shopify-integration';
+import { TopicArticleLinks } from '@/components/articles/topic-article-links';
 import type { Database } from '@/lib/types/database';
 
 type Article = Database['public']['Tables']['articles']['Row'];
@@ -54,7 +55,7 @@ export default function ArticleEditPage() {
   const [hasChanges, setHasChanges] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [newKeyword, setNewKeyword] = useState('');
-  const [activeTab, setActiveTab] = useState<'editor' | 'seo' | 'preview'>('editor');
+  const [activeTab, setActiveTab] = useState<'editor' | 'seo' | 'preview' | 'topic'>('editor');
 
   useEffect(() => {
     loadArticle();
@@ -301,7 +302,7 @@ export default function ArticleEditPage() {
         {/* Tab Navigation */}
         <div className="border-b border-gray-200 mb-6">
           <nav className="-mb-px flex space-x-8">
-            {['editor', 'seo', 'preview'].map((tab) => (
+            {['editor', 'topic', 'seo', 'preview'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab as any)}
@@ -516,6 +517,16 @@ export default function ArticleEditPage() {
                 }}
               />
             </div>
+          </div>
+        )}
+
+        {/* Topic Tab */}
+        {activeTab === 'topic' && (
+          <div className="space-y-6">
+            <TopicArticleLinks 
+              articleId={articleId}
+              showNavigation={true}
+            />
           </div>
         )}
 

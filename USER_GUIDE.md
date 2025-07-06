@@ -16,11 +16,25 @@
 
 ### Main Sections
 
-- **🎯 Topics**: Research and plan your content strategy
+- **🎯 Topics**: Research and plan your content strategy with template selection
 - **🖋️ Content Generation**: Create articles using AI-powered tools
-- **📚 Articles**: Manage your complete content library
+- **📚 Articles**: Manage your complete content library with topic relationships
 - **✏️ Editorial**: Review and publish content workflow
 - **⚙️ Form Demo**: Test and configure system settings
+
+### New Features Overview
+
+**🔗 Topic-Article Linking System**: Complete traceability from topic planning to published articles
+- **Automatic Status Tracking**: Topics move from Available → Generated → Published
+- **Sectioned Dashboard**: Clear separation of available vs published topics
+- **Relationship Navigation**: Easy movement between topics and their articles
+- **Progress Tracking**: Visual indicators showing topic usage and article counts
+
+**⚡ Streamlined Template Selection**: Simplified content creation workflow
+- **Direct Template Choice**: Select templates during topic creation
+- **Visual Template Cards**: Rich interface with icons and descriptions
+- **Auto-Selection**: Templates automatically carry over to content generation
+- **Eliminated Complexity**: No more template mapping logic required
 
 ## Core Workflows
 
@@ -36,10 +50,12 @@
 
 **Features**:
 - **Create New Topics**: Define title, description, target audience, and content goals
+- **Template Selection**: Choose content templates directly during topic creation
 - **AI Title Suggestions**: Get 6 SEO-optimized article titles automatically generated
 - **Keyword Research**: Add relevant keywords for SEO optimization  
 - **Topic Organization**: Categorize and manage your content pipeline
-- **Status Tracking**: Monitor topic development progress
+- **Status Tracking**: Monitor topic development progress (Available → Generated → Published)
+- **Article Relationships**: Track which articles were generated from each topic
 
 **How to Use**:
 1. Click **"Create New Topic"**
@@ -48,7 +64,17 @@
    - **Description**: Detailed explanation of the topic
    - **Target Audience**: Define your intended readers
    - **Content Goals**: Select objectives (educate, entertain, sell, etc.)
-   - **Template**: Select content template type
+   - **Template**: Choose from visual template cards with descriptions
+     - How-To Guide 📋
+     - Product Showcase 🛍️
+     - Industry News 📰
+     - Tutorial 🎓
+     - Review ⭐
+     - Comparison ⚖️
+     - List Article 📝
+     - Case Study 📊
+     - Interview 🎤
+     - Opinion Piece 💭
    - **Keywords**: Add SEO-relevant keywords
    - **Notes**: Additional planning information
 3. **Save** to add to your topic library
@@ -83,12 +109,41 @@
 6. Traditional Mithila Art: Madhubani Painting Techniques 2024
 ```
 
+**Enhanced Topic Dashboard** (New):
+
+The topic dashboard now features a **sectioned interface** that organizes your content pipeline:
+
+**📊 Statistics Overview**:
+- **Available Topics**: Topics ready for content generation
+- **Published Topics**: Topics that have generated published articles
+- **Total Articles**: Complete count of generated articles
+
+**📋 Available Topics Section**:
+- **Topic Cards**: Rich cards showing template badges, keywords, and status
+- **Generate Button**: One-click content generation with pre-selected template
+- **Template Icons**: Visual identification (📋 How-To, 🛍️ Showcase, etc.)
+- **Status Indicators**: Available, Generated, Published badges
+- **Article Count**: Number of articles generated from each topic
+
+**✅ Published Topics Section**:
+- **Success Tracking**: Topics that have resulted in published articles
+- **Publication Dates**: When articles were last published
+- **Article Links**: Direct navigation to published articles
+- **Performance Metrics**: Article count and publishing success
+
+**🔗 Topic-Article Navigation**:
+- **View Articles**: See all articles generated from a topic
+- **Edit Topic**: Modify topic details and settings
+- **Generate More**: Create additional articles from the same topic
+- **Topic History**: Track the complete lifecycle from planning to publishing
+
 **Best Practices**:
 - Use specific, actionable topic titles (triggers better AI suggestions)
 - Select appropriate templates for faster generation
 - Include 5-10 relevant keywords per topic (improves title quality)
 - Define clear content goals for better AI generation
 - Experiment with different tones to see varied title styles
+- Monitor topic progress through the Available → Published workflow
 - Update topics based on performance data
 
 #### Step 2: Content Generation (`/content-generation`)
@@ -105,12 +160,29 @@
 
 **Generation Workflow**:
 
+**🚀 Streamlined Topic-to-Content Flow** (New):
+When generating content from a topic, the template is **automatically selected** and the workflow is optimized:
+
+1. **From Topics Dashboard**: Click "Generate" on any topic card
+2. **Auto-Configuration**: Template and topic data pre-filled
+3. **Skip Template Selection**: Direct to content configuration
+4. **Inherited Keywords**: Keywords from topic automatically included
+5. **One-Click Generation**: Streamlined path to content creation
+
+**🔧 Manual Content Generation**:
+For standalone content creation without a source topic:
+
 1. **Select Template**: Choose from available content templates
-   - How-to guides
-   - Product reviews
-   - Educational content
-   - Buying guides
-   - Industry insights
+   - How-To Guide 📋
+   - Product Showcase 🛍️
+   - Industry News 📰
+   - Tutorial 🎓
+   - Review ⭐
+   - Comparison ⚖️
+   - List Article 📝
+   - Case Study 📊
+   - Interview 🎤
+   - Opinion Piece 💭
 
 2. **Configure Generation**:
    - **Topic/Title**: Enter your content topic
@@ -172,12 +244,19 @@ When you come from Topics with selected keywords, you'll see:
 
 **Article Editor** (`/articles/[id]/edit`):
 
+**Enhanced Tab Interface** (New):
+- **Editor Tab**: Core content editing and publishing controls
+- **Topic Tab**: View source topic and related articles (New!)
+- **SEO Tab**: Keyword management and optimization tools
+- **Preview Tab**: Live content preview with formatting
+
 **Core Editing Features**:
-- **Rich Text Editor**: Full-featured content editing
+- **Rich Text Editor**: Full-featured content editing with markdown support
 - **Meta Information**: Title, slug, description, featured image
 - **SEO Tools**: Keyword management, meta descriptions
 - **Status Management**: Control publication workflow
 - **Word Count & Reading Time**: Automatic content analytics
+- **Topic Relationship**: View and navigate to source topic (if applicable)
 
 **Product Integration Manager**:
 - **Generate Suggestions**: AI-powered product recommendations based on content
@@ -186,6 +265,34 @@ When you come from Topics with selected keywords, you'll see:
 - **Approval Workflow**: Review and approve product suggestions
 - **Link Customization**: Set custom link text and UTM parameters
 - **Position Management**: Control where products appear in content
+
+**🔗 Topic Tab Features** (New):
+
+The new **Topic Tab** provides complete visibility into article-topic relationships:
+
+**Source Topic Information**:
+- **Topic Details**: View the original topic that generated this article
+- **Template Badge**: See which template was used (📋 How-To, 🛍️ Showcase, etc.)
+- **Topic Status**: Current status (Available, Generated, Published)
+- **Keywords**: Original keywords from topic research
+- **Statistics**: Article count and publication metrics
+
+**Related Articles**:
+- **Same Topic Articles**: See all other articles generated from the same topic
+- **Status Overview**: View status of each related article
+- **Quick Navigation**: Direct links to edit other articles
+- **Creation Timeline**: See when articles were created and published
+
+**Navigation Actions**:
+- **View All Topics**: Return to topic dashboard
+- **Generate New Article**: Create another article from the same topic
+- **Edit Source Topic**: Modify the original topic details
+
+**Benefits**:
+- ✅ **Complete Traceability**: Always know which topic generated an article
+- ✅ **Content Series**: Easily manage multiple articles from one topic
+- ✅ **Performance Tracking**: See how topics perform across articles
+- ✅ **Workflow Visibility**: Understand the complete content pipeline
 
 **Save Button Behavior** (Important):
 - **Disabled by Default**: Prevents unnecessary saves when no changes made

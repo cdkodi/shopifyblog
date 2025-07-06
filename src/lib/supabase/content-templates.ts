@@ -16,6 +16,27 @@ export interface ContentTemplate {
 }
 
 export class ContentTemplateService {
+  // Get template names for topic form dropdown
+  static async getTemplateNames(): Promise<{ data: string[] | null; error: string | null }> {
+    try {
+      const { data: templates, error } = await this.getContentTemplates();
+      
+      if (error || !templates) {
+        return { data: null, error: error || 'Failed to fetch templates' };
+      }
+
+      const templateNames = templates
+        .filter(template => template.isActive !== false)
+        .map(template => template.name)
+        .sort();
+
+      return { data: templateNames, error: null };
+    } catch (err) {
+      console.error('Error fetching template names:', err);
+      return { data: null, error: 'Failed to fetch template names' };
+    }
+  }
+
   // Get all content templates from Supabase
   static async getContentTemplates(): Promise<{ data: ContentTemplate[] | null; error: string | null }> {
     try {

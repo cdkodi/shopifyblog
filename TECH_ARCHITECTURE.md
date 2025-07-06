@@ -71,7 +71,10 @@ CREATE TABLE topics (
   content_goals TEXT[],
   keywords TEXT[],
   notes TEXT,
-  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
+  content_template TEXT, -- New: Direct template selection
+  style_preferences JSONB,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'generated', 'published', 'archived')),
+  used_at TIMESTAMPTZ, -- New: Tracks when topic was used for generation
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -79,7 +82,7 @@ CREATE TABLE topics (
 -- Articles Management
 CREATE TABLE articles (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  topic_id UUID REFERENCES topics(id),
+  source_topic_id UUID REFERENCES topics(id), -- New: Links articles to source topics
   title TEXT NOT NULL,
   slug TEXT,
   content TEXT,
@@ -87,7 +90,7 @@ CREATE TABLE articles (
   meta_description TEXT,
   featured_image TEXT,
   tags JSONB,
-  keywords TEXT[],
+  target_keywords JSONB, -- Updated: Better JSON support
   status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'review', 'approved', 'published', 'archived')),
   word_count INTEGER,
   reading_time INTEGER,
@@ -95,6 +98,9 @@ CREATE TABLE articles (
   ai_provider TEXT,
   generation_cost DECIMAL(10,4),
   published_at TIMESTAMPTZ,
+  scheduled_publish_date TIMESTAMPTZ,
+  shopify_article_id BIGINT, -- New: Shopify integration
+  shopify_blog_id BIGINT, -- New: Shopify integration
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -175,13 +181,51 @@ CREATE TABLE app_config (
 );
 ```
 
+-- Database Views for Topic-Article Relationships
+CREATE OR REPLACE VIEW topics_with_article_status AS
+SELECT 
+  t.*,
+  COUNT(a.id) as article_count,
+  COUNT(CASE WHEN a.status = 'published' THEN 1 END) as published_article_count,
+  CASE 
+    WHEN COUNT(CASE WHEN a.status = 'published' THEN 1 END) > 0 THEN true 
+    ELSE false 
+  END as has_published_articles,
+  MAX(a.published_at) as last_published_at,
+  CASE 
+    WHEN COUNT(CASE WHEN a.status = 'published' THEN 1 END) > 0 THEN 'published'
+    WHEN COUNT(a.id) > 0 THEN 'generated'
+    ELSE t.status
+  END as topic_status
+FROM topics t
+LEFT JOIN articles a ON a.source_topic_id = t.id
+GROUP BY t.id, t.topic_title, t.keywords, t.content_template, t.style_preferences, 
+         t.competition_score, t.created_at, t.industry, t.market_segment, 
+         t.priority_score, t.search_volume, t.status, t.used_at;
+
+CREATE OR REPLACE VIEW articles_with_shopify_status AS
+SELECT 
+  a.*,
+  CASE 
+    WHEN a.shopify_article_id IS NOT NULL THEN 'published_to_shopify'
+    ELSE a.status
+  END as publishing_status,
+  t.topic_title as source_topic_title,
+  t.content_template as source_template
+FROM articles a
+LEFT JOIN topics t ON t.id = a.source_topic_id;
+```
+
 ### Performance Optimizations
 
 ```sql
 -- Critical Indexes for Query Performance
 CREATE INDEX idx_articles_status ON articles(status);
-CREATE INDEX idx_articles_topic_id ON articles(topic_id);
+CREATE INDEX idx_articles_source_topic_id ON articles(source_topic_id); -- Updated
 CREATE INDEX idx_articles_created_at ON articles(created_at DESC);
+CREATE INDEX idx_articles_shopify_article_id ON articles(shopify_article_id); -- New
+CREATE INDEX idx_topics_status ON topics(status); -- New
+CREATE INDEX idx_topics_content_template ON topics(content_template); -- New
 CREATE INDEX idx_shopify_products_status ON shopify_products(status);
 CREATE INDEX idx_shopify_products_collections ON shopify_products USING GIN(collections);
 CREATE INDEX idx_shopify_products_tags ON shopify_products USING GIN(tags);
@@ -215,6 +259,152 @@ CREATE POLICY "Enable authenticated access" ON articles FOR ALL TO authenticated
 CREATE POLICY "Enable authenticated access" ON seo_keywords FOR ALL TO authenticated;
 ```
 
+## Topic-Article Linking System (New)
+
+### Architecture Overview
+
+**Purpose**: Complete traceability and workflow management from topic planning to article publishing.
+
+**Key Components**:
+- **Database Relations**: Foreign key linking articles to source topics
+- **Status Tracking**: Automatic topic status updates (available → generated → published)
+- **Dashboard Views**: Sectioned interface separating available vs published topics
+- **Relationship UI**: Bidirectional navigation between topics and articles
+
+### Implementation Details
+
+```typescript
+// Database relationship
+interface Article {
+  id: string;
+  source_topic_id?: string; // Links to topics.id
+  title: string;
+  content: string;
+  status: 'draft' | 'review' | 'approved' | 'published';
+  shopify_article_id?: number;
+  // ... other fields
+}
+
+interface Topic {
+  id: string;
+  topic_title: string;
+  content_template: string; // Direct template selection
+  status: 'active' | 'generated' | 'published';
+  used_at?: string; // Timestamp when topic was used
+  // ... other fields
+}
+
+// Enhanced view with article statistics
+interface TopicWithArticleStatus extends Topic {
+  article_count: number;
+  published_article_count: number;
+  has_published_articles: boolean;
+  last_published_at?: string;
+  topic_status: 'available' | 'generated' | 'published';
+}
+```
+
+### Workflow Automation
+
+```typescript
+// Automatic status tracking
+export const updateTopicStatus = async (topicId: string, status: 'generated' | 'published') => {
+  await supabase
+    .from('topics')
+    .update({ 
+      status,
+      used_at: new Date().toISOString()
+    })
+    .eq('id', topicId);
+};
+
+// Article creation with topic linking
+export const createArticleFromTopic = async (articleData: ArticleFormData) => {
+  const { data: article } = await supabase
+    .from('articles')
+    .insert({
+      ...articleData,
+      source_topic_id: articleData.sourceTopicId
+    });
+
+  // Update topic status to 'generated'
+  if (articleData.sourceTopicId) {
+    await updateTopicStatus(articleData.sourceTopicId, 'generated');
+  }
+
+  return article;
+};
+
+// Shopify publishing with topic status update
+export const publishToShopify = async (articleId: string) => {
+  // ... Shopify publishing logic
+  
+  // Update topic status to 'published' if article came from topic
+  const { data: article } = await supabase
+    .from('articles')
+    .select('source_topic_id')
+    .eq('id', articleId)
+    .single();
+
+  if (article?.source_topic_id) {
+    await updateTopicStatus(article.source_topic_id, 'published');
+  }
+};
+```
+
+### UI Components
+
+- **TopicDashboard**: Sectioned view with Available/Published topics
+- **TopicArticleLinks**: Relationship display and navigation component
+- **Enhanced Topic Cards**: Status indicators, article counts, template badges
+- **Article Editor**: Topic tab showing source topic and related articles
+
+## Streamlined Template Selection (New)
+
+### Architecture Changes
+
+**Before**: Complex template mapping logic in content generation
+**After**: Direct template selection in topic creation
+
+```typescript
+// Old approach - complex mapping
+const mapTopicToTemplate = (topic: Topic): ContentTemplate => {
+  // Complex logic to determine template from topic data
+  if (topic.style_preferences?.template_type === 'Blog Post') {
+    return getTemplate('how-to-guide');
+  }
+  // ... more mapping logic
+};
+
+// New approach - direct selection
+interface Topic {
+  content_template: string; // Direct template name
+}
+
+interface ContentConfiguration {
+  topicId?: string;
+  template?: string; // Auto-selected from topic
+}
+
+// Streamlined flow
+const generateFromTopic = (topicId: string) => {
+  const topic = await getTopicById(topicId);
+  return {
+    template: topic.content_template, // Direct usage
+    topicId: topicId,
+    // ... other config
+  };
+};
+```
+
+### Benefits
+
+- **Eliminated Complexity**: No template mapping logic required
+- **User Control**: Direct template selection in topic creation
+- **Faster Generation**: Skip template selection step when coming from topics
+- **Better UX**: Visual template cards with descriptions and icons
+- **Consistency**: Same template used throughout topic → article workflow
+
 ## Application Architecture
 
 ### Directory Structure
@@ -240,7 +430,9 @@ src/
 │   │   ├── article-list.tsx
 │   │   ├── article-review-dashboard.tsx
 │   │   ├── article-stats.tsx
-│   │   └── product-integration-manager.tsx
+│   │   ├── product-integration-manager.tsx
+│   │   ├── shopify-integration.tsx
+│   │   └── topic-article-links.tsx # New: Topic-article relationships
 │   ├── content-generation/       # Content generation
 │   │   ├── content-configuration.tsx
 │   │   ├── content-editor.tsx

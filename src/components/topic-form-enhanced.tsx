@@ -3,14 +3,17 @@
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Palette, FileText, Layout } from 'lucide-react'
+import { Palette, FileText, Layout, Sparkles, Target, Clock } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { Textarea } from './ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
+import { Card } from './ui/card'
+import { Badge } from './ui/badge'
 import { topicSchema, type TopicFormData } from '../lib/validations/topic'
 import { TopicService } from '../lib/supabase/topics'
+import { ContentTemplateService, ContentTemplate } from '../lib/supabase/content-templates'
 
 interface TopicFormProps {
   initialData?: Partial<TopicFormData>
@@ -22,7 +25,7 @@ interface TopicFormProps {
 interface ConfigValues {
   style_tones: string[]
   article_lengths: string[]
-  content_templates: string[]
+  content_templates: ContentTemplate[]
 }
 
 export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }: TopicFormProps) {
@@ -35,6 +38,7 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
   const [titleSuggestions, setTitleSuggestions] = useState<string[]>([])
   const [loadingTitles, setLoadingTitles] = useState(false)
   const [titleError, setTitleError] = useState<string | null>(null)
+  const [selectedTemplate, setSelectedTemplate] = useState<ContentTemplate | null>(null)
 
   const {
     register,
@@ -50,23 +54,64 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
       keywords: initialData?.keywords || '',
       tone: initialData?.tone || 'Professional',
       length: initialData?.length || 'Medium (800-1500 words)',
-      template: initialData?.template || 'Blog Post',
+      template: initialData?.template || '',
     },
     mode: 'onChange',
   })
 
   const watchedValues = watch()
 
-  // Mock config values for demo (replace with real data in production)
+  // Load config values including actual content templates
   useEffect(() => {
-    // Simulating API call with mock data
-    const mockConfig: ConfigValues = {
-      style_tones: ['Professional', 'Conversational', 'Educational', 'Inspirational', 'Humorous', 'Story Telling'],
-      article_lengths: ['Short (500-800 words)', 'Medium (800-1500 words)', 'Long (1500-3000 words)', 'Extended (3000+ words)'],
-      content_templates: ['Blog Post', 'How-to Guide', 'Listicle', 'Review', 'Case Study', 'Tutorial']
+    const loadConfigValues = async () => {
+      try {
+        // Load actual content templates from service
+        const { data: templates, error: templateError } = await ContentTemplateService.getContentTemplates()
+        
+        if (templateError) {
+          console.error('Failed to load templates:', templateError)
+          // Fallback to mock data
+          setConfigValues({
+            style_tones: ['Professional', 'Conversational', 'Educational', 'Inspirational', 'Humorous', 'Story Telling'],
+            article_lengths: ['Short (500-800 words)', 'Medium (800-1500 words)', 'Long (1500-3000 words)', 'Extended (3000+ words)'],
+            content_templates: []
+          })
+          return
+        }
+
+        setConfigValues({
+          style_tones: ['Professional', 'Conversational', 'Educational', 'Inspirational', 'Humorous', 'Story Telling'],
+          article_lengths: ['Short (500-800 words)', 'Medium (800-1500 words)', 'Long (1500-3000 words)', 'Extended (3000+ words)'],
+          content_templates: templates || []
+        })
+
+        // Set default template if none selected
+        if (templates && templates.length > 0 && !watchedValues.template) {
+          const defaultTemplate = templates.find(t => t.name === 'How-To Guide') || templates[0]
+          setValue('template', defaultTemplate.name)
+          setSelectedTemplate(defaultTemplate)
+        }
+      } catch (error) {
+        console.error('Error loading config values:', error)
+        // Fallback to mock data
+        setConfigValues({
+          style_tones: ['Professional', 'Conversational', 'Educational', 'Inspirational', 'Humorous', 'Story Telling'],
+          article_lengths: ['Short (500-800 words)', 'Medium (800-1500 words)', 'Long (1500-3000 words)', 'Extended (3000+ words)'],
+          content_templates: []
+        })
+      }
     }
-    setConfigValues(mockConfig)
-  }, [])
+
+    loadConfigValues()
+  }, [setValue, watchedValues.template])
+
+  // Update selected template when template field changes
+  useEffect(() => {
+    if (configValues?.content_templates && watchedValues.template) {
+      const template = configValues.content_templates.find(t => t.name === watchedValues.template)
+      setSelectedTemplate(template || null)
+    }
+  }, [watchedValues.template, configValues])
 
   // Reset form when initialData changes
   useEffect(() => {
@@ -76,7 +121,7 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
         keywords: initialData.keywords || '',
         tone: initialData.tone || 'Professional',
         length: initialData.length || 'Medium (800-1500 words)',
-        template: initialData.template || 'Blog Post',
+        template: initialData.template || '',
       })
     }
   }, [initialData, reset])
@@ -142,8 +187,6 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
       setTitleError(null)
 
       try {
-        // Generate AI title suggestions
-        
         const response = await fetch('/api/ai/suggest-titles', {
           method: 'POST',
           headers: {
@@ -153,7 +196,7 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
             topic: title,
             tone: tone || 'Professional',
             targetAudience: 'intermediate readers',
-            templateType: template || 'Blog Post',
+            templateType: template || 'How-To Guide',
             keywords: watchedValues.keywords || ''
           })
         })
@@ -181,8 +224,7 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
       }
     }
 
-    // Debounce title generation to avoid too many API calls
-    const debounceTimer = setTimeout(generateTitleSuggestions, 2000) // Longer delay for title generation
+    const debounceTimer = setTimeout(generateTitleSuggestions, 2000)
     return () => clearTimeout(debounceTimer)
   }, [watchedValues.title, watchedValues.tone, watchedValues.template, watchedValues.keywords])
 
@@ -191,30 +233,61 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
     setSubmitError(null)
 
     try {
+      // Include the selected content template in the data
+      const topicData = {
+        ...data,
+        content_template: data.template // Store the actual template name
+      }
+
       let result;
       if (topicId) {
-        // Update existing topic
-        result = await TopicService.updateTopic(topicId, data)
+        result = await TopicService.updateTopic(topicId, topicData)
       } else {
-        // Create new topic
-        result = await TopicService.createTopic(data)
+        result = await TopicService.createTopic(topicData)
       }
-      
+
       if (result.error) {
-        setSubmitError(result.error)
-        return
+        throw new Error(result.error)
       }
+
       onSuccess?.(result.data)
-      
-      if (!topicId) {
-        reset() // Reset form after successful creation
-      }
     } catch (error) {
-      console.error('Topic submission error:', error)
-      setSubmitError('An unexpected error occurred')
+      console.error('Topic submission failed:', error)
+      setSubmitError(error instanceof Error ? error.message : 'Failed to save topic')
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleTitleSuggestionClick = (suggestion: string) => {
+    setValue('title', suggestion, { shouldValidate: true })
+  }
+
+  const handleKeywordSuggestionClick = (keyword: string) => {
+    const currentKeywords = watchedValues.keywords || ''
+    const keywordArray = currentKeywords.split(',').map(k => k.trim()).filter(k => k)
+    
+    if (!keywordArray.includes(keyword)) {
+      const newKeywords = [...keywordArray, keyword].join(', ')
+      setValue('keywords', newKeywords, { shouldValidate: true })
+    }
+  }
+
+  const handleTemplateSelect = (templateName: string) => {
+    setValue('template', templateName, { shouldValidate: true })
+    const template = configValues?.content_templates.find(t => t.name === templateName)
+    setSelectedTemplate(template || null)
+  }
+
+  if (!configValues) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading form configuration...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -278,7 +351,7 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
                   <button
                     key={index}
                     type="button"
-                    onClick={() => setValue('title', title)}
+                    onClick={() => handleTitleSuggestionClick(title)}
                     className="w-full text-left p-3 bg-white border border-purple-100 rounded-lg hover:bg-purple-50 hover:border-purple-300 transition-colors group"
                   >
                     <div className="flex items-start justify-between">
@@ -342,14 +415,7 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
                   <button
                     key={index}
                     type="button"
-                    onClick={() => {
-                      const currentKeywords = watchedValues.keywords || ''
-                      const keywordList = currentKeywords.split(',').map(k => k.trim()).filter(Boolean)
-                      if (!keywordList.includes(keyword)) {
-                        const newKeywords = [...keywordList, keyword].join(', ')
-                        setValue('keywords', newKeywords)
-                      }
-                    }}
+                    onClick={() => handleKeywordSuggestionClick(keyword)}
                     className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200 transition-colors"
                   >
                     + {keyword}
@@ -380,6 +446,117 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
           </p>
         </div>
 
+        {/* Content Template Selection - Rich UI */}
+        <div className="space-y-4">
+          <div className="border-t pt-4">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Content Template</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Choose the structure and format for your article. This will determine the AI generation approach.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {configValues?.content_templates?.map((template) => (
+              <Card 
+                key={template.id}
+                className={`p-4 cursor-pointer transition-all hover:shadow-md ${
+                  watchedValues.template === template.name 
+                    ? 'ring-2 ring-blue-500 bg-blue-50' 
+                    : 'hover:bg-gray-50'
+                }`}
+                onClick={() => handleTemplateSelect(template.name)}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="text-2xl">{template.icon}</div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-gray-900 mb-1">{template.name}</h3>
+                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">{template.description}</p>
+                    
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      <Badge variant="secondary" className="text-xs">
+                        <Target className="h-3 w-3 mr-1" />
+                        {template.difficulty}
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        <Clock className="h-3 w-3 mr-1" />
+                        {template.targetLength}w
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        ${template.estimatedCost.toFixed(3)}
+                      </Badge>
+                    </div>
+                    
+                    {template.seoAdvantages && template.seoAdvantages.length > 0 && (
+                      <div className="text-xs text-green-600">
+                        ✓ {template.seoAdvantages[0]}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+          
+          {errors.template && (
+            <p className="text-red-500 text-sm">{errors.template.message}</p>
+          )}
+        </div>
+
+        {/* Selected Template Details */}
+        {selectedTemplate && (
+          <Card className="p-4 bg-blue-50 border-blue-200">
+            <div className="flex items-start gap-3">
+              <div className="text-2xl">{selectedTemplate.icon}</div>
+              <div className="flex-1">
+                <h3 className="font-medium text-blue-900 mb-2">
+                  Selected: {selectedTemplate.name}
+                </h3>
+                <p className="text-sm text-blue-700 mb-3">{selectedTemplate.description}</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                  <div>
+                    <div className="text-xs text-blue-600 font-medium">Recommended Provider</div>
+                    <div className="text-sm text-blue-800 capitalize">{selectedTemplate.recommendedProvider}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-blue-600 font-medium">Target Length</div>
+                    <div className="text-sm text-blue-800">{selectedTemplate.targetLength} words</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-blue-600 font-medium">Estimated Cost</div>
+                    <div className="text-sm text-blue-800">${selectedTemplate.estimatedCost.toFixed(3)}</div>
+                  </div>
+                </div>
+                
+                {selectedTemplate.seoAdvantages && selectedTemplate.seoAdvantages.length > 0 && (
+                  <div>
+                    <div className="text-xs text-blue-600 font-medium mb-1">SEO Advantages</div>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedTemplate.seoAdvantages.map((advantage, index) => (
+                        <Badge key={index} variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+                          {advantage}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {selectedTemplate.exampleTitles && selectedTemplate.exampleTitles.length > 0 && (
+                  <div className="mt-3">
+                    <div className="text-xs text-blue-600 font-medium mb-1">Example Titles</div>
+                    <div className="text-sm text-blue-700">
+                      {selectedTemplate.exampleTitles.slice(0, 2).map((title, index) => (
+                        <div key={index} className="mb-1">• {title}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Style Preferences Section */}
         <div className="space-y-4">
           <div className="border-t pt-4">
@@ -389,7 +566,7 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-2 gap-4">
             {/* Tone Selection */}
             <div className="space-y-2">
               <Label className="text-gray-700 flex items-center gap-1 font-medium">
@@ -439,32 +616,6 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
               </Select>
               <p className="text-xs text-gray-500">
                 Target word count for generated content
-              </p>
-            </div>
-
-            {/* Content Template */}
-            <div className="space-y-2">
-              <Label className="text-gray-700 flex items-center gap-1 font-medium">
-                <Layout className="h-4 w-4" />
-                Content Type
-              </Label>
-              <Select
-                value={watchedValues.template || 'Blog Post'}
-                onValueChange={(value) => setValue('template', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose content type..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {configValues?.content_templates?.map((template) => (
-                    <SelectItem key={template} value={template}>
-                      {template}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-gray-500">
-                Structure and format for the article
               </p>
             </div>
           </div>

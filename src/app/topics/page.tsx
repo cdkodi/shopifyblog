@@ -8,6 +8,7 @@ import type { Database } from '../../lib/types/database'
 import { dbTopicToFormData } from '../../lib/types/database'
 
 type Topic = Database['public']['Tables']['topics']['Row']
+type TopicWithStatus = Database['public']['Views']['topics_with_article_status']['Row']
 
 type ViewMode = 'dashboard' | 'create' | 'edit'
 
@@ -22,8 +23,24 @@ export default function TopicsPage() {
     setViewMode('create')
   }
 
-  const handleEditTopic = (topic: Topic) => {
-    setEditingTopic(topic)
+  const handleEditTopic = (topic: TopicWithStatus) => {
+    // Convert TopicWithStatus to Topic for editing
+    const topicForEdit: Topic = {
+      id: topic.id!,
+      topic_title: topic.topic_title!,
+      keywords: topic.keywords,
+      content_template: topic.content_template,
+      style_preferences: topic.style_preferences,
+      competition_score: topic.competition_score,
+      created_at: topic.created_at,
+      industry: topic.industry,
+      market_segment: topic.market_segment,
+      priority_score: topic.priority_score,
+      search_volume: topic.search_volume,
+      status: topic.status,
+      used_at: topic.used_at,
+    }
+    setEditingTopic(topicForEdit)
     setViewMode('edit')
   }
 
@@ -38,12 +55,17 @@ export default function TopicsPage() {
     setEditingTopic(null)
   }
 
-  const handleGenerateContent = (topic: Topic) => {
+  const handleGenerateContent = (topic: TopicWithStatus) => {
     console.log('🚀 Generate clicked for topic:', topic);
     console.log('📊 Style preferences:', topic.style_preferences);
     
     // Navigate to content generation page with topic data
     const params = new URLSearchParams()
+    
+    // Add topic ID for linking
+    if (topic.id) {
+      params.set('topicId', topic.id)
+    }
     
     // Add topic title
     if (topic.topic_title) {

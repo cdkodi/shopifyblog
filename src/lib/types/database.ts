@@ -107,6 +107,7 @@ export type Database = {
           shopify_article_id: number | null
           shopify_blog_id: number | null
           slug: string | null
+          source_topic_id: string | null
           status: string | null
           target_keywords: Json | null
           title: string
@@ -125,6 +126,7 @@ export type Database = {
           shopify_article_id?: number | null
           shopify_blog_id?: number | null
           slug?: string | null
+          source_topic_id?: string | null
           status?: string | null
           target_keywords?: Json | null
           title: string
@@ -143,13 +145,22 @@ export type Database = {
           shopify_article_id?: number | null
           shopify_blog_id?: number | null
           slug?: string | null
+          source_topic_id?: string | null
           status?: string | null
           target_keywords?: Json | null
           title?: string
           updated_at?: string | null
           word_count?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "articles_source_topic_id_fkey"
+            columns: ["source_topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       content_templates: {
         Row: {
@@ -271,6 +282,7 @@ export type Database = {
       topics: {
         Row: {
           competition_score: number | null
+          content_template: string | null
           created_at: string | null
           id: string
           industry: string | null
@@ -285,6 +297,7 @@ export type Database = {
         }
         Insert: {
           competition_score?: number | null
+          content_template?: string | null
           created_at?: string | null
           id?: string
           industry?: string | null
@@ -299,6 +312,7 @@ export type Database = {
         }
         Update: {
           competition_score?: number | null
+          content_template?: string | null
           created_at?: string | null
           id?: string
           industry?: string | null
@@ -360,11 +374,34 @@ export type Database = {
           shopify_blog_id: number | null
           shopify_status: string | null
           slug: string | null
+          source_topic_id: string | null
           status: string | null
           target_keywords: Json | null
           title: string | null
           updated_at: string | null
           word_count: number | null
+        }
+      }
+      topics_with_article_status: {
+        Row: {
+          article_count: number | null
+          competition_score: number | null
+          content_template: string | null
+          created_at: string | null
+          has_published_articles: boolean | null
+          id: string | null
+          industry: string | null
+          keywords: Json | null
+          last_published_at: string | null
+          market_segment: string | null
+          priority_score: number | null
+          published_article_count: number | null
+          search_volume: number | null
+          status: string | null
+          style_preferences: Json | null
+          topic_status: string | null
+          topic_title: string | null
+          used_at: string | null
         }
         Insert: {
           content?: string | null
@@ -574,6 +611,7 @@ export function formDataToDbInsert(formData: {
   tone?: string
   length?: string
   template?: string
+  content_template?: string
 }): Database['public']['Tables']['topics']['Insert'] {
   // Convert comma-separated keywords string to JSON array
   const keywordsArray = formData.keywords 
@@ -590,6 +628,7 @@ export function formDataToDbInsert(formData: {
   return {
     topic_title: formData.title,
     keywords: keywordsArray,
+    content_template: formData.content_template || formData.template || null,
     style_preferences: Object.keys(stylePreferences).length > 0 ? stylePreferences : null,
     priority_score: 5, // Default priority
     status: 'pending',
@@ -602,6 +641,7 @@ export function formDataToDbUpdate(formData: {
   tone?: string
   length?: string
   template?: string
+  content_template?: string
 }): Database['public']['Tables']['topics']['Update'] {
   // Convert comma-separated keywords string to JSON array
   const keywordsArray = formData.keywords 
@@ -618,6 +658,7 @@ export function formDataToDbUpdate(formData: {
   return {
     topic_title: formData.title,
     keywords: keywordsArray,
+    content_template: formData.content_template || formData.template || null,
     style_preferences: Object.keys(stylePreferences).length > 0 ? stylePreferences : null,
   }
 } 

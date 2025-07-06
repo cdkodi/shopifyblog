@@ -15,6 +15,7 @@ interface ContentConfigurationProps {
   onConfigurationComplete: (config: ContentConfiguration) => void;
   onBack: () => void;
   initialData?: {
+    topicId?: string;
     topic?: string;
     targetKeyword?: string;
     relatedKeywords?: string[];
@@ -25,6 +26,7 @@ interface ContentConfigurationProps {
 
 export interface ContentConfiguration {
   template: ContentTemplate;
+  topicId?: string;
   topic: string;
   targetKeyword: string;
   relatedKeywords: string[];
@@ -63,6 +65,7 @@ export function ContentConfiguration({ selectedTemplate, onConfigurationComplete
         if (savedConfig.template?.id === selectedTemplate.id) {
           return {
             template: selectedTemplate,
+            topicId: savedConfig.topicId || initialData?.topicId,
             topic: savedConfig.topic || initialData?.topic || '',
             targetKeyword: savedConfig.targetKeyword || initialData?.targetKeyword || '',
             relatedKeywords: savedConfig.relatedKeywords || initialData?.relatedKeywords || [],
@@ -84,6 +87,7 @@ export function ContentConfiguration({ selectedTemplate, onConfigurationComplete
     // Return default config if no saved config or loading failed
     return {
       template: selectedTemplate,
+      topicId: initialData?.topicId,
       topic: initialData?.topic || '',
       targetKeyword: initialData?.targetKeyword || '',
       relatedKeywords: initialData?.relatedKeywords || [],

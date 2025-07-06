@@ -69,6 +69,28 @@ export async function POST(request: NextRequest) {
       // We should still return success but log the issue
     }
 
+    // Update the source topic status to 'published' if this article came from a topic
+    if (article.source_topic_id) {
+      try {
+        const { error: topicError } = await supabase
+          .from('topics')
+          .update({ 
+            status: 'published',
+            used_at: new Date().toISOString()
+          })
+          .eq('id', article.source_topic_id);
+
+        if (topicError) {
+          console.error('Failed to update topic status to published:', topicError);
+          // Don't fail the article publishing if topic update fails
+        } else {
+          console.log(`✅ Topic ${article.source_topic_id} marked as published`);
+        }
+      } catch (topicError) {
+        console.error('Error updating topic status:', topicError);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Article published to Shopify successfully',

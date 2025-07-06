@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { GeneratedContent } from './content-generator';
 import { blogIntegration } from '@/lib/publishing/blog-integration';
 import { ArticleService } from '@/lib/supabase/articles';
+import { supabase } from '@/lib/supabase';
 import { ImageBrowser } from './image-browser';
 import { Image } from 'lucide-react';
 
@@ -160,7 +161,8 @@ export function ContentEditor({ generatedContent, onPublish, onBack }: ContentEd
         status: 'draft' as const,
         targetKeywords: editedContent.tags,
         seoScore: Math.round((seoOptimizations.keywordDensityScore + seoOptimizations.readabilityScore + seoOptimizations.headingsStructure) / 3),
-        scheduledPublishDate: editedContent.scheduledDate || undefined
+        scheduledPublishDate: editedContent.scheduledDate || undefined,
+        sourceTopicId: generatedContent.configuration.topicId
       };
 
       const { data: article, error } = await ArticleService.createArticle(articleData);
@@ -168,6 +170,22 @@ export function ContentEditor({ generatedContent, onPublish, onBack }: ContentEd
       if (error) {
         alert(`Failed to save article: ${error}`);
       } else {
+        // Update the topic's used_at timestamp if it came from a topic
+        if (generatedContent.configuration.topicId) {
+          try {
+            await supabase
+              .from('topics')
+              .update({ 
+                used_at: new Date().toISOString(),
+                status: 'generated'
+              })
+              .eq('id', generatedContent.configuration.topicId);
+          } catch (topicError) {
+            console.error('Failed to update topic status:', topicError);
+            // Don't fail the article creation if topic update fails
+          }
+        }
+        
         alert('Article saved to database successfully!');
       }
     } catch (err) {

@@ -2,9 +2,155 @@
 
 All notable changes to the Shopify Blog CMS will be documented in this file.
 
-## [Latest] - December 2024
+## [Latest] - January 2025
+
+### 🎯 Phase 3 Complete: Topic-Article Linking & Streamlined Templates
+
+#### **🔗 Topic-Article Linking System** (New)
+- **Complete Traceability**: Every article can be traced back to its source topic
+- **Database Relations**: Added `source_topic_id` foreign key linking articles to topics
+- **Automatic Status Tracking**: Topics progress from Available → Generated → Published
+- **Enhanced Dashboard**: Sectioned interface with Available vs Published topics
+- **Bidirectional Navigation**: Easy movement between topics and their articles
+- **Article Statistics**: Real-time counts of articles per topic and publication status
+
+**Database Schema Updates**:
+```sql
+-- Topic-Article relationship
+ALTER TABLE articles ADD COLUMN source_topic_id UUID REFERENCES topics(id);
+CREATE INDEX idx_articles_source_topic_id ON articles(source_topic_id);
+
+-- Direct template selection
+ALTER TABLE topics ADD COLUMN content_template TEXT;
+ALTER TABLE topics ADD COLUMN used_at TIMESTAMPTZ;
+
+-- Enhanced topic status tracking
+ALTER TABLE topics ALTER COLUMN status TYPE TEXT;
+-- Now supports: 'active', 'generated', 'published', 'archived'
+
+-- Database views for efficient queries
+CREATE VIEW topics_with_article_status AS
+SELECT t.*, 
+  COUNT(a.id) as article_count,
+  COUNT(CASE WHEN a.status = 'published' THEN 1 END) as published_article_count,
+  CASE 
+    WHEN COUNT(CASE WHEN a.status = 'published' THEN 1 END) > 0 THEN 'published'
+    WHEN COUNT(a.id) > 0 THEN 'generated'
+    ELSE t.status
+  END as topic_status
+FROM topics t
+LEFT JOIN articles a ON a.source_topic_id = t.id
+GROUP BY t.id;
+```
+
+**Workflow Automation**:
+- **Article Creation**: Automatically links articles to source topics
+- **Topic Status Updates**: Auto-update when articles are created or published
+- **Shopify Publishing**: Topic marked as 'published' when article goes live
+- **Timestamp Tracking**: Records when topics are first used for generation
+
+#### **⚡ Streamlined Template Selection** (New)
+- **Direct Template Choice**: Select templates during topic creation, not content generation
+- **Visual Template Cards**: Rich interface with icons and descriptions
+- **Eliminated Complexity**: Removed complex template mapping logic
+- **Auto-Selection**: Templates automatically carry over to content generation
+- **Skip Template Step**: Bypass template selection when generating from topics
+
+**Template System Overhaul**:
+```typescript
+// Before: Complex mapping logic
+const mapTopicToTemplate = (topic: Topic): ContentTemplate => {
+  if (topic.style_preferences?.template_type === 'Blog Post') {
+    return getTemplate('how-to-guide');
+  }
+  // ... complex mapping
+};
+
+// After: Direct selection
+interface Topic {
+  content_template: string; // Direct template name
+}
+
+// Streamlined generation
+const generateFromTopic = (topicId: string) => {
+  const topic = await getTopicById(topicId);
+  return {
+    template: topic.content_template, // Direct usage
+    topicId: topicId
+  };
+};
+```
+
+**Available Templates with Icons**:
+- 📋 How-To Guide
+- 🛍️ Product Showcase  
+- 📰 Industry News
+- 🎓 Tutorial
+- ⭐ Review
+- ⚖️ Comparison
+- 📝 List Article
+- 📊 Case Study
+- 🎤 Interview
+- 💭 Opinion Piece
+
+#### **📊 Enhanced Topic Dashboard** (New)
+- **Sectioned Interface**: Clear separation of Available vs Published topics
+- **Statistics Overview**: Topic counts, article counts, publishing metrics
+- **Visual Status Indicators**: Color-coded badges for topic status
+- **Template Badges**: Visual identification of template types
+- **Article Counts**: Shows how many articles generated from each topic
+- **Quick Actions**: Generate, Edit, View Articles directly from cards
+
+**Dashboard Features**:
+- **Available Topics Section**: Topics ready for content generation
+- **Published Topics Section**: Topics with published articles
+- **Progress Tracking**: Visual indicators of topic lifecycle
+- **Search & Filter**: Enhanced filtering by status and template
+- **Performance Metrics**: Success rates and publishing statistics
+
+#### **🔄 Topic-Article Relationship UI** (New)
+- **Article Editor Topic Tab**: New tab showing source topic and related articles
+- **Relationship Component**: Displays topic details, article statistics, navigation
+- **Related Articles View**: See all articles generated from the same topic
+- **Navigation Links**: Easy movement between topics and articles
+- **Status Tracking**: Visual timeline of topic → article → published workflow
+
+**Component Features**:
+```typescript
+// New TopicArticleLinks component
+<TopicArticleLinks 
+  articleId={articleId}  // Show topic for this article
+  topicId={topicId}      // Show articles for this topic
+  showNavigation={true}  // Enable navigation links
+/>
+```
+
+#### **🚀 Optimized Content Generation Workflow** (New)
+- **One-Click Generation**: Direct from topic cards to content creation
+- **Auto-Configuration**: Topic data pre-fills content settings
+- **Template Pre-Selection**: Skip template selection step
+- **Keyword Inheritance**: Keywords flow from topics to generation
+- **Source Tracking**: Generated articles automatically linked to topics
+
+### 🔄 Migration & Data Updates
+
+#### **Existing Data Migration**
+- **Template Migration**: Converted existing `style_preferences.template_type` to `content_template`
+- **Default Templates**: Set fallback templates for topics without preferences
+- **Status Updates**: Migrated topic statuses to new schema
+- **Data Integrity**: Preserved all existing topic and article data
+
+**Migration Results**:
+- ✅ 5 topics migrated to "How-To Guide" template
+- ✅ 1 topic migrated to "Case Study" template  
+- ✅ All existing data preserved and enhanced
+- ✅ No data loss during schema updates
+
+## [December 2024] - Phase 2 Complete
 
 ### 🎯 Major Features Added
+
+#### **Shopify Blog Publishing Integration** (December 2024)
 
 #### **Shopify Blog Publishing Integration** (Latest)
 - **Hybrid GraphQL/REST Architecture**: Optimal approach using GraphQL for reading, REST for mutations

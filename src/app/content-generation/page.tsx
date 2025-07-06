@@ -75,14 +75,16 @@ function ContentGenerationInner() {
 
   // Parse URL parameters when component mounts
   useEffect(() => {
+    const topicId = searchParams.get('topicId');
     const topic = searchParams.get('topic');
     const keywords = searchParams.get('keywords');
     const tone = searchParams.get('tone');
     const length = searchParams.get('length');
     const template = searchParams.get('template');
 
-    if (topic || keywords || tone || length || template) {
+    if (topic || keywords || tone || length || template || topicId) {
       const initialData = {
+        topicId: topicId || undefined,
         topic: topic || '',
         targetKeyword: keywords ? keywords.split(',')[0]?.trim() : '',
         relatedKeywords: keywords ? keywords.split(',').slice(1).map(k => k.trim()).filter(Boolean) : [],
@@ -91,7 +93,7 @@ function ContentGenerationInner() {
         suggestedTemplate: template
       };
       
-      console.log('📥 URL params parsed:', { topic, keywords, tone, length, template });
+      console.log('📥 URL params parsed:', { topicId, topic, keywords, tone, length, template });
       setInitialConfigData(initialData);
       
       // If coming from Topics with template, set flag for auto-selection
