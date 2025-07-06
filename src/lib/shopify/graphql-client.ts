@@ -297,10 +297,10 @@ class ShopifyGraphQLClient {
         body_html: article.content,
         author: article.authorDisplayName || 'Admin',
         handle: article.handle || article.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-        excerpt: article.excerpt,
+        excerpt: article.excerpt || article.summary,
         summary: article.summary,
         tags: Array.isArray(article.tags) ? article.tags.join(', ') : article.tags,
-        published: article.published || false,
+        published: article.published || false
       }
     };
 
@@ -325,6 +325,15 @@ class ShopifyGraphQLClient {
       const result = await response.json();
       const createdArticle = result.article;
       
+      // If we have an excerpt, set it as SEO metafield for better meta description support
+      if (article.excerpt) {
+        try {
+          await this.setArticleSEOMetafield(createdArticle.id, article.excerpt);
+        } catch (error) {
+          console.warn('Failed to set SEO metafield, but article was created successfully:', error);
+        }
+      }
+      
       // Convert REST response to our interface format
       return {
         id: `gid://shopify/Article/${createdArticle.id}`,
@@ -342,6 +351,45 @@ class ShopifyGraphQLClient {
         summary: createdArticle.summary,
       };
     }, 'createArticle');
+  }
+
+  // Set SEO metafield for article
+  private async setArticleSEOMetafield(articleId: number, description: string): Promise<void> {
+    const storeDomain = process.env.SHOPIFY_STORE_DOMAIN;
+    const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+    const apiVersion = process.env.SHOPIFY_API_VERSION || '2024-10';
+    
+    if (!storeDomain || !accessToken) {
+      throw new Error('Missing Shopify configuration for SEO metafield');
+    }
+    
+    const metafieldData = {
+      metafield: {
+        namespace: 'seo',
+        key: 'description',
+        value: description,
+        type: 'single_line_text_field',
+        owner_resource: 'article',
+        owner_id: articleId
+      }
+    };
+
+    const response = await fetch(
+      `https://${storeDomain}/admin/api/${apiVersion}/articles/${articleId}/metafields.json`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Shopify-Access-Token': accessToken,
+        },
+        body: JSON.stringify(metafieldData),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      throw new Error(`SEO metafield creation failed: ${response.status} ${response.statusText} - ${errorData}`);
+    }
   }
 
   // Update an existing article using REST API
@@ -364,7 +412,13 @@ class ShopifyGraphQLClient {
     if (article.authorDisplayName) articleData.article.author = article.authorDisplayName;
     if (article.handle) articleData.article.handle = article.handle;
     if (article.excerpt) articleData.article.excerpt = article.excerpt;
-    if (article.summary) articleData.article.summary = article.summary;
+    if (article.summary) {
+      articleData.article.summary = article.summary;
+      // If no excerpt provided but summary exists, use summary for excerpt (meta description)
+      if (!article.excerpt) {
+        articleData.article.excerpt = article.summary;
+      }
+    }
     if (article.tags) articleData.article.tags = Array.isArray(article.tags) ? article.tags.join(', ') : article.tags;
     if (article.published !== undefined) articleData.article.published = article.published;
 
@@ -388,6 +442,15 @@ class ShopifyGraphQLClient {
 
       const result = await response.json();
       const updatedArticle = result.article;
+      
+      // If we have an excerpt, set it as SEO metafield for better meta description support
+      if (article.excerpt) {
+        try {
+          await this.setArticleSEOMetafield(updatedArticle.id, article.excerpt);
+        } catch (error) {
+          console.warn('Failed to set SEO metafield, but article was updated successfully:', error);
+        }
+      }
       
       // Convert REST response to our interface format
       return {

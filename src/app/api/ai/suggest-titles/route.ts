@@ -37,7 +37,7 @@ REQUIREMENTS:
 6. Appeal to ${targetAudience || 'general readers'}
 
 TITLE STYLES TO INCLUDE:
-- How-to/Guide style: "How to...", "Complete Guide to..."
+- How-to/Guide style: "How to...", "Essential Guide to...", "Mastering..."
 - Listicle style: "5 Ways to...", "Top 10..."
 - Question style: "Why Do...", "What Is..."
 - Benefit-focused: "The Secret to...", "Unlock..."
@@ -148,12 +148,12 @@ function extractTitlesFromResponse(content: string): string[] {
  */
 function generateFallbackTitles(topic: string, tone: string = 'professional', templateType: string = 'blog post'): string[] {
   const baseTitles = [
-    `Complete Guide to ${topic}`,
-    `How to Master ${topic}: Step-by-Step Guide`,
-    `${topic}: Everything You Need to Know`,
-    `The Ultimate ${topic} Handbook`,
-    `${topic} Tips and Best Practices`,
-    `Understanding ${topic}: A Beginner's Guide`
+    `${topic}: Essential Guide for Art Lovers`,
+    `How to Appreciate ${topic}: Expert Insights`,
+    `${topic}: Cultural Heritage and Modern Appeal`,
+    `The Art of ${topic}: Traditional Techniques Explained`,
+    `${topic}: Authentic Craftsmanship and Cultural Stories`,
+    `Understanding ${topic}: From Tradition to Today`
   ];
 
   // Customize based on tone
