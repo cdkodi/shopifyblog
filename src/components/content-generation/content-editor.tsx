@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { GeneratedContent } from './content-generator';
 import { blogIntegration } from '@/lib/publishing/blog-integration';
 import { ArticleService } from '@/lib/supabase/articles';
+import { ImageBrowser } from './image-browser';
+import { Image } from 'lucide-react';
 
 interface ContentEditorProps {
   generatedContent: GeneratedContent;
@@ -50,6 +52,7 @@ export function ContentEditor({ generatedContent, onPublish, onBack }: ContentEd
 
   const [activeTab, setActiveTab] = useState<'editor' | 'seo' | 'preview'>('editor');
   const [seoSuggestions, setSeoSuggestions] = useState<string[]>([]);
+  const [isImageBrowserOpen, setIsImageBrowserOpen] = useState(false);
 
   function generateSlug(title: string): string {
     return title
@@ -114,6 +117,14 @@ export function ContentEditor({ generatedContent, onPublish, onBack }: ContentEd
   };
 
   const seoOptimizations = calculateSEOScore();
+
+  const handleImageSelect = (imageUrl: string, alt: string) => {
+    const imageMarkdown = `![${alt}](${imageUrl})`;
+    setEditedContent(prev => ({ 
+      ...prev, 
+      content: prev.content + '\n\n' + imageMarkdown 
+    }));
+  };
 
   const handlePublish = () => {
     const publishedContent: PublishedContent = {
@@ -285,7 +296,19 @@ export function ContentEditor({ generatedContent, onPublish, onBack }: ContentEd
                 </div>
 
                 <div>
-                  <Label htmlFor="content">Content</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="content">Content</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsImageBrowserOpen(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <Image className="w-4 h-4" />
+                      Add Image
+                    </Button>
+                  </div>
                   <Textarea
                     id="content"
                     value={editedContent.content}
@@ -294,7 +317,7 @@ export function ContentEditor({ generatedContent, onPublish, onBack }: ContentEd
                     rows={20}
                   />
                   <p className="text-sm text-gray-500 mt-1">
-                    Use markdown for formatting: # for headings, **bold**, *italic*
+                    Use markdown for formatting: # for headings, **bold**, *italic*. Images: ![alt text](url)
                   </p>
                 </div>
               </CardContent>
@@ -516,6 +539,16 @@ export function ContentEditor({ generatedContent, onPublish, onBack }: ContentEd
           </Button>
         </div>
       </div>
+
+      {/* Image Browser */}
+      <ImageBrowser
+        isOpen={isImageBrowserOpen}
+        onClose={() => setIsImageBrowserOpen(false)}
+        onImageSelect={handleImageSelect}
+        articleTitle={editedContent.title}
+        articleContent={editedContent.content}
+        articleTags={editedContent.tags}
+      />
     </div>
   );
 } 

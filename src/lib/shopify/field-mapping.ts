@@ -44,15 +44,12 @@ export function mapDatabaseToShopifyInput(
     title: article.title,
     content: htmlContent,
     handle: handle,
-    published: options.published ?? (article.status === 'published'),
+    published: false, // Always publish as hidden - Shopify editors control final publishing
     tags: tags,
+    // Always include excerpt and summary - auto-generate if meta_description is empty
+    excerpt: article.meta_description || generateExcerpt(article.content),
+    summary: article.meta_description || generateSummary(article.content),
   };
-
-  // Add excerpt/summary if available
-  if (article.meta_description) {
-    shopifyInput.excerpt = article.meta_description;
-    shopifyInput.summary = article.meta_description;
-  }
 
   return shopifyInput;
 }
@@ -281,7 +278,7 @@ export function mapCMSToShopify(cmsArticle: CMSArticle): ShopifyArticleInput {
     content: htmlContent,
     excerpt: cmsArticle.meta_description || generateExcerpt(cmsArticle.content),
     handle,
-    published: cmsArticle.status === 'published',
+    published: false, // Always publish as hidden - Shopify editors control final publishing
     tags,
     authorDisplayName: 'Culturati Team', // Default author
     summary: cmsArticle.meta_description || generateSummary(cmsArticle.content),

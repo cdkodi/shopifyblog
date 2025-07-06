@@ -466,6 +466,14 @@ class ShopifyGraphQLClient {
       return response.data.shop;
     }, 'getShop');
   }
+
+  // Generic request method for external use
+  async request(query: string, variables?: any) {
+    this.initializeClient();
+    return this.executeWithRetry(async () => {
+      return await this.client.request(query, variables);
+    }, 'genericRequest');
+  }
 }
 
 // Export singleton instance

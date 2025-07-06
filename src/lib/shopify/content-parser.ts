@@ -108,7 +108,7 @@ export async function convertMarkdownToHTMLWithImages(
   const processed = await processContentWithImages(markdownContent, imageProvider);
   
   // Then convert to HTML
-  const html = marked(processed.content, {
+  const html = await marked(processed.content, {
     gfm: true,
     breaks: true
   });
@@ -226,7 +226,7 @@ export async function optimizeContentForShopify(
     return convertMarkdownToHTMLWithImages(markdownContent, imageProvider);
   } else {
     // Just convert markdown to HTML without processing images
-    const html = marked(markdownContent, {
+    const html = await marked(markdownContent, {
       gfm: true,
       breaks: true
     });
