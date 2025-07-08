@@ -187,6 +187,13 @@ export function TopicDashboard({ onCreateTopic, onEditTopic, onGenerateContent }
                 )}
               </Badge>
               
+              {topic.has_published_articles && (
+                <Badge variant="default" className="text-xs bg-green-600 hover:bg-green-700">
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  Published
+                </Badge>
+              )}
+              
               {topic.article_count && topic.article_count > 0 && (
                 <Badge variant="outline" className="text-xs">
                   {topic.article_count} article{topic.article_count !== 1 ? 's' : ''}
