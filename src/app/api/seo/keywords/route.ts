@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const keywordData = await seoService.getKeywordAnalysis(keyword);
+    const keywordData = await seoService.analyzeKeyword(keyword);
 
     return NextResponse.json({
       success: true,
