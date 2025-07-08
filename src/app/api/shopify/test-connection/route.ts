@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { shopifyClient } from '@/lib/shopify/graphql-client';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     // Check if environment variables are configured

@@ -1,48 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { seoService } from '@/lib/seo';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const topic = searchParams.get('topic');
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const keyword = searchParams.get('keyword');
+    const location = searchParams.get('location');
+    const language = searchParams.get('language');
 
-    if (!topic) {
+    if (!keyword) {
       return NextResponse.json(
-        { error: 'Topic parameter is required' },
+        { error: 'Keyword parameter is required' },
         { status: 400 }
       );
     }
 
-    // Initialize SEO service
-    seoService.initialize();
-
+    // Check if SEO service is available
     if (!seoService.isAvailable()) {
       return NextResponse.json(
-        { error: 'SEO service not available. Please check API credentials.' },
+        { 
+          error: 'SEO service is not configured. Please check your DataForSEO credentials.',
+          keyword,
+          available: false
+        },
         { status: 503 }
       );
     }
 
-    // Get keyword suggestions
-    const keywords = await seoService.getKeywordSuggestions(topic, limit);
-    
+    const keywordData = await seoService.getKeywordData(
+      keyword,
+      location || undefined,
+      language || undefined
+    );
+
     return NextResponse.json({
       success: true,
-      data: {
-        topic,
-        keywords,
-        count: keywords.length
-      }
+      keyword,
+      data: keywordData
     });
 
   } catch (error) {
     console.error('Keywords API error:', error);
+    
     return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch keyword data',
-        message: error instanceof Error ? error.message : 'Unknown error'
+      { 
+        error: error instanceof Error ? error.message : 'Failed to fetch keyword data',
+        success: false
       },
       { status: 500 }
     );
