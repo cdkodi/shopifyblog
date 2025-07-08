@@ -305,12 +305,48 @@ The new **Topic Tab** provides complete visibility into article-topic relationsh
 
 **Purpose**: Publish articles directly to your Shopify store blog with one-click publishing.
 
+**🔍 Meta Description SEO Integration** (Latest Update):
+
+**Enhanced SEO Support**: The CMS now properly handles meta descriptions for Shopify blogs using the correct `global.description_tag` metafield that Shopify themes use for HTML meta description tags.
+
+**How Meta Descriptions Work**:
+- **Automatic Setup**: When you publish an article to Shopify, the meta description is automatically set using the proper `description_tag` metafield
+- **SEO Optimization**: Meta descriptions now appear in:
+  - ✅ Shopify admin interface (visible in article editing)
+  - ✅ HTML `<meta name="description">` tags on your website frontend
+  - ✅ Search engine results (Google, Bing, etc.)
+  - ✅ Social media sharing previews (Facebook, Twitter, LinkedIn)
+- **Dual Implementation**: Uses both REST API and GraphQL methods for maximum compatibility
+- **Existing Articles**: Use the fix utility to update articles that were published before this enhancement
+
+**Fix Existing Articles** (Important):
+If you have articles published to Shopify before this update, their meta descriptions may not be appearing. To fix this:
+
+1. **Contact your developer** to run the meta description fix utility
+2. **API Endpoint**: `POST /api/shopify/fix-meta-descriptions`
+3. **What it does**: Updates all existing Shopify articles with proper meta description metafields
+4. **Safe to run**: Only adds missing meta descriptions, doesn't modify existing content
+
+**🎨 Enhanced Content Quality** (Latest Update):
+
+**Improved AI Generation**: The AI content generation has been enhanced to create more engaging, culturally-relevant content instead of generic patterns.
+
+**What's Changed**:
+- **No More Generic Titles**: AI no longer generates titles like "Complete Guide to..." or "Ultimate Guide to..."
+- **Cultural Focus**: Titles now emphasize cultural significance, artistic techniques, and historical importance
+- **Better Meta Descriptions**: Descriptions focus on cultural heritage and artistic value instead of generic "Learn about..." patterns
+- **Alternative Patterns**: AI uses patterns like:
+  - "The Art of [Topic]: Traditional Techniques and Cultural Heritage"
+  - "Cultural Heritage of [Topic]: Artistic Significance and Modern Relevance"
+  - "Traditional Techniques of [Topic]: From History to Today"
+
+**Expected Results**:
+- More engaging and specific article titles
+- Better click-through rates from search results
+- Improved user engagement with culturally-relevant content
+- Enhanced SEO performance with unique, descriptive titles
+
 **Features**:
-- **Direct Publishing**: Send articles to Shopify blog without leaving the CMS
-- **Blog Selection**: Choose which Shopify blog to publish to
-- **Sync Status**: Real-time indicators showing publish status
-- **Update Management**: Update published articles seamlessly
-- **Error Handling**: Clear error messages and retry functionality
 
 **How to Use Shopify Integration**:
 
