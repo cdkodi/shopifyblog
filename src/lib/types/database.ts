@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instanciate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.3 (519615d)"
+  }
   public: {
     Tables: {
       app_config: {
@@ -96,8 +101,12 @@ export type Database = {
       }
       articles: {
         Row: {
+          ai_model_used: string | null
           content: string
           created_at: string | null
+          generation_completed_at: string | null
+          generation_prompt_version: string | null
+          generation_started_at: string | null
           id: string
           meta_description: string | null
           published_at: string | null
@@ -108,15 +117,19 @@ export type Database = {
           shopify_blog_id: number | null
           slug: string | null
           source_topic_id: string | null
-          status: string | null
+          status: Database["public"]["Enums"]["article_status_v2"]
           target_keywords: Json | null
           title: string
           updated_at: string | null
           word_count: number | null
         }
         Insert: {
+          ai_model_used?: string | null
           content: string
           created_at?: string | null
+          generation_completed_at?: string | null
+          generation_prompt_version?: string | null
+          generation_started_at?: string | null
           id?: string
           meta_description?: string | null
           published_at?: string | null
@@ -127,15 +140,19 @@ export type Database = {
           shopify_blog_id?: number | null
           slug?: string | null
           source_topic_id?: string | null
-          status?: string | null
+          status?: Database["public"]["Enums"]["article_status_v2"]
           target_keywords?: Json | null
           title: string
           updated_at?: string | null
           word_count?: number | null
         }
         Update: {
+          ai_model_used?: string | null
           content?: string
           created_at?: string | null
+          generation_completed_at?: string | null
+          generation_prompt_version?: string | null
+          generation_started_at?: string | null
           id?: string
           meta_description?: string | null
           published_at?: string | null
@@ -146,7 +163,7 @@ export type Database = {
           shopify_blog_id?: number | null
           slug?: string | null
           source_topic_id?: string | null
-          status?: string | null
+          status?: Database["public"]["Enums"]["article_status_v2"]
           target_keywords?: Json | null
           title?: string
           updated_at?: string | null
@@ -158,6 +175,13 @@ export type Database = {
             columns: ["source_topic_id"]
             isOneToOne: false
             referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "articles_source_topic_id_fkey"
+            columns: ["source_topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics_with_article_status"
             referencedColumns: ["id"]
           },
         ]
@@ -374,13 +398,66 @@ export type Database = {
           shopify_blog_id: number | null
           shopify_status: string | null
           slug: string | null
-          source_topic_id: string | null
-          status: string | null
+          status: Database["public"]["Enums"]["article_status_v2"] | null
           target_keywords: Json | null
           title: string | null
           updated_at: string | null
           word_count: number | null
         }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          id?: string | null
+          is_synced_to_shopify?: never
+          meta_description?: string | null
+          published_at?: string | null
+          reading_time?: number | null
+          scheduled_publish_date?: string | null
+          seo_score?: number | null
+          shopify_article_id?: number | null
+          shopify_blog_id?: number | null
+          shopify_status?: never
+          slug?: string | null
+          status?: Database["public"]["Enums"]["article_status_v2"] | null
+          target_keywords?: Json | null
+          title?: string | null
+          updated_at?: string | null
+          word_count?: number | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          id?: string | null
+          is_synced_to_shopify?: never
+          meta_description?: string | null
+          published_at?: string | null
+          reading_time?: number | null
+          scheduled_publish_date?: string | null
+          seo_score?: number | null
+          shopify_article_id?: number | null
+          shopify_blog_id?: number | null
+          shopify_status?: never
+          slug?: string | null
+          status?: Database["public"]["Enums"]["article_status_v2"] | null
+          target_keywords?: Json | null
+          title?: string | null
+          updated_at?: string | null
+          word_count?: number | null
+        }
+        Relationships: []
+      }
+      generation_analytics: {
+        Row: {
+          ai_model_used: string | null
+          avg_generation_time_seconds: number | null
+          failed_generations: number | null
+          first_generation: string | null
+          generation_prompt_version: string | null
+          last_generation: string | null
+          successful_generations: number | null
+          total_generations: number | null
+        }
+        Relationships: []
       }
       topics_with_article_status: {
         Row: {
@@ -403,54 +480,24 @@ export type Database = {
           topic_title: string | null
           used_at: string | null
         }
-        Insert: {
-          content?: string | null
-          created_at?: string | null
-          id?: string | null
-          is_synced_to_shopify?: never
-          meta_description?: string | null
-          published_at?: string | null
-          reading_time?: number | null
-          scheduled_publish_date?: string | null
-          seo_score?: number | null
-          shopify_article_id?: number | null
-          shopify_blog_id?: number | null
-          shopify_status?: never
-          slug?: string | null
-          status?: string | null
-          target_keywords?: Json | null
-          title?: string | null
-          updated_at?: string | null
-          word_count?: number | null
-        }
-        Update: {
-          content?: string | null
-          created_at?: string | null
-          id?: string | null
-          is_synced_to_shopify?: never
-          meta_description?: string | null
-          published_at?: string | null
-          reading_time?: number | null
-          scheduled_publish_date?: string | null
-          seo_score?: number | null
-          shopify_article_id?: number | null
-          shopify_blog_id?: number | null
-          shopify_status?: never
-          slug?: string | null
-          status?: string | null
-          target_keywords?: Json | null
-          title?: string | null
-          updated_at?: string | null
-          word_count?: number | null
-        }
         Relationships: []
       }
     }
     Functions: {
-      [_ in never]: never
+      get_generation_duration: {
+        Args: { article_id: string }
+        Returns: unknown
+      }
     }
     Enums: {
-      [_ in never]: never
+      article_status_v2:
+        | "draft"
+        | "generating"
+        | "generation_failed"
+        | "ready_for_editorial"
+        | "published"
+        | "published_hidden"
+        | "published_visible"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -458,21 +505,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -490,14 +541,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -513,14 +566,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -536,14 +591,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -551,25 +608,40 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      article_status_v2: [
+        "draft",
+        "generating",
+        "generation_failed",
+        "ready_for_editorial",
+        "published",
+        "published_hidden",
+        "published_visible",
+      ],
+    },
   },
 } as const
 
-// Style Preferences Interface
+// Helper types for V2 article statuses
+export type ArticleStatus = Database["public"]["Enums"]["article_status_v2"]
+
+// Enhanced interfaces for V2 features
 export interface StylePreferences {
   [key: string]: string | undefined
   tone?: string
@@ -579,7 +651,18 @@ export interface StylePreferences {
   custom_notes?: string
 }
 
-// Transformation helpers for form/database field mapping
+// V2 Article interface with generation metadata
+export interface ArticleWithGeneration extends Tables<'articles'> {
+  generation_duration?: string // calculated field
+  is_ai_generated?: boolean // helper field
+}
+
+// Generation analytics interface
+export interface GenerationMetrics extends Tables<'generation_analytics'> {
+  success_rate?: number // calculated field
+}
+
+// Legacy conversion functions (updated for V2 compatibility)
 export function dbTopicToFormData(dbTopic: Database['public']['Tables']['topics']['Row']): {
   title: string
   keywords?: string
@@ -587,21 +670,19 @@ export function dbTopicToFormData(dbTopic: Database['public']['Tables']['topics'
   length?: string
   template?: string
 } {
-  // Convert keywords JSON array back to comma-separated string
-  const keywordsString = Array.isArray(dbTopic.keywords) 
-    ? dbTopic.keywords.join(', ')
+  const stylePrefs = dbTopic.style_preferences as StylePreferences | null
+  const keywords = Array.isArray(dbTopic.keywords) 
+    ? (dbTopic.keywords as string[]).join(', ')
     : typeof dbTopic.keywords === 'string' 
-      ? dbTopic.keywords 
-      : undefined
-
-  const stylePrefs = dbTopic.style_preferences as StylePreferences || {}
+    ? dbTopic.keywords 
+    : ''
 
   return {
     title: dbTopic.topic_title,
-    keywords: keywordsString,
-    tone: stylePrefs.tone || undefined,
-    length: stylePrefs.length || undefined,
-    template: stylePrefs.template_type || stylePrefs.template || undefined,
+    keywords: keywords || '',
+    tone: stylePrefs?.tone || '',
+    length: stylePrefs?.length || '',
+    template: dbTopic.content_template || ''
   }
 }
 
@@ -613,25 +694,19 @@ export function formDataToDbInsert(formData: {
   template?: string
   content_template?: string
 }): Database['public']['Tables']['topics']['Insert'] {
-  // Convert comma-separated keywords string to JSON array
   const keywordsArray = formData.keywords 
-    ? formData.keywords.split(',').map(k => k.trim()).filter(k => k.length > 0)
-    : null
+    ? formData.keywords.split(',').map(k => k.trim()).filter(Boolean)
+    : []
 
-  // Build style preferences object
-  const stylePreferences = {
-    ...(formData.tone && { tone: formData.tone }),
-    ...(formData.length && { length: formData.length }),
-    ...(formData.template && { template_type: formData.template }),
-  }
+  const stylePreferences: StylePreferences = {}
+  if (formData.tone) stylePreferences.tone = formData.tone
+  if (formData.length) stylePreferences.length = formData.length
 
   return {
     topic_title: formData.title,
-    keywords: keywordsArray,
+    keywords: keywordsArray.length > 0 ? keywordsArray : null,
     content_template: formData.content_template || formData.template || null,
-    style_preferences: Object.keys(stylePreferences).length > 0 ? stylePreferences : null,
-    priority_score: 5, // Default priority
-    status: 'pending',
+    style_preferences: Object.keys(stylePreferences).length > 0 ? stylePreferences : null
   }
 }
 
@@ -643,22 +718,18 @@ export function formDataToDbUpdate(formData: {
   template?: string
   content_template?: string
 }): Database['public']['Tables']['topics']['Update'] {
-  // Convert comma-separated keywords string to JSON array
   const keywordsArray = formData.keywords 
-    ? formData.keywords.split(',').map(k => k.trim()).filter(k => k.length > 0)
-    : null
+    ? formData.keywords.split(',').map(k => k.trim()).filter(Boolean)
+    : []
 
-  // Build style preferences object
-  const stylePreferences = {
-    ...(formData.tone && { tone: formData.tone }),
-    ...(formData.length && { length: formData.length }),
-    ...(formData.template && { template_type: formData.template }),
-  }
+  const stylePreferences: StylePreferences = {}
+  if (formData.tone) stylePreferences.tone = formData.tone
+  if (formData.length) stylePreferences.length = formData.length
 
   return {
     topic_title: formData.title,
-    keywords: keywordsArray,
+    keywords: keywordsArray.length > 0 ? keywordsArray : null,
     content_template: formData.content_template || formData.template || null,
-    style_preferences: Object.keys(stylePreferences).length > 0 ? stylePreferences : null,
+    style_preferences: Object.keys(stylePreferences).length > 0 ? stylePreferences : null
   }
 } 
