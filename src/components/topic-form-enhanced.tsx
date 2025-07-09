@@ -228,8 +228,8 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
           throw new Error(result.error || 'Failed to generate title suggestions')
         }
 
-        if (result.success && result.data.titles && result.data.titles.length > 0) {
-          setTitleSuggestions(result.data.titles.slice(0, 5))
+        if (result.success && result.titles && result.titles.length > 0) {
+          setTitleSuggestions(result.titles.slice(0, 5))
         } else {
           setTitleSuggestions([])
         }
