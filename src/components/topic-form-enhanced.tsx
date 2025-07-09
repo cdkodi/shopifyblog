@@ -73,7 +73,7 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
       length: initialData?.length || 'Medium (800-1500 words)',
       template: initialData?.template || '',
     },
-    mode: 'onChange',
+    mode: 'onBlur', // Change from 'onChange' to 'onBlur' to reduce validation frequency
   })
 
   const watchedValues = watch()
@@ -105,8 +105,14 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
         // Set default template if none selected
         if (templates && templates.length > 0 && !watchedValues.template) {
           const defaultTemplate = templates.find(t => t.name === 'How-To Guide') || templates[0]
-          setValue('template', defaultTemplate.name)
+          setValue('template', defaultTemplate.name, { shouldValidate: true })
           setSelectedTemplate(defaultTemplate)
+        } else if (templates && templates.length > 0 && watchedValues.template) {
+          // If template is already set, make sure selectedTemplate is updated
+          const existingTemplate = templates.find(t => t.name === watchedValues.template)
+          if (existingTemplate) {
+            setSelectedTemplate(existingTemplate)
+          }
         }
       } catch (error) {
         console.error('Error loading config values:', error)
@@ -307,7 +313,10 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
   }
 
   const handleGenerateAndPublish = async () => {
-    if (!isValid) {
+    // Check if form is actually valid by checking required fields manually
+    const isFormActuallyValid = watchedValues.title && watchedValues.title.trim().length >= 3
+    
+    if (!isValid && !isFormActuallyValid) {
       setSubmitError('Please fill in all required fields before generating content')
       return
     }
@@ -854,23 +863,33 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
 
         {/* Form Actions */}
         <div className="flex flex-col sm:flex-row gap-3 pt-4">
-          <Button
-            type="submit"
-            disabled={!isValid || isSubmitting || isGenerating}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            {isSubmitting ? 'Saving...' : (topicId ? 'Update Topic' : 'Create Topic')}
-          </Button>
-          
-          <Button
-            type="button"
-            disabled={!isValid || isSubmitting || isGenerating}
-            onClick={handleGenerateAndPublish}
-            className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
-          >
-            <Zap className="h-4 w-4 mr-2" />
-            {isGenerating ? 'Generating...' : 'Generate & Publish'}
-          </Button>
+          {(() => {
+            // More robust validation check
+            const isFormActuallyValid = watchedValues.title && watchedValues.title.trim().length >= 3
+            const shouldDisable = !isValid && !isFormActuallyValid
+            
+            return (
+              <>
+                <Button
+                  type="submit"
+                  disabled={shouldDisable || isSubmitting || isGenerating}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {isSubmitting ? 'Saving...' : (topicId ? 'Update Topic' : 'Create Topic')}
+                </Button>
+                
+                <Button
+                  type="button"
+                  disabled={shouldDisable || isSubmitting || isGenerating}
+                  onClick={handleGenerateAndPublish}
+                  className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+                >
+                  <Zap className="h-4 w-4 mr-2" />
+                  {isGenerating ? 'Generating...' : 'Generate & Publish'}
+                </Button>
+              </>
+            )
+          })()}
           
           {onCancel && (
             <Button
