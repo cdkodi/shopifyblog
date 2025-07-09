@@ -122,9 +122,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     // Enhance articles with generation data if requested
     const enhancedArticles = articles?.map(article => {
-      const enhanced: any = { ...article };
+      const enhanced: any = article ? Object.assign({}, article) : {};
 
-      if (params.includeGeneration) {
+      if (params.includeGeneration && article && typeof article === 'object' && !('error' in article)) {
         enhanced.generationSummary = buildGenerationSummary(article);
       }
 
@@ -145,7 +145,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { data: statusData } = await supabase
       .from('articles')
       .select('status')
-      .neq('status', null);
+      .not('status', 'is', null);
 
     const availableStatuses = Array.from(
       new Set(statusData?.map(item => item.status as ArticleStatus) || [])
@@ -293,8 +293,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Calculate word count and reading time if content exists
     if (content) {
       const wordCount = content.trim().split(/\s+/).length;
-      articleData.word_count = wordCount;
-      articleData.reading_time = Math.ceil(wordCount / 200); // ~200 WPM
+      (articleData as any).word_count = wordCount;
+      (articleData as any).reading_time = Math.ceil(wordCount / 200); // ~200 WPM
     }
 
     // Create article

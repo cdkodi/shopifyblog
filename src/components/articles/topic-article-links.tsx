@@ -72,12 +72,12 @@ export function TopicArticleLinks({
         .eq('id', topicId)
         .single();
 
-      if (topicError) {
-        setError('Failed to load topic');
+      if (topicError || !topic || !topic.id) {
+        console.error('Error fetching topic:', topicError);
         return;
       }
 
-      setTopicData(topic);
+      setTopicData(topic as any);
 
       // Get related articles
       const { data: articles, error: articlesError } = await supabase
@@ -95,14 +95,14 @@ export function TopicArticleLinks({
       if (articlesError) {
         console.error('Failed to load related articles:', articlesError);
       } else {
-        setRelatedArticles(articles.map(article => ({
+        setRelatedArticles(articles?.map(article => ({
           ...article,
           source_topic: {
             id: topic.id,
             topic_title: topic.topic_title,
             content_template: topic.content_template
           }
-        })));
+        })) as any || []);
       }
     } catch (err) {
       setError('Failed to load topic data');
@@ -147,7 +147,7 @@ export function TopicArticleLinks({
         setRelatedArticles([{
           ...article,
           source_topic: topicInfo
-        }]);
+        } as any]);
 
         // If we have a topic, get other articles from the same topic
         if (topicInfo) {
@@ -171,7 +171,7 @@ export function TopicArticleLinks({
                 ...otherArticle,
                 source_topic: topicInfo
               }))
-            ]);
+            ] as any);
           }
         }
       }

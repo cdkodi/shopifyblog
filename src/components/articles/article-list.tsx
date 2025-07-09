@@ -100,7 +100,7 @@ export function ArticleList({
   };
 
   const isAiGenerated = (article: Article) => {
-    return article.generation_metadata !== null || article.ai_provider !== null;
+    return article.ai_model_used !== null || article.generation_started_at !== null;
   };
 
   const isReadyForReview = (article: Article) => {
@@ -115,17 +115,17 @@ export function ArticleList({
   };
 
   const getFilterCounts = () => {
-    const counts = {
+    const stats = {
       all: articles.length,
       draft: articles.filter(a => a.status === 'draft').length,
-      review: articles.filter(a => a.status === 'review').length,
-      approved: articles.filter(a => a.status === 'approved').length,
-      published: articles.filter(a => a.status === 'published').length,
-      rejected: articles.filter(a => a.status === 'rejected').length,
-      'ai-generated': articles.filter(isAiGenerated).length,
-      'ready-for-review': articles.filter(isReadyForReview).length
+      review: articles.filter(a => a.status === 'ready_for_editorial').length,
+      approved: articles.filter(a => a.status === 'published').length,
+      published: articles.filter(a => a.status === 'published_visible').length,
+      rejected: articles.filter(a => a.status === 'generation_failed').length,
+      aiGenerated: articles.filter(isAiGenerated).length,
+      readyForReview: articles.filter(isReadyForReview).length
     };
-    return counts;
+    return stats;
   };
 
   const handleEditArticle = (articleId: string) => {
@@ -216,24 +216,29 @@ export function ArticleList({
   const renderGenerationMetadata = (article: Article) => {
     if (!isAiGenerated(article)) return null;
 
-    const metadata = article.generation_metadata as any;
+    const metadata = {
+      aiModel: article.ai_model_used,
+      promptVersion: article.generation_prompt_version,
+      startedAt: article.generation_started_at,
+      completedAt: article.generation_completed_at
+    };
     return (
       <div className="flex items-center space-x-4 text-xs text-purple-600 bg-purple-50 rounded-lg p-2">
         <div className="flex items-center space-x-1">
           <SparklesIcon className="w-3 h-3" />
           <span>AI Generated</span>
         </div>
-        {metadata?.topicId && (
-          <span>Topic: {metadata.topicId}</span>
+        {article.source_topic_id && (
+          <span>Topic: {article.source_topic_id}</span>
         )}
-        {article.ai_provider && (
-          <span>Provider: {article.ai_provider}</span>
+        {article.ai_model_used && (
+          <span>Provider: {article.ai_model_used}</span>
         )}
-        {metadata?.wordCount && (
-          <span>{metadata.wordCount} words</span>
+        {article.word_count && (
+          <span>{article.word_count} words</span>
         )}
-        {metadata?.seoScore && (
-          <span>SEO: {metadata.seoScore}/100</span>
+        {article.seo_score && (
+          <span>SEO: {article.seo_score}%</span>
         )}
       </div>
     );
@@ -474,19 +479,14 @@ export function ArticleList({
                         Move to Draft
                       </DropdownMenuItem>
                     )}
-                    {article.status !== 'review' && (
-                      <DropdownMenuItem onClick={() => handleStatusChange(article.id, 'review')}>
+                    {article.status !== 'ready_for_editorial' && (
+                      <DropdownMenuItem onClick={() => handleStatusChange(article.id, 'ready_for_editorial')}>
                         Send for Review
-                      </DropdownMenuItem>
-                    )}
-                    {article.status !== 'approved' && (
-                      <DropdownMenuItem onClick={() => handleStatusChange(article.id, 'approved')}>
-                        Approve
                       </DropdownMenuItem>
                     )}
                     {article.status !== 'published' && (
                       <DropdownMenuItem onClick={() => handleStatusChange(article.id, 'published')}>
-                        Publish
+                        Approve
                       </DropdownMenuItem>
                     )}
 

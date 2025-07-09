@@ -1,8 +1,8 @@
 // V2 Generation Queue - Background Job Processing
 
-import { GenerationJob, GenerationQueue, TopicGenerationRequest } from './v2-types';
+import { GenerationJob, TopicGenerationRequest } from './v2-types';
 
-export class V2GenerationQueue implements GenerationQueue {
+export class V2GenerationQueue {
   private jobs: Map<string, GenerationJob> = new Map();
   private processingQueue: GenerationJob[] = [];
   private isProcessing = false;
@@ -21,11 +21,19 @@ export class V2GenerationQueue implements GenerationQueue {
     const jobId = this.generateJobId();
     
     const fullJob: GenerationJob = {
-      ...job,
       id: jobId,
+      request: job.request,
       createdAt: new Date(),
       status: 'pending',
-      attempts: 0
+      topicId: job.request.topic?.id || '',
+      articleId: '',
+      progress: {
+        phase: 'queued',
+        percentage: 0,
+        currentStep: 'Queued for processing',
+        jobId: jobId,
+        articleId: ''
+      }
     };
 
     this.jobs.set(jobId, fullJob);

@@ -40,8 +40,8 @@ export async function POST(request: NextRequest) {
         
         // Update meta description using GraphQL
         const success = await shopifyClient.updateArticleMetaDescription(
-          article.shopify_article_id,
-          article.meta_description
+          article.shopify_article_id?.toString() || '',
+          article.meta_description || ''
         );
 
         if (success) {

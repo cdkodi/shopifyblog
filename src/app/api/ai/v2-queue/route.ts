@@ -37,10 +37,12 @@ export async function POST(request: NextRequest) {
             length: body.topic.length || 'medium',
             template: body.topic.template || 'article'
           },
-          generateMetaDescription: body.generateMetaDescription ?? true,
           optimizeForSEO: body.optimizeForSEO ?? true,
           targetWordCount: body.targetWordCount || 1000,
-          contentStructure: body.contentStructure || 'standard'
+          options: {
+            temperature: body.temperature || 0.7,
+            maxTokens: body.maxTokens || 2000
+          }
         };
 
         const result = await v2Service.queueGeneration(generationRequest);

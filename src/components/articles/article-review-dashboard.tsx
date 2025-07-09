@@ -64,7 +64,7 @@ export function ArticleReviewDashboard() {
         .order(sortBy as any, { ascending: false });
 
       if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
+        query = query.eq('status', statusFilter as any);
       }
 
       if (searchQuery) {
@@ -121,7 +121,7 @@ export function ArticleReviewDashboard() {
       const { error } = await supabase
         .from('articles')
         .update({ 
-          status: newStatus,
+          status: newStatus as any,
           updated_at: new Date().toISOString(),
           ...(newStatus === 'published' ? { published_at: new Date().toISOString() } : {})
         })

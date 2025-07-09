@@ -99,6 +99,11 @@ export const aiServiceManager = new AIServiceManager({
   googleKey: process.env.GOOGLE_AI_KEY || ''
 });
 
+// Legacy V1 getAIService function for backward compatibility
+export function getAIService() {
+  return aiServiceManager;
+}
+
 // Export types for convenience
 export type {
   TopicGenerationRequest,

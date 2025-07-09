@@ -174,5 +174,7 @@ export const CONTENT_TEMPLATES = {
   COMPREHENSIVE: 'comprehensive'
 } as const;
 
+export const V2_CONTENT_TEMPLATES = CONTENT_TEMPLATES;
+
 export type ContentTemplate = typeof CONTENT_TEMPLATES[keyof typeof CONTENT_TEMPLATES];
 export type V2ErrorCode = typeof V2_ERROR_CODES[keyof typeof V2_ERROR_CODES]; 

@@ -327,12 +327,11 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
 
       if (!topicId) {
         const result = await TopicService.createTopic({
-          ...topicData,
-          content_template: topicData.template
+          ...topicData
         })
 
-        if (result.error) {
-          throw new Error(result.error)
+        if (result.error || !result.data) {
+          throw new Error(`Failed to create topic: ${result.error}`)
         }
 
         savedTopicId = result.data.id

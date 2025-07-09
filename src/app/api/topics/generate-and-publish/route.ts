@@ -66,31 +66,27 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Parse and validate request body
     const body: GenerateAndPublishRequest = await request.json();
     const { 
-      title,
+      title, 
       keywords, 
       tone, 
       length, 
       template,
-      content_template,
       generateImmediately = true,
       aiProvider,
       promptVersion = 'v2.1',
       skipEditorialReview = false,
-      autoPublishToShopify = false,
-      publishAsHidden = true
+      autoPublishToShopify = false
     } = body;
 
-    console.log('📝 V2 Request parameters:', {
+    console.log('🚀 Generate & Publish request:', {
       title,
       keywordsCount: keywords?.split(',').length || 0,
       tone,
       length,
-      template: template || content_template,
+      template: template || 'article',
       generateImmediately,
       aiProvider,
-      promptVersion,
-      skipEditorialReview,
-      autoPublishToShopify
+      promptVersion
     });
 
     // Validate required fields
@@ -113,7 +109,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       keywords: keywords?.trim() || '',
       tone: tone || 'professional',
       length: length || 'medium',
-      template: template || content_template || 'article'
+      template: template || 'article'
     };
 
     const { data: topic, error: topicError } = await TopicService.createTopic(topicData);
@@ -186,12 +182,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         keywords: keywords?.split(',').map(k => k.trim()).filter(Boolean) || [],
         tone: tone || 'professional',
         length: length || 'medium',
-        template: template || content_template || 'article'
+        template: template || 'article'
       });
 
       const aiRequest: AIGenerationRequest = {
         prompt: generationPrompt,
-        template: template || content_template || 'article',
+        template: template || 'article',
         tone: tone || 'professional',
         length: length || 'medium',
         keywords: keywords?.split(',').map(k => k.trim()).filter(Boolean) || [],
@@ -203,7 +199,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       console.log('📞 Calling AI service...');
       const aiService = getAIService();
-      const result = await aiService.generateContent(aiRequest, aiProvider);
+      const result = await aiService.generateContent(aiRequest, aiProvider as any);
 
       if (result.success && result.content) {
         console.log('✅ AI generation successful');

@@ -1,8 +1,8 @@
 // V2 Content Quality Analyzer - SEO and Content Quality Assessment
 
-import { ContentQualityAnalyzer, TopicGenerationRequest, SEO_CONSTANTS } from './v2-types';
+import { ContentQualityAnalysis, TopicGenerationRequest, SEO_CONSTANTS } from './v2-types';
 
-export class V2ContentQualityAnalyzer implements ContentQualityAnalyzer {
+export class V2ContentQualityAnalyzer {
   
   /**
    * Comprehensive content analysis including SEO, readability, and structure
@@ -73,16 +73,16 @@ export class V2ContentQualityAnalyzer implements ContentQualityAnalyzer {
       if (density === 0) {
         missingKeywords.push(keyword);
         suggestions.push(`Add keyword "${keyword}" naturally in the content`);
-      } else if (density > SEO_CONSTANTS.OPTIMAL_KEYWORD_DENSITY.max) {
+      } else if (density > SEO_CONSTANTS.OPTIMAL_KEYWORD_DENSITY.MAX) {
         overOptimizedKeywords.push(keyword);
         suggestions.push(`Reduce frequency of "${keyword}" (current: ${density.toFixed(1)}%)`);
-      } else if (density < SEO_CONSTANTS.OPTIMAL_KEYWORD_DENSITY.min) {
+      } else if (density < SEO_CONSTANTS.OPTIMAL_KEYWORD_DENSITY.MIN) {
         suggestions.push(`Consider using "${keyword}" more frequently (current: ${density.toFixed(1)}%)`);
       }
     }
 
     // General SEO suggestions
-    if (content.length < SEO_CONSTANTS.OPTIMAL_CONTENT_LENGTH.min * 5) {
+    if (content.length < 800 * 5) {
       suggestions.push('Content may be too short for optimal SEO performance');
     }
 
@@ -213,7 +213,7 @@ export class V2ContentQualityAnalyzer implements ContentQualityAnalyzer {
     if (densities.length === 0) return 0;
 
     let score = 100;
-    const { min, max } = SEO_CONSTANTS.OPTIMAL_KEYWORD_DENSITY;
+    const { MIN: min, MAX: max } = SEO_CONSTANTS.OPTIMAL_KEYWORD_DENSITY;
 
     for (const density of densities) {
       if (density === 0) {

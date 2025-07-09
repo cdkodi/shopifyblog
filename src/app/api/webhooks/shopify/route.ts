@@ -160,7 +160,7 @@ async function handleArticleCreate(articleData: any) {
     // Insert new article into our database
     const { error } = await supabase
       .from('articles')
-      .insert(articleInsert);
+      .insert(articleInsert as any);
 
     if (error) {
       console.error('Failed to create article from webhook:', error);
@@ -203,7 +203,7 @@ async function handleArticleUpdate(articleData: any) {
       .update({
         ...cmsArticle,
         updated_at: new Date().toISOString()
-      })
+      } as any)
       .eq('shopify_article_id', articleData.id);
 
     if (error) {

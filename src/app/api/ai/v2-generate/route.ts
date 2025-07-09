@@ -32,17 +32,8 @@ export async function POST(request: NextRequest) {
         length: body.topic.length || 'medium',
         template: body.topic.template || 'article'
       },
-      generateMetaDescription: body.generateMetaDescription ?? true,
       optimizeForSEO: body.optimizeForSEO ?? true,
       targetWordCount: body.targetWordCount || 1000,
-      contentStructure: body.contentStructure || 'standard',
-      includeIntroduction: body.includeIntroduction ?? true,
-      includeConclusion: body.includeConclusion ?? true,
-      generationContext: {
-        urgency: body.urgency || 'medium',
-        quality: body.quality || 'editorial',
-        audience: body.audience || 'general'
-      },
       options: {
         temperature: body.temperature || 0.7,
         maxTokens: body.maxTokens || 2000
@@ -90,10 +81,8 @@ export async function POST(request: NextRequest) {
         // Generation details
         generationDetails: {
           provider: result.finalProvider,
-          attempts: result.attempts?.length || 1,
-          totalCost: result.totalCost,
-          totalTokens: result.totalTokens,
-          processingTimeMs: processingTime
+          processingTimeMs: processingTime,
+          cost: result.cost
         },
         
         // V2 enhancements
@@ -101,7 +90,7 @@ export async function POST(request: NextRequest) {
           topicBased: true,
           seoOptimized: generationRequest.optimizeForSEO,
           templateSpecific: !!generationRequest.topic.template,
-          structureEnhanced: generationRequest.contentStructure !== 'standard'
+          structureEnhanced: true
         }
       },
       version: 'v2.1'
