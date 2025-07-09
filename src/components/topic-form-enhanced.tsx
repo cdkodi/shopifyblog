@@ -841,6 +841,17 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
           </div>
         )}
 
+        {/* Debug Info - Remove in production */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="bg-gray-50 border border-gray-200 rounded-md p-3 text-xs">
+            <div className="font-medium mb-2">Debug Info:</div>
+            <div>Form Valid: {isValid ? 'Yes' : 'No'}</div>
+            <div>Errors: {JSON.stringify(errors)}</div>
+            <div>Values: {JSON.stringify(watchedValues)}</div>
+            <div>Template Selected: {selectedTemplate?.name || 'None'}</div>
+          </div>
+        )}
+
         {/* Form Actions */}
         <div className="flex flex-col sm:flex-row gap-3 pt-4">
           <Button
