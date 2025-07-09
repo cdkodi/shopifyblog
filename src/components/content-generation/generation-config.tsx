@@ -182,7 +182,7 @@ export function GenerationConfig({
       setKeywordError(null);
 
       try {
-        const response = await fetch(`/api/seo/keywords?topic=${encodeURIComponent(config.topic)}&limit=20`);
+        const response = await fetch(`/api/seo/keywords?keyword=${encodeURIComponent(config.topic)}&limit=20`);
         const result = await response.json();
         
         if (!response.ok) {
@@ -224,7 +224,7 @@ export function GenerationConfig({
     setAllowNewResearch(true); // Enable research mode
 
     try {
-      const response = await fetch(`/api/seo/keywords?topic=${encodeURIComponent(config.topic)}&limit=20`);
+      const response = await fetch(`/api/seo/keywords?keyword=${encodeURIComponent(config.topic)}&limit=20`);
       const result = await response.json();
       
       if (!response.ok) {

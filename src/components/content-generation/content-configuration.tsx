@@ -128,7 +128,7 @@ export function ContentConfiguration({ selectedTemplate, onConfigurationComplete
 
       try {
         // Call the keyword research API endpoint
-        const response = await fetch(`/api/seo/keywords?topic=${encodeURIComponent(config.topic)}&limit=20`);
+        const response = await fetch(`/api/seo/keywords?keyword=${encodeURIComponent(config.topic)}&limit=20`);
         const result = await response.json();
         
         if (!response.ok) {

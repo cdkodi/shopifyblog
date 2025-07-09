@@ -160,7 +160,7 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
       setKeywordError(null)
 
       try {
-        const response = await fetch(`/api/seo/keywords?topic=${encodeURIComponent(title)}&limit=10`)
+        const response = await fetch(`/api/seo/keywords?keyword=${encodeURIComponent(title)}&limit=10`)
         const result = await response.json()
         
         if (!response.ok) {
