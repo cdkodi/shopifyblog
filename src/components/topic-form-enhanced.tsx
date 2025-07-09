@@ -353,6 +353,7 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
+          action: 'queue', // Add the missing action parameter
           topic: {
             id: savedTopicId,
             title: topicData.title,
