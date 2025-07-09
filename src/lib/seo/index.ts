@@ -177,6 +177,9 @@ Please ensure the content naturally incorporates the target keywords and answers
 // Export singleton instance
 export const seoService = SEOServiceManager.getInstance();
 
+// Initialize the service when the module is loaded
+seoService.initialize();
+
 // Utility functions
 export function formatSearchVolume(volume: number): string {
   if (volume >= 1000000) {
