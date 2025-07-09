@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Palette, FileText, Layout, Sparkles, Target, Clock } from 'lucide-react'
+import { Palette, FileText, Layout, Sparkles, Target, Clock, Zap, Eye, CheckCircle, AlertCircle } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
@@ -11,6 +11,7 @@ import { Textarea } from './ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Card } from './ui/card'
 import { Badge } from './ui/badge'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog'
 import { topicSchema, type TopicFormData } from '../lib/validations/topic'
 import { TopicService } from '../lib/supabase/topics'
 import { ContentTemplateService, ContentTemplate } from '../lib/supabase/content-templates'
@@ -28,6 +29,15 @@ interface ConfigValues {
   content_templates: ContentTemplate[]
 }
 
+interface GenerationProgress {
+  jobId: string
+  phase: 'queued' | 'analyzing' | 'structuring' | 'writing' | 'optimizing' | 'finalizing' | 'completed' | 'error'
+  percentage: number
+  currentStep: string
+  estimatedTimeRemaining?: number
+  articleId?: string
+}
+
 export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }: TopicFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -39,6 +49,13 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
   const [loadingTitles, setLoadingTitles] = useState(false)
   const [titleError, setTitleError] = useState<string | null>(null)
   const [selectedTemplate, setSelectedTemplate] = useState<ContentTemplate | null>(null)
+  
+  // V2 Generation States
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generationProgress, setGenerationProgress] = useState<GenerationProgress | null>(null)
+  const [showGenerationDialog, setShowGenerationDialog] = useState(false)
+  const [generationResult, setGenerationResult] = useState<any>(null)
+  const [estimatedCost, setEstimatedCost] = useState<number>(0)
 
   const {
     register,
@@ -110,6 +127,10 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
     if (configValues?.content_templates && watchedValues.template) {
       const template = configValues.content_templates.find(t => t.name === watchedValues.template)
       setSelectedTemplate(template || null)
+      // Update estimated cost
+      if (template) {
+        setEstimatedCost(template.estimatedCost)
+      }
     }
   }, [watchedValues.template, configValues])
 
@@ -200,33 +221,59 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
             keywords: watchedValues.keywords || ''
           })
         })
-
+        
         const result = await response.json()
         
         if (!response.ok) {
           throw new Error(result.error || 'Failed to generate title suggestions')
         }
 
-        if (result.success && result.titles && result.titles.length > 0) {
-          setTitleSuggestions(result.titles)
+        if (result.success && result.data.titles && result.data.titles.length > 0) {
+          setTitleSuggestions(result.data.titles.slice(0, 5))
         } else {
           setTitleSuggestions([])
-          if (result.fallback && result.fallback.length > 0) {
-            setTitleSuggestions(result.fallback)
-          }
         }
       } catch (error) {
-        console.error('Title generation failed:', error)
-        setTitleError('Failed to generate title suggestions. You can enter a title manually.')
+        console.error('Title suggestion failed:', error)
+        setTitleError('Failed to generate title suggestions. You can still enter titles manually.')
         setTitleSuggestions([])
       } finally {
         setLoadingTitles(false)
       }
     }
 
-    const debounceTimer = setTimeout(generateTitleSuggestions, 2000)
+    const debounceTimer = setTimeout(generateTitleSuggestions, 1500)
     return () => clearTimeout(debounceTimer)
   }, [watchedValues.title, watchedValues.tone, watchedValues.template, watchedValues.keywords])
+
+  // Poll for generation progress
+  useEffect(() => {
+    if (!isGenerating || !generationProgress?.jobId) return
+
+    const pollProgress = async () => {
+      try {
+        const response = await fetch(`/api/ai/v2-queue?jobId=${generationProgress.jobId}`)
+        const result = await response.json()
+        
+        if (result.success && result.data) {
+          setGenerationProgress(result.data)
+          
+          if (result.data.phase === 'completed') {
+            setIsGenerating(false)
+            setGenerationResult(result.data)
+          } else if (result.data.phase === 'error') {
+            setIsGenerating(false)
+            setSubmitError(result.data.currentStep || 'Generation failed')
+          }
+        }
+      } catch (error) {
+        console.error('Failed to poll generation progress:', error)
+      }
+    }
+
+    const interval = setInterval(pollProgress, 2000)
+    return () => clearInterval(interval)
+  }, [isGenerating, generationProgress?.jobId])
 
   const onSubmit = async (data: TopicFormData) => {
     setIsSubmitting(true)
@@ -259,6 +306,79 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
     }
   }
 
+  const handleGenerateAndPublish = async () => {
+    if (!isValid) {
+      setSubmitError('Please fill in all required fields before generating content')
+      return
+    }
+
+    setShowGenerationDialog(true)
+  }
+
+  const confirmGeneration = async () => {
+    setShowGenerationDialog(false)
+    setIsGenerating(true)
+    setSubmitError(null)
+
+    try {
+      // First, save the topic if it's new
+      let topicData = watchedValues
+      let savedTopicId = topicId
+
+      if (!topicId) {
+        const result = await TopicService.createTopic({
+          ...topicData,
+          content_template: topicData.template
+        })
+
+        if (result.error) {
+          throw new Error(result.error)
+        }
+
+        savedTopicId = result.data.id
+      }
+
+      // Queue the generation
+      const response = await fetch('/api/ai/v2-queue', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          topic: {
+            id: savedTopicId,
+            title: topicData.title,
+            keywords: topicData.keywords,
+            tone: topicData.tone,
+            length: topicData.length,
+            template: topicData.template
+          },
+          optimizeForSEO: true,
+          targetWordCount: selectedTemplate?.targetLength || 800
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to queue generation')
+      }
+
+      setGenerationProgress({
+        jobId: result.data.jobId,
+        phase: 'queued',
+        percentage: 0,
+        currentStep: 'Generation queued...',
+        estimatedTimeRemaining: Math.ceil((new Date(result.data.estimatedCompletion).getTime() - Date.now()) / 1000)
+      })
+
+    } catch (error) {
+      console.error('Generation failed:', error)
+      setSubmitError(error instanceof Error ? error.message : 'Failed to start generation')
+      setIsGenerating(false)
+    }
+  }
+
   const handleTitleSuggestionClick = (suggestion: string) => {
     setValue('title', suggestion, { shouldValidate: true })
   }
@@ -277,6 +397,34 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
     setValue('template', templateName, { shouldValidate: true })
     const template = configValues?.content_templates.find(t => t.name === templateName)
     setSelectedTemplate(template || null)
+  }
+
+  const getPhaseIcon = (phase: string) => {
+    switch (phase) {
+      case 'queued': return <Clock className="h-4 w-4" />
+      case 'analyzing': return <Eye className="h-4 w-4" />
+      case 'structuring': return <Layout className="h-4 w-4" />
+      case 'writing': return <FileText className="h-4 w-4" />
+      case 'optimizing': return <Sparkles className="h-4 w-4" />
+      case 'finalizing': return <Target className="h-4 w-4" />
+      case 'completed': return <CheckCircle className="h-4 w-4" />
+      case 'error': return <AlertCircle className="h-4 w-4" />
+      default: return <Clock className="h-4 w-4" />
+    }
+  }
+
+  const getPhaseColor = (phase: string) => {
+    switch (phase) {
+      case 'queued': return 'text-gray-500'
+      case 'analyzing': return 'text-blue-500'
+      case 'structuring': return 'text-purple-500'
+      case 'writing': return 'text-green-500'
+      case 'optimizing': return 'text-yellow-500'
+      case 'finalizing': return 'text-orange-500'
+      case 'completed': return 'text-green-600'
+      case 'error': return 'text-red-500'
+      default: return 'text-gray-500'
+    }
   }
 
   if (!configValues) {
@@ -300,6 +448,70 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
           {topicId ? 'Update topic details and style preferences' : 'Add a new topic for content generation'}
         </p>
       </div>
+
+      {/* Generation Progress Display */}
+      {isGenerating && generationProgress && (
+        <Card className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className={`${getPhaseColor(generationProgress.phase)} animate-pulse`}>
+                {getPhaseIcon(generationProgress.phase)}
+              </div>
+              <span className="font-medium text-gray-900">
+                Generating Content
+              </span>
+            </div>
+            <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+              {generationProgress.percentage}%
+            </Badge>
+          </div>
+          
+          <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+            <div 
+              className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${generationProgress.percentage}%` }}
+            />
+          </div>
+          
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-600">{generationProgress.currentStep}</span>
+            {generationProgress.estimatedTimeRemaining && (
+              <span className="text-gray-500">
+                ~{Math.ceil(generationProgress.estimatedTimeRemaining / 60)}m remaining
+              </span>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* Generation Result Display */}
+      {generationResult && (
+        <Card className="mb-6 p-4 bg-green-50 border-green-200">
+          <div className="flex items-center gap-2 mb-3">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            <span className="font-medium text-green-900">Content Generated Successfully!</span>
+          </div>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="text-gray-600">Word Count:</span>
+              <span className="ml-2 font-medium">{generationResult.wordCount || 'N/A'}</span>
+            </div>
+            <div>
+              <span className="text-gray-600">SEO Score:</span>
+              <span className="ml-2 font-medium">{generationResult.seoScore || 'N/A'}/100</span>
+            </div>
+          </div>
+          <div className="mt-3 flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => window.open(`/articles/${generationResult.articleId}/edit`, '_blank')}>
+              <Eye className="h-4 w-4 mr-1" />
+              Review Article
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setGenerationResult(null)}>
+              Dismiss
+            </Button>
+          </div>
+        </Card>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Title - Required Field */}
@@ -428,32 +640,34 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
           <Textarea
             id="keywords"
             {...register('keywords')}
-            placeholder="e.g., digital marketing, social media, SEO, content strategy, 2024 trends"
-            rows={3}
-            className={errors.keywords ? 'border-red-500' : ''}
+            placeholder="e.g., digital marketing, SEO, social media, content strategy"
+            className={`min-h-[80px] ${errors.keywords ? 'border-red-500' : ''}`}
           />
-          
           {errors.keywords && (
             <p className="text-sm text-red-600">{errors.keywords.message}</p>
           )}
           
           {keywordError && (
-            <p className="text-sm text-amber-600">⚠️ {keywordError}</p>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2">
+              <p className="text-sm text-amber-800">⚠️ {keywordError}</p>
+            </div>
           )}
           
           <p className="text-xs text-gray-500">
-            Optional • Keywords will be automatically suggested based on your topic title using SEO research
+            Separate keywords with commas. These will be used for SEO optimization and content focus.
           </p>
         </div>
 
-        {/* Content Template Selection - Rich UI */}
-        <div className="space-y-4">
-          <div className="border-t pt-4">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Content Template</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Choose the structure and format for your article. This will determine the AI generation approach.
-            </p>
-          </div>
+        {/* Content Template Selection */}
+        <div className="space-y-3">
+          <Label className="text-gray-700 font-medium flex items-center gap-2">
+            <Layout className="h-4 w-4" />
+            Content Template <span className="text-red-500">*</span>
+          </Label>
+          
+          <p className="text-sm text-gray-600">
+            Choose the structure and approach for your article. Each template is optimized for different content types and SEO goals.
+          </p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {configValues?.content_templates?.map((template) => (
@@ -632,10 +846,20 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
         <div className="flex flex-col sm:flex-row gap-3 pt-4">
           <Button
             type="submit"
-            disabled={!isValid || isSubmitting}
+            disabled={!isValid || isSubmitting || isGenerating}
             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
           >
             {isSubmitting ? 'Saving...' : (topicId ? 'Update Topic' : 'Create Topic')}
+          </Button>
+          
+          <Button
+            type="button"
+            disabled={!isValid || isSubmitting || isGenerating}
+            onClick={handleGenerateAndPublish}
+            className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+          >
+            <Zap className="h-4 w-4 mr-2" />
+            {isGenerating ? 'Generating...' : 'Generate & Publish'}
           </Button>
           
           {onCancel && (
@@ -644,12 +868,47 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
               variant="outline"
               onClick={onCancel}
               className="flex-1"
+              disabled={isGenerating}
             >
               Cancel
             </Button>
           )}
         </div>
       </form>
+
+      {/* Generation Confirmation Dialog */}
+      <AlertDialog open={showGenerationDialog} onOpenChange={setShowGenerationDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Generate & Publish Article</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will use AI to generate a complete article based on your topic configuration. The process will:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Create SEO-optimized content using the "{watchedValues.template}" template</li>
+                <li>Target approximately {selectedTemplate?.targetLength || 800} words</li>
+                <li>Use "{watchedValues.tone}" tone and include your keywords</li>
+                <li>Generate meta descriptions and optimize for search engines</li>
+              </ul>
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">Estimated Cost:</span>
+                  <span className="text-blue-600">${estimatedCost.toFixed(3)}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">Processing Time:</span>
+                  <span className="text-blue-600">2-5 minutes</span>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmGeneration}>
+              Generate Article
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 } 
