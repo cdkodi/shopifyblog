@@ -993,7 +993,7 @@ POST /api/ai/generate-content
 }
 
 // SEO Keywords
-GET /api/seo/keywords?topic=string
+GET /api/seo/keywords?keyword=string
 {
   keywords: Array<{
     keyword: string;
