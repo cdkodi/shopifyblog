@@ -2,7 +2,6 @@
 
 import { 
   TopicGenerationRequest, 
-  V2_CONTENT_TEMPLATES, 
   SEO_CONSTANTS 
 } from './v2-types';
 
@@ -22,7 +21,7 @@ export class V2TopicPromptBuilder {
     const keywords = this.extractKeywords(topic);
     const estimatedWords = targetWordCount || this.estimateWordCount(request);
     const contentStructure = 'standard';
-    const template = V2_CONTENT_TEMPLATES.STANDARD;
+    const template = 'standard'; // Use string directly instead of V2_CONTENT_TEMPLATES.STANDARD
 
     return `Create a comprehensive ${estimatedWords}-word article about "${topic.title}" following the V2 enhanced content structure.
 
@@ -295,7 +294,7 @@ ${templateSpecificInstructions}`;
     let baseWords = lengthMap[topic.length || 'medium'];
     
     // Adjust based on content structure
-    const template = V2_CONTENT_TEMPLATES.STANDARD;
+    const template = 'standard'; // Use string directly instead of V2_CONTENT_TEMPLATES.STANDARD
     const structureMultiplier = 800; // Default word count
     
     // Use the larger of the two estimates
