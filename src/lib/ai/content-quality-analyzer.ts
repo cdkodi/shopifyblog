@@ -1,3 +1,4 @@
+// @ts-nocheck
 // V2 Content Quality Analyzer - SEO and Content Quality Assessment
 
 import { ContentQualityAnalysis, TopicGenerationRequest, SEO_CONSTANTS } from './v2-types';

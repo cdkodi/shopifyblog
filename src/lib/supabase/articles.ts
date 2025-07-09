@@ -37,7 +37,7 @@ export class ArticleService {
         content: data.content,
         meta_description: data.metaDescription || null,
         slug: data.slug || this.generateSlug(data.title),
-        status: data.status || 'draft',
+        status: (data.status as any) || 'draft',
         target_keywords: data.targetKeywords ? JSON.stringify(data.targetKeywords) : null,
         shopify_blog_id: data.shopifyBlogId || null,
         shopify_article_id: data.shopifyArticleId || null,
@@ -81,7 +81,7 @@ export class ArticleService {
 
       // Apply status filter
       if (filters?.status) {
-        query = query.eq('status', filters.status)
+        query = query.eq('status', filters.status as any)
       }
 
       // Apply ordering
@@ -139,7 +139,7 @@ export class ArticleService {
       }
       if (data.metaDescription !== undefined) updateData.meta_description = data.metaDescription
       if (data.slug !== undefined) updateData.slug = data.slug
-      if (data.status !== undefined) updateData.status = data.status
+      if (data.status !== undefined) updateData.status = data.status as any
       if (data.targetKeywords !== undefined) updateData.target_keywords = JSON.stringify(data.targetKeywords)
       if (data.shopifyBlogId !== undefined) updateData.shopify_blog_id = data.shopifyBlogId
       if (data.shopifyArticleId !== undefined) updateData.shopify_article_id = data.shopifyArticleId

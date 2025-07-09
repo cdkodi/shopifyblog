@@ -110,5 +110,5 @@ export type {
   V2GenerationResult,
   GenerationProgress,
   GenerationJob,
-  ContentQualityAnalyzer
+  ContentQualityAnalysis
 } from './v2-types'; 

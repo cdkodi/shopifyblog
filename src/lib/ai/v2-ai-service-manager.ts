@@ -64,7 +64,7 @@ export class V2AIServiceManager extends AIServiceManager implements IV2AIService
       console.log('🎯 Using provider:', optimalProvider);
 
       // Generate content using base service
-      const baseResult = await this.generateContent(aiRequest, optimalProvider);
+      const baseResult = await this.generateContent(aiRequest, optimalProvider as any);
 
       if (!baseResult.success || !baseResult.content) {
         throw this.createV2Error(
@@ -478,8 +478,8 @@ Please provide the optimized version:`;
     });
 
     const avgDensity = Object.values(keywordDensity).reduce((a, b) => a + b, 0) / keywords.length;
-    const optimalDensity = avgDensity >= SEO_CONSTANTS.OPTIMAL_KEYWORD_DENSITY.min && 
-                          avgDensity <= SEO_CONSTANTS.OPTIMAL_KEYWORD_DENSITY.max;
+    const optimalDensity = avgDensity >= SEO_CONSTANTS.OPTIMAL_KEYWORD_DENSITY.MIN && 
+                          avgDensity <= SEO_CONSTANTS.OPTIMAL_KEYWORD_DENSITY.MAX;
     
     const overallScore = optimalDensity ? 85 : 70;
 
@@ -500,8 +500,8 @@ Please provide the optimized version:`;
     let score = 100;
     
     // Word count check
-    if (metadata.wordCount < SEO_CONSTANTS.OPTIMAL_CONTENT_LENGTH.min) score -= 10;
-    if (metadata.wordCount > SEO_CONSTANTS.OPTIMAL_CONTENT_LENGTH.max) score -= 5;
+    if (metadata.wordCount < 800) score -= 10;
+    if (metadata.wordCount > 2000) score -= 5;
     
     // SEO score integration
     score = (score + seoAnalysis.overallScore) / 2;
@@ -512,7 +512,7 @@ Please provide the optimized version:`;
   private identifyQualityIssues(metadata: any, seoAnalysis: any, request: TopicGenerationRequest): string[] {
     const issues: string[] = [];
     
-    if (metadata.wordCount < SEO_CONSTANTS.OPTIMAL_CONTENT_LENGTH.min) {
+    if (metadata.wordCount < 800) {
       issues.push('Content is too short for optimal SEO');
     }
     

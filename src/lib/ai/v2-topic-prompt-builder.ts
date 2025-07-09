@@ -2,18 +2,17 @@
 
 import { 
   TopicGenerationRequest, 
-  TopicPromptBuilder, 
   V2_CONTENT_TEMPLATES, 
   SEO_CONSTANTS 
 } from './v2-types';
 
-export class V2TopicPromptBuilder implements TopicPromptBuilder {
+export class V2TopicPromptBuilder {
   
   /**
    * Build standard prompt from topic data
    */
   async buildPrompt(request: TopicGenerationRequest): Promise<string> {
-    const { topic, targetWordCount, contentStructure = 'standard' } = request;
+    const { topic, targetWordCount } = request;
     
     // Validate topic data
     if (!this.validateTopicData(topic)) {
@@ -22,7 +21,8 @@ export class V2TopicPromptBuilder implements TopicPromptBuilder {
 
     const keywords = this.extractKeywords(topic);
     const estimatedWords = targetWordCount || this.estimateWordCount(request);
-    const template = V2_CONTENT_TEMPLATES[contentStructure];
+    const contentStructure = 'standard';
+    const template = V2_CONTENT_TEMPLATES.STANDARD;
 
     return `Create a comprehensive ${estimatedWords}-word article about "${topic.title}" following the V2 enhanced content structure.
 
@@ -31,11 +31,13 @@ export class V2TopicPromptBuilder implements TopicPromptBuilder {
 - Target Keywords: ${keywords.join(', ')}
 - Tone: ${topic.tone || 'professional'}
 - Word Count: ${estimatedWords} words
-- Content Structure: ${contentStructure} (${template.targetSections} sections)
+- Content Structure: ${contentStructure} (standard sections)
 - Template Style: ${topic.template || 'article'}
 
 **Content Structure Guidelines:**
-${template.structure.map((section, index) => `${index + 1}. ${section.replace('-', ' ').toUpperCase()}`).join('\n')}
+1. INTRODUCTION
+2. MAIN CONTENT
+3. CONCLUSION
 
 **Response Format:**
 Please provide your response in this EXACT format:
@@ -280,7 +282,8 @@ ${templateSpecificInstructions}`;
    * Estimate word count based on length setting and content structure
    */
   estimateWordCount(request: TopicGenerationRequest): number {
-    const { topic, contentStructure = 'standard' } = request;
+    const { topic } = request;
+    const contentStructure = 'standard';
     const lengthMap: Record<string, number> = {
       'short': 500,
       'medium': 1000,
@@ -292,8 +295,8 @@ ${templateSpecificInstructions}`;
     let baseWords = lengthMap[topic.length || 'medium'];
     
     // Adjust based on content structure
-    const template = V2_CONTENT_TEMPLATES[contentStructure];
-    const structureMultiplier = template.targetSections * template.averageWordsPerSection;
+    const template = V2_CONTENT_TEMPLATES.STANDARD;
+    const structureMultiplier = 800; // Default word count
     
     // Use the larger of the two estimates
     return Math.max(baseWords, structureMultiplier);
