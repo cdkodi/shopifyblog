@@ -252,55 +252,7 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
     return () => clearTimeout(debounceTimer)
   }, [watchedValues.title, watchedValues.tone, watchedValues.template, watchedValues.keywords])
 
-  // Poll for generation progress
-  useEffect(() => {
-    if (!isGenerating || !generationProgress?.jobId) return
-
-    const pollProgress = async () => {
-      try {
-        const response = await fetch(`/api/ai/v2-queue?jobId=${generationProgress.jobId}`)
-        const result = await response.json()
-        
-        if (result.success && result.data) {
-          setGenerationProgress(result.data)
-          
-          if (result.data.phase === 'completed') {
-            setIsGenerating(false)
-            setGenerationResult(result.data)
-          } else if (result.data.phase === 'error') {
-            setIsGenerating(false)
-            setSubmitError(result.data.currentStep || 'Generation failed')
-          }
-        } else {
-          // Handle API error objects properly
-          let errorMessage = 'Failed to check progress';
-          if (result.error) {
-            if (typeof result.error === 'string') {
-              errorMessage = result.error;
-            } else if (result.error.message) {
-              errorMessage = result.error.message;
-            }
-          }
-          console.error('Progress polling failed:', errorMessage);
-        }
-      } catch (error) {
-        console.error('Failed to poll generation progress:', error)
-        // Only set error if we're still generating to avoid overriding other errors
-        if (isGenerating) {
-          let errorMessage = 'Failed to check progress';
-          if (error instanceof Error) {
-            errorMessage = error.message;
-          } else if (typeof error === 'string') {
-            errorMessage = error;
-          }
-          setSubmitError(errorMessage);
-        }
-      }
-    }
-
-    const interval = setInterval(pollProgress, 2000)
-    return () => clearInterval(interval)
-  }, [isGenerating, generationProgress?.jobId])
+  // Note: Polling removed since we're using direct V2 generation instead of queue-based generation
 
   const onSubmit = async (data: TopicFormData) => {
     setIsSubmitting(true)
@@ -397,9 +349,8 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
         console.log('✅ Topic created with ID:', savedTopicId)
       }
 
-      // Queue the generation
+      // Use direct V2 generation instead of queue (which gets stuck at 60%)
       const requestBody = {
-        action: 'queue', // Add the missing action parameter
         topic: {
           id: savedTopicId,
           title: topicData.title,
@@ -409,12 +360,22 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
           template: topicData.template
         },
         optimizeForSEO: true,
-        targetWordCount: selectedTemplate?.targetLength || 800
+        targetWordCount: selectedTemplate?.targetLength || 800,
+        createArticle: true // Create article immediately
       }
 
-      console.log('📋 Sending generation request:', requestBody)
+      console.log('📋 Sending direct V2 generation request:', requestBody)
 
-      const response = await fetch('/api/ai/v2-queue', {
+      // Show immediate progress for direct generation
+      setGenerationProgress({
+        jobId: `direct_${Date.now()}`,
+        phase: 'writing',
+        percentage: 10,
+        currentStep: 'Starting content generation...',
+        estimatedTimeRemaining: 120
+      })
+
+      const response = await fetch('/api/ai/v2-generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -422,40 +383,57 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
         body: JSON.stringify(requestBody)
       })
 
-      console.log('📡 Response status:', response.status)
-      console.log('📡 Response ok:', response.ok)
+      console.log('📡 Direct generation response status:', response.status)
 
       const result = await response.json()
-      console.log('📦 Response data:', result)
+      console.log('📦 Direct generation response data:', result)
 
       if (!response.ok) {
-        // Handle API error objects properly
-        let errorMessage = 'Failed to queue generation';
+        let errorMessage = 'Failed to generate content';
         if (result.error) {
-          if (typeof result.error === 'string') {
-            errorMessage = result.error;
-          } else if (result.error.message) {
-            errorMessage = result.error.message;
-          }
+          errorMessage = typeof result.error === 'string' ? result.error : result.error.message || errorMessage;
         }
-        console.log('❌ Request failed:', errorMessage)
+        console.log('❌ Direct generation failed:', errorMessage)
         throw new Error(errorMessage)
       }
 
-      console.log('🎯 Setting generation progress with jobId:', result.data.jobId)
-      
+      // Update progress to completion
       setGenerationProgress({
-        jobId: result.data.jobId,
-        phase: 'queued',
-        percentage: 0,
-        currentStep: 'Generation queued...',
-        estimatedTimeRemaining: Math.ceil((new Date(result.data.estimatedCompletion).getTime() - Date.now()) / 1000)
+        jobId: `direct_${Date.now()}`,
+        phase: 'completed',
+        percentage: 100,
+        currentStep: result.article ? 'Article created successfully!' : 'Content generated successfully!',
+        estimatedTimeRemaining: 0
       })
 
+      console.log('🎯 Direct generation completed successfully!')
+      
+      // Set generation result and stop generating state
+      setGenerationResult({
+        content: result.content,
+        article: result.article,
+        seoScore: result.seoScore,
+        phase: 'completed'
+      })
+      
+      // Stop generating after a brief delay to show completion
+      setTimeout(() => {
+        setIsGenerating(false)
+      }, 2000)
+
     } catch (error) {
-      console.error('💥 Generation failed:', error)
-      // Ensure error message is always a string
-      let errorMessage = 'Failed to start generation';
+      console.error('💥 Direct generation failed:', error)
+      
+      // Update progress to show error
+      setGenerationProgress({
+        jobId: `direct_${Date.now()}`,
+        phase: 'error',
+        percentage: 0,
+        currentStep: 'Generation failed',
+        estimatedTimeRemaining: 0
+      })
+      
+      let errorMessage = 'Failed to generate content';
       if (error instanceof Error) {
         errorMessage = error.message;
       } else if (typeof error === 'string') {
