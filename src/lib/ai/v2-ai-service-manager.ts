@@ -3,6 +3,7 @@
 import { AIServiceManager } from './ai-service-manager';
 import { V2TopicPromptBuilder } from './v2-topic-prompt-builder';
 import { generationJobsService } from '@/lib/supabase/generation-jobs';
+import { ArticleService } from '@/lib/supabase/articles';
 import { 
   TopicGenerationRequest, 
   V2GenerationResult, 
@@ -333,8 +334,7 @@ Please provide the optimized version:`;
         currentStep: 'Creating article in database'
       });
 
-      // Import ArticleService to create the article
-      const { ArticleService } = await import('@/lib/supabase/articles');
+      // Use ArticleService to create the article
 
       const articleData = {
         title: result.parsedContent?.title || request.topic.title,
