@@ -165,10 +165,7 @@ export async function GET(request: NextRequest) {
         
         return NextResponse.json({
           success: true,
-          data: {
-            jobId,
-            progress
-          }
+          data: progress  // Return progress data directly, not nested
         });
       } catch (error) {
         console.error('❌ Job progress fetch failed:', error);

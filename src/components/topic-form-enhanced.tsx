@@ -370,6 +370,7 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
   }
 
   const confirmGeneration = async () => {
+    console.log('🎬 confirmGeneration started')
     setShowGenerationDialog(false)
     setIsGenerating(true)
     setSubmitError(null)
@@ -379,7 +380,11 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
       let topicData = watchedValues
       let savedTopicId = topicId
 
+      console.log('💾 Topic data:', topicData)
+      console.log('🆔 Current topicId:', topicId)
+
       if (!topicId) {
+        console.log('📝 Creating new topic...')
         const result = await TopicService.createTopic({
           ...topicData
         })
@@ -389,30 +394,39 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
         }
 
         savedTopicId = result.data.id
+        console.log('✅ Topic created with ID:', savedTopicId)
       }
 
       // Queue the generation
+      const requestBody = {
+        action: 'queue', // Add the missing action parameter
+        topic: {
+          id: savedTopicId,
+          title: topicData.title,
+          keywords: topicData.keywords,
+          tone: topicData.tone,
+          length: topicData.length,
+          template: topicData.template
+        },
+        optimizeForSEO: true,
+        targetWordCount: selectedTemplate?.targetLength || 800
+      }
+
+      console.log('📋 Sending generation request:', requestBody)
+
       const response = await fetch('/api/ai/v2-queue', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          action: 'queue', // Add the missing action parameter
-          topic: {
-            id: savedTopicId,
-            title: topicData.title,
-            keywords: topicData.keywords,
-            tone: topicData.tone,
-            length: topicData.length,
-            template: topicData.template
-          },
-          optimizeForSEO: true,
-          targetWordCount: selectedTemplate?.targetLength || 800
-        })
+        body: JSON.stringify(requestBody)
       })
 
+      console.log('📡 Response status:', response.status)
+      console.log('📡 Response ok:', response.ok)
+
       const result = await response.json()
+      console.log('📦 Response data:', result)
 
       if (!response.ok) {
         // Handle API error objects properly
@@ -424,9 +438,12 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
             errorMessage = result.error.message;
           }
         }
+        console.log('❌ Request failed:', errorMessage)
         throw new Error(errorMessage)
       }
 
+      console.log('🎯 Setting generation progress with jobId:', result.data.jobId)
+      
       setGenerationProgress({
         jobId: result.data.jobId,
         phase: 'queued',
@@ -436,7 +453,7 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
       })
 
     } catch (error) {
-      console.error('Generation failed:', error)
+      console.error('💥 Generation failed:', error)
       // Ensure error message is always a string
       let errorMessage = 'Failed to start generation';
       if (error instanceof Error) {
