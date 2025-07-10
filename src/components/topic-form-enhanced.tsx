@@ -334,14 +334,27 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
   }
 
   const handleGenerateAndPublish = async () => {
+    console.log('🔥 Generate & Publish button clicked!')
+    console.log('📊 Form validation state:', {
+      isValid,
+      watchedValues,
+      errors,
+      title: watchedValues.title,
+      titleLength: watchedValues.title?.trim().length
+    })
+    
     // Check if form is actually valid by checking required fields manually
     const isFormActuallyValid = watchedValues.title && watchedValues.title.trim().length >= 3
     
+    console.log('✅ Manual validation:', { isFormActuallyValid })
+    
     if (!isValid && !isFormActuallyValid) {
+      console.log('❌ Validation failed - showing error')
       setSubmitError('Please fill in all required fields before generating content')
       return
     }
 
+    console.log('🎯 Opening generation dialog...')
     setShowGenerationDialog(true)
   }
 
@@ -905,6 +918,15 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
             // More robust validation check
             const isFormActuallyValid = watchedValues.title && watchedValues.title.trim().length >= 3
             const shouldDisable = !isValid && !isFormActuallyValid
+            
+            console.log('🔍 Button state check:', {
+              isValid,
+              isFormActuallyValid,
+              shouldDisable,
+              isSubmitting,
+              isGenerating,
+              finalDisabled: shouldDisable || isSubmitting || isGenerating
+            })
             
             return (
               <>
