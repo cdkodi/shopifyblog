@@ -326,6 +326,46 @@ Please provide the optimized version:`;
 
       await this.sleep(1000);
 
+      // Create article in database from generated content
+      await generationJobsService.updateJobProgress(jobId, {
+        phase: 'finalizing',
+        percentage: 95,
+        currentStep: 'Creating article in database'
+      });
+
+      // Import ArticleService to create the article
+      const { ArticleService } = await import('@/lib/supabase/articles');
+
+      const articleData = {
+        title: result.parsedContent?.title || request.topic.title,
+        content: result.parsedContent?.content || result.content || '',
+        metaDescription: result.parsedContent?.metaDescription || '',
+        slug: this.generateSlugFromTitle(result.parsedContent?.title || request.topic.title),
+        status: 'review' as const, // Set to review for editorial approval
+        targetKeywords: result.parsedContent?.keywords || this.promptBuilder.extractKeywords(request.topic),
+        seoScore: result.generationMetadata?.seoScore || 0,
+        wordCount: result.generationMetadata?.wordCount || 0,
+        readingTime: result.generationMetadata?.readingTime || 0,
+        sourceTopicId: request.topic.id
+      };
+
+      console.log('📝 Creating article in database...', { title: articleData.title });
+
+      const articleResult = await ArticleService.createArticle(articleData);
+      
+      if (articleResult.error || !articleResult.data) {
+        throw new Error(`Failed to create article: ${articleResult.error}`);
+      }
+
+      console.log('✅ Article created successfully:', articleResult.data.id);
+
+      // Update job with article ID
+      await generationJobsService.updateJobProgress(jobId, {
+        percentage: 98,
+        currentStep: 'Article created successfully',
+        articleId: articleResult.data.id
+      });
+
       // Mark job as completed with result
       await generationJobsService.completeJob(jobId, result);
 
@@ -527,5 +567,14 @@ Please provide the optimized version:`;
 
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  private generateSlugFromTitle(title: string): string {
+    return title
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim();
   }
 } 
