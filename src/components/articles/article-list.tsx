@@ -176,7 +176,7 @@ export function ArticleList({
       setActionLoading(articleId);
       const { error } = await ArticleService.updateArticleStatus(
         articleId, 
-        newStatus as 'draft' | 'review' | 'approved' | 'published' | 'rejected'
+        newStatus as 'draft' | 'generating' | 'generation_failed' | 'ready_for_editorial' | 'published' | 'published_hidden' | 'published_visible'
       );
       
       if (error) {
@@ -196,7 +196,7 @@ export function ArticleList({
     try {
       setActionLoading('bulk-approve');
       const results = await Promise.all(
-        articleIds.map(id => ArticleService.updateArticleStatus(id, 'approved'))
+        articleIds.map(id => ArticleService.updateArticleStatus(id, 'published'))
       );
       
       const hasError = results.some(result => result.error);

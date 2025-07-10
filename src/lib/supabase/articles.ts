@@ -10,7 +10,7 @@ export interface ArticleFormData {
   content: string
   metaDescription?: string
   slug?: string
-  status?: 'draft' | 'review' | 'approved' | 'published' | 'rejected'
+  status?: 'draft' | 'generating' | 'generation_failed' | 'ready_for_editorial' | 'published' | 'published_hidden' | 'published_visible'
   targetKeywords?: string[]
   shopifyBlogId?: number
   shopifyArticleId?: number
@@ -227,7 +227,7 @@ export class ArticleService {
   }
 
   // Update article status
-  static async updateArticleStatus(id: string, status: 'draft' | 'review' | 'approved' | 'published' | 'rejected'): Promise<{ data: Article | null; error: string | null }> {
+  static async updateArticleStatus(id: string, status: 'draft' | 'generating' | 'generation_failed' | 'ready_for_editorial' | 'published' | 'published_hidden' | 'published_visible'): Promise<{ data: Article | null; error: string | null }> {
     return this.updateArticle(id, { status })
   }
 

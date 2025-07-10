@@ -320,7 +320,7 @@ Please provide the optimized version:`;
         content: result.parsedContent?.content || result.content || '',
         metaDescription: result.parsedContent?.metaDescription || '',
         slug: this.generateSlugFromTitle(result.parsedContent?.title || request.topic.title),
-        status: 'review' as const,
+        status: 'ready_for_editorial' as const,
         targetKeywords: result.parsedContent?.keywords || this.promptBuilder.extractKeywords(request.topic),
         seoScore: result.generationMetadata?.seoScore || 0,
         wordCount: result.generationMetadata?.wordCount || 0,

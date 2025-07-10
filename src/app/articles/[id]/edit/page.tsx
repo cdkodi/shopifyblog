@@ -24,7 +24,7 @@ interface ArticleEditorState {
   content: string;
   metaDescription: string;
   slug: string;
-  status: 'draft' | 'review' | 'approved' | 'published' | 'rejected';
+  status: 'draft' | 'generating' | 'generation_failed' | 'ready_for_editorial' | 'published' | 'published_hidden' | 'published_visible';
   targetKeywords: string[];
   scheduledPublishDate: string;
   seoScore: number;
@@ -401,10 +401,10 @@ export default function ArticleEditPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="draft">Draft</SelectItem>
-                        <SelectItem value="review">In Review</SelectItem>
-                        <SelectItem value="approved">Approved</SelectItem>
-                        <SelectItem value="published">Published</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
+                                              <SelectItem value="ready_for_editorial">Ready for Editorial</SelectItem>
+                      <SelectItem value="published">Published</SelectItem>
+                      <SelectItem value="published_visible">Published (Visible)</SelectItem>
+                      <SelectItem value="published_hidden">Published (Hidden)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

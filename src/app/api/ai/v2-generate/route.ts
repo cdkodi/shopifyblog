@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
           content: result.parsedContent?.content || result.content || '',
           metaDescription: result.parsedContent?.metaDescription || '',
           slug: generateSlug(result.parsedContent?.title || generationRequest.topic.title),
-          status: 'review' as const,
+          status: 'ready_for_editorial' as const,
           targetKeywords: result.parsedContent?.keywords || [],
           seoScore: result.generationMetadata?.seoScore || 0,
           wordCount: result.generationMetadata?.wordCount || 0,
