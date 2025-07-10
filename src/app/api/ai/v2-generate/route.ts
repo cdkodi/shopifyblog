@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDefaultV2Service } from '@/lib/ai';
 import { TopicGenerationRequest } from '@/lib/ai/v2-types';
+import { ArticleService } from '@/lib/supabase/articles';
 
 // Helper function to generate slug from title
 function generateSlug(title: string): string {
@@ -69,9 +70,10 @@ export async function POST(request: NextRequest) {
 
     // Optional: Create article in database if requested
     let createdArticle = null;
+    let articleCreationError = null;
     if (body.createArticle) {
       try {
-        const { ArticleService } = await import('@/lib/supabase/articles');
+        console.log('🚀 Article creation requested, preparing data...');
         
         const articleData = {
           title: result.parsedContent?.title || generationRequest.topic.title,
@@ -86,18 +88,37 @@ export async function POST(request: NextRequest) {
           sourceTopicId: generationRequest.topic.id
         };
 
-        console.log('📝 Creating article in database...', { title: articleData.title });
+        console.log('📝 Creating article in database...', { 
+          title: articleData.title,
+          slug: articleData.slug,
+          wordCount: articleData.wordCount,
+          seoScore: articleData.seoScore 
+        });
+        
         const articleResult = await ArticleService.createArticle(articleData);
+        console.log('📊 Article creation result:', { 
+          success: !articleResult.error, 
+          error: articleResult.error,
+          hasData: !!articleResult.data 
+        });
         
         if (articleResult.error || !articleResult.data) {
           console.error('❌ Failed to create article:', articleResult.error);
+          throw new Error(`Article creation failed: ${articleResult.error}`);
         } else {
           createdArticle = articleResult.data;
-          console.log('✅ Article created successfully:', articleResult.data.id);
+          console.log('✅ Article created successfully:', {
+            id: articleResult.data.id,
+            title: articleResult.data.title,
+            status: articleResult.data.status
+          });
         }
-      } catch (error) {
-        console.error('❌ Error creating article:', error);
-      }
+              } catch (error) {
+          console.error('❌ Error creating article:', error);
+          articleCreationError = error instanceof Error ? error.message : String(error);
+          // Don't throw here - let the generation response still work
+          // but include the error in the response
+        }
     }
 
     // Return enhanced response with V2 metadata
@@ -137,13 +158,22 @@ export async function POST(request: NextRequest) {
         },
 
         // Created article (if requested)
-        ...(createdArticle && {
-          createdArticle: {
-            id: createdArticle.id,
-            title: createdArticle.title,
-            slug: createdArticle.slug,
-            status: createdArticle.status,
-            createdAt: createdArticle.created_at
+        ...(body.createArticle && {
+          articleCreation: {
+            requested: true,
+            success: !!createdArticle,
+            ...(createdArticle && {
+              article: {
+                id: createdArticle.id,
+                title: createdArticle.title,
+                slug: createdArticle.slug,
+                status: createdArticle.status,
+                createdAt: createdArticle.created_at
+              }
+            }),
+            ...(articleCreationError && {
+              error: articleCreationError
+            })
           }
         })
       },
