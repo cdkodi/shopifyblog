@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getDefaultV2Service } from '@/lib/ai';
+import { generationJobsService } from '@/lib/supabase/generation-jobs';
 import { TopicGenerationRequest } from '@/lib/ai/v2-types';
 
 export async function POST(request: NextRequest) {
@@ -147,7 +148,7 @@ export async function GET(request: NextRequest) {
 
     if (stats === 'true') {
       // Return queue statistics
-      const queueStats = await v2Service.generationQueue.getQueueStats();
+      const queueStats = await generationJobsService.getJobStats();
       
       return NextResponse.json({
         success: true,
@@ -161,7 +162,7 @@ export async function GET(request: NextRequest) {
     if (jobId) {
       // Get specific job progress
       try {
-        const progress = await v2Service.aiServiceManager.getGenerationProgress(jobId);
+        const progress = await generationJobsService.getJobProgress(jobId);
         
         return NextResponse.json({
           success: true,
@@ -171,6 +172,7 @@ export async function GET(request: NextRequest) {
           }
         });
       } catch (error) {
+        console.error('❌ Job progress fetch failed:', error);
         return NextResponse.json(
           { error: `Job not found: ${jobId}` },
           { status: 404 }
@@ -181,7 +183,7 @@ export async function GET(request: NextRequest) {
     if (batchId) {
       // Get batch progress
       try {
-        const batchProgress = await v2Service.aiServiceManager.getBatchProgress(batchId);
+        const batchProgress = await generationJobsService.getBatchProgress(batchId);
         
         return NextResponse.json({
           success: true,
@@ -193,6 +195,7 @@ export async function GET(request: NextRequest) {
           }
         });
       } catch (error) {
+        console.error('❌ Batch progress fetch failed:', error);
         return NextResponse.json(
           { error: `Batch not found: ${batchId}` },
           { status: 404 }
@@ -201,7 +204,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Return general queue status
-    const queueStats = await v2Service.generationQueue.getQueueStats();
+    const queueStats = await generationJobsService.getJobStats();
     
     return NextResponse.json({
       success: true,
@@ -257,7 +260,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    await v2Service.aiServiceManager.cancelGeneration(jobId);
+    await generationJobsService.cancelJob(jobId);
     
     console.log('🛑 Generation cancelled:', jobId);
 

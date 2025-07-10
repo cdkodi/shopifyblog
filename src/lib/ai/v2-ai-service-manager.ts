@@ -2,6 +2,7 @@
 
 import { AIServiceManager } from './ai-service-manager';
 import { V2TopicPromptBuilder } from './v2-topic-prompt-builder';
+import { generationJobsService } from '@/lib/supabase/generation-jobs';
 import { 
   TopicGenerationRequest, 
   V2GenerationResult, 
@@ -14,7 +15,6 @@ import { AIGenerationRequest, ProviderError } from './types';
 
 export class V2AIServiceManager extends AIServiceManager implements IV2AIServiceManager {
   private promptBuilder: V2TopicPromptBuilder;
-  private activeJobs: Map<string, GenerationProgress> = new Map();
 
   constructor(config: any) {
     super(config);
@@ -135,24 +135,14 @@ export class V2AIServiceManager extends AIServiceManager implements IV2AIService
     const estimatedDuration = this.estimateGenerationTime(request);
     const estimatedCompletion = new Date(Date.now() + estimatedDuration * 1000);
 
-    // Initialize progress tracking
-    this.activeJobs.set(jobId, {
-      jobId,
-      articleId: '', // Will be set when article is created
-      phase: 'queued',
-      percentage: 0,
-      currentStep: 'Job queued for processing',
-      estimatedTimeRemaining: estimatedDuration
-    });
+    // Create job in database
+    await generationJobsService.createJob(jobId, request);
 
     // Start background processing
     this.processGenerationJob(jobId, request).catch(error => {
       console.error('Background generation failed:', error);
-      this.updateJobProgress(jobId, {
-        phase: 'queued', // Reset to allow retry
-        percentage: 0,
-        currentStep: `Error: ${error.message}`,
-        estimatedTimeRemaining: undefined
+      generationJobsService.failJob(jobId, error.message).catch(dbError => {
+        console.error('Failed to update job failure in database:', dbError);
       });
     });
 
@@ -163,22 +153,14 @@ export class V2AIServiceManager extends AIServiceManager implements IV2AIService
    * Get current generation progress
    */
   async getGenerationProgress(jobId: string): Promise<GenerationProgress> {
-    const progress = this.activeJobs.get(jobId);
-    if (!progress) {
-      throw new Error(`Job not found: ${jobId}`);
-    }
-    return progress;
+    return await generationJobsService.getJobProgress(jobId);
   }
 
   /**
    * Cancel ongoing generation
    */
   async cancelGeneration(jobId: string): Promise<void> {
-    const progress = this.activeJobs.get(jobId);
-    if (progress) {
-      this.activeJobs.delete(jobId);
-      console.log('🛑 Generation cancelled:', jobId);
-    }
+    await generationJobsService.cancelJob(jobId);
   }
 
   /**
@@ -200,9 +182,7 @@ export class V2AIServiceManager extends AIServiceManager implements IV2AIService
    * Get batch progress for multiple generations
    */
   async getBatchProgress(batchId: string): Promise<GenerationProgress[]> {
-    // In a real implementation, this would track batch relationships
-    // For now, return all active jobs
-    return Array.from(this.activeJobs.values());
+    return await generationJobsService.getBatchProgress(batchId);
   }
 
   /**
@@ -306,7 +286,7 @@ Please provide the optimized version:`;
   private async processGenerationJob(jobId: string, request: TopicGenerationRequest): Promise<void> {
     try {
       // Update progress through phases
-      this.updateJobProgress(jobId, {
+      await generationJobsService.updateJobProgress(jobId, {
         phase: 'analyzing',
         percentage: 10,
         currentStep: 'Analyzing topic and requirements'
@@ -314,7 +294,7 @@ Please provide the optimized version:`;
 
       await this.sleep(1000); // Simulate processing time
 
-      this.updateJobProgress(jobId, {
+      await generationJobsService.updateJobProgress(jobId, {
         phase: 'structuring',
         percentage: 30,
         currentStep: 'Building content structure'
@@ -322,7 +302,7 @@ Please provide the optimized version:`;
 
       await this.sleep(2000);
 
-      this.updateJobProgress(jobId, {
+      await generationJobsService.updateJobProgress(jobId, {
         phase: 'writing',
         percentage: 60,
         currentStep: 'Generating article content'
@@ -331,7 +311,7 @@ Please provide the optimized version:`;
       // Perform actual generation
       const result = await this.generateFromTopic(request);
 
-      this.updateJobProgress(jobId, {
+      await generationJobsService.updateJobProgress(jobId, {
         phase: 'optimizing',
         percentage: 85,
         currentStep: 'Optimizing content for SEO'
@@ -339,30 +319,16 @@ Please provide the optimized version:`;
 
       await this.sleep(1000);
 
-      this.updateJobProgress(jobId, {
-        phase: 'finalizing',
-        percentage: 100,
-        currentStep: 'Generation completed successfully'
-      });
-
-      // Clean up completed job after delay
-      setTimeout(() => this.activeJobs.delete(jobId), 30000);
+      // Mark job as completed with result
+      await generationJobsService.completeJob(jobId, result);
 
     } catch (error) {
-      this.updateJobProgress(jobId, {
-        phase: 'queued',
-        percentage: 0,
-        currentStep: `Generation failed: ${error instanceof Error ? error.message : error}`
-      });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      await generationJobsService.failJob(jobId, errorMessage);
     }
   }
 
-  private updateJobProgress(jobId: string, updates: Partial<GenerationProgress>): void {
-    const current = this.activeJobs.get(jobId);
-    if (current) {
-      this.activeJobs.set(jobId, { ...current, ...updates });
-    }
-  }
+
 
   private generateJobId(prefix = 'job'): string {
     return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

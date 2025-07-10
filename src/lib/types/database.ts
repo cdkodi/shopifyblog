@@ -216,6 +216,110 @@ export type Database = {
         }
         Relationships: []
       }
+      generation_jobs: {
+        Row: {
+          id: string
+          topic_id: string | null
+          article_id: string | null
+          request_data: Json
+          status: string
+          phase: string
+          percentage: number
+          current_step: string
+          estimated_time_remaining: number | null
+          provider_used: string | null
+          cost: number | null
+          word_count: number | null
+          seo_score: number | null
+          result_data: Json | null
+          error_message: string | null
+          created_at: string | null
+          started_at: string | null
+          completed_at: string | null
+          last_updated: string | null
+          attempts: number
+          max_attempts: number
+          last_error: string | null
+        }
+        Insert: {
+          id: string
+          topic_id?: string | null
+          article_id?: string | null
+          request_data: Json
+          status?: string
+          phase?: string
+          percentage?: number
+          current_step?: string
+          estimated_time_remaining?: number | null
+          provider_used?: string | null
+          cost?: number | null
+          word_count?: number | null
+          seo_score?: number | null
+          result_data?: Json | null
+          error_message?: string | null
+          created_at?: string | null
+          started_at?: string | null
+          completed_at?: string | null
+          last_updated?: string | null
+          attempts?: number
+          max_attempts?: number
+          last_error?: string | null
+        }
+        Update: {
+          id?: string
+          topic_id?: string | null
+          article_id?: string | null
+          request_data?: Json
+          status?: string
+          phase?: string
+          percentage?: number
+          current_step?: string
+          estimated_time_remaining?: number | null
+          provider_used?: string | null
+          cost?: number | null
+          word_count?: number | null
+          seo_score?: number | null
+          result_data?: Json | null
+          error_message?: string | null
+          created_at?: string | null
+          started_at?: string | null
+          completed_at?: string | null
+          last_updated?: string | null
+          attempts?: number
+          max_attempts?: number
+          last_error?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generation_jobs_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generation_jobs_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics_with_article_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generation_jobs_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generation_jobs_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles_with_shopify_status"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       seo_keywords: {
         Row: {
           category: string | null
@@ -446,6 +550,99 @@ export type Database = {
         }
         Relationships: []
       }
+      active_generation_jobs: {
+        Row: {
+          id: string | null
+          topic_id: string | null
+          article_id: string | null
+          request_data: Json | null
+          status: string | null
+          phase: string | null
+          percentage: number | null
+          current_step: string | null
+          estimated_time_remaining: number | null
+          provider_used: string | null
+          cost: number | null
+          word_count: number | null
+          seo_score: number | null
+          result_data: Json | null
+          error_message: string | null
+          created_at: string | null
+          started_at: string | null
+          completed_at: string | null
+          last_updated: string | null
+          attempts: number | null
+          max_attempts: number | null
+          last_error: string | null
+          topic_title: string | null
+          topic_keywords: Json | null
+          article_title: string | null
+          article_status: Database["public"]["Enums"]["article_status_v2"] | null
+          age_seconds: number | null
+          processing_duration_seconds: number | null
+        }
+        Insert: {
+          id?: string | null
+          topic_id?: string | null
+          article_id?: string | null
+          request_data?: Json | null
+          status?: string | null
+          phase?: string | null
+          percentage?: number | null
+          current_step?: string | null
+          estimated_time_remaining?: number | null
+          provider_used?: string | null
+          cost?: number | null
+          word_count?: number | null
+          seo_score?: number | null
+          result_data?: Json | null
+          error_message?: string | null
+          created_at?: string | null
+          started_at?: string | null
+          completed_at?: string | null
+          last_updated?: string | null
+          attempts?: number | null
+          max_attempts?: number | null
+          last_error?: string | null
+          topic_title?: string | null
+          topic_keywords?: Json | null
+          article_title?: string | null
+          article_status?: Database["public"]["Enums"]["article_status_v2"] | null
+          age_seconds?: number | null
+          processing_duration_seconds?: number | null
+        }
+        Update: {
+          id?: string | null
+          topic_id?: string | null
+          article_id?: string | null
+          request_data?: Json | null
+          status?: string | null
+          phase?: string | null
+          percentage?: number | null
+          current_step?: string | null
+          estimated_time_remaining?: number | null
+          provider_used?: string | null
+          cost?: number | null
+          word_count?: number | null
+          seo_score?: number | null
+          result_data?: Json | null
+          error_message?: string | null
+          created_at?: string | null
+          started_at?: string | null
+          completed_at?: string | null
+          last_updated?: string | null
+          attempts?: number | null
+          max_attempts?: number | null
+          last_error?: string | null
+          topic_title?: string | null
+          topic_keywords?: Json | null
+          article_title?: string | null
+          article_status?: Database["public"]["Enums"]["article_status_v2"] | null
+          age_seconds?: number | null
+          processing_duration_seconds?: number | null
+        }
+        Relationships: []
+      }
       generation_analytics: {
         Row: {
           ai_model_used: string | null
@@ -456,6 +653,42 @@ export type Database = {
           last_generation: string | null
           successful_generations: number | null
           total_generations: number | null
+        }
+        Relationships: []
+      }
+      generation_job_stats: {
+        Row: {
+          total_jobs: number | null
+          pending_jobs: number | null
+          processing_jobs: number | null
+          completed_jobs: number | null
+          failed_jobs: number | null
+          cancelled_jobs: number | null
+          avg_processing_time_seconds: number | null
+          jobs_last_hour: number | null
+          jobs_last_day: number | null
+        }
+        Insert: {
+          total_jobs?: number | null
+          pending_jobs?: number | null
+          processing_jobs?: number | null
+          completed_jobs?: number | null
+          failed_jobs?: number | null
+          cancelled_jobs?: number | null
+          avg_processing_time_seconds?: number | null
+          jobs_last_hour?: number | null
+          jobs_last_day?: number | null
+        }
+        Update: {
+          total_jobs?: number | null
+          pending_jobs?: number | null
+          processing_jobs?: number | null
+          completed_jobs?: number | null
+          failed_jobs?: number | null
+          cancelled_jobs?: number | null
+          avg_processing_time_seconds?: number | null
+          jobs_last_hour?: number | null
+          jobs_last_day?: number | null
         }
         Relationships: []
       }
@@ -484,9 +717,17 @@ export type Database = {
       }
     }
     Functions: {
+      cleanup_old_generation_jobs: {
+        Args: {}
+        Returns: number
+      }
       get_generation_duration: {
         Args: { article_id: string }
         Returns: unknown
+      }
+      get_job_progress: {
+        Args: { job_id: string }
+        Returns: Json
       }
     }
     Enums: {
