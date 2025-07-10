@@ -163,6 +163,8 @@ export async function GET(request: NextRequest) {
       try {
         const progress = await generationJobsService.getJobProgress(jobId);
         
+        console.log('📊 V2 Queue API - returning progress directly:', progress);
+        
         return NextResponse.json({
           success: true,
           data: progress  // Return progress data directly, not nested
