@@ -308,8 +308,15 @@ Please provide the optimized version:`;
         currentStep: 'Generating article content'
       });
 
-      // Perform actual generation
-      const result = await this.generateFromTopic(request);
+      // Perform actual generation with timeout handling
+      const result = await Promise.race([
+        this.generateFromTopic(request),
+        new Promise<never>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error('Content generation timed out after 2 minutes. Please try again with a shorter article or simpler requirements.'));
+          }, 120000); // 2 minute timeout
+        })
+      ]);
 
       await generationJobsService.updateJobProgress(jobId, {
         phase: 'optimizing',

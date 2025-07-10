@@ -161,6 +161,9 @@ export async function GET(request: NextRequest) {
     if (jobId) {
       // Get specific job progress
       try {
+        // First, cleanup any stuck jobs (runs periodically)
+        await generationJobsService.cleanupStuckJobs();
+        
         const progress = await generationJobsService.getJobProgress(jobId);
         
         console.log('📊 V2 Queue API - returning progress directly:', progress);

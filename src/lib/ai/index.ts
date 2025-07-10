@@ -39,7 +39,7 @@ export function createV2AIService(config: V2ServiceConfig) {
     rateLimitPerMinute: 60,
     rateLimitPerHour: 1000,
     maxRetries: 3,
-    timeout: 30000
+    timeout: 120000 // Increased to 120 seconds (2 minutes) for content generation
   });
 
   const generationQueue = config.enableBackgroundProcessing 

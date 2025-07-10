@@ -226,6 +226,38 @@ export class GenerationJobsService {
   }
 
   /**
+   * Clean up stuck jobs that have been processing too long
+   */
+  async cleanupStuckJobs(): Promise<number> {
+    const { data, error } = await supabase
+      .from('generation_jobs')
+      .update({
+        status: 'failed',
+        phase: 'error',
+        current_step: 'Job timed out - exceeded maximum processing time',
+        error_message: 'Job was stuck in processing for over 5 minutes',
+        completed_at: new Date().toISOString()
+      })
+      .eq('status', 'pending')
+      .in('phase', ['writing', 'optimizing'])
+      .lt('started_at', new Date(Date.now() - 5 * 60 * 1000).toISOString()) // 5 minutes ago
+      .is('completed_at', null)
+      .select('id');
+
+    if (error) {
+      console.error('❌ Failed to cleanup stuck jobs:', error);
+      throw new Error(`Failed to cleanup stuck jobs: ${error.message}`);
+    }
+
+    const cleanedCount = data?.length || 0;
+    if (cleanedCount > 0) {
+      console.log(`🧹 Cleaned up ${cleanedCount} stuck jobs:`, data?.map(job => job.id));
+    }
+
+    return cleanedCount;
+  }
+
+  /**
    * Clean up old completed/failed jobs
    */
   async cleanupOldJobs(): Promise<number> {
