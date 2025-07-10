@@ -3,7 +3,6 @@
 import { AIServiceManager } from './ai-service-manager';
 import { V2TopicPromptBuilder } from './v2-topic-prompt-builder';
 import { generationJobsService } from '@/lib/supabase/generation-jobs';
-import { ArticleService } from '@/lib/supabase/articles';
 import { 
   TopicGenerationRequest, 
   V2GenerationResult, 
@@ -327,43 +326,11 @@ Please provide the optimized version:`;
 
       await this.sleep(1000);
 
-      // Create article in database from generated content
+      // TODO: Add article creation back after verifying generation works
       await generationJobsService.updateJobProgress(jobId, {
         phase: 'finalizing',
         percentage: 95,
-        currentStep: 'Creating article in database'
-      });
-
-      // Use ArticleService to create the article
-
-      const articleData = {
-        title: result.parsedContent?.title || request.topic.title,
-        content: result.parsedContent?.content || result.content || '',
-        metaDescription: result.parsedContent?.metaDescription || '',
-        slug: this.generateSlugFromTitle(result.parsedContent?.title || request.topic.title),
-        status: 'review' as const, // Set to review for editorial approval
-        targetKeywords: result.parsedContent?.keywords || this.promptBuilder.extractKeywords(request.topic),
-        seoScore: result.generationMetadata?.seoScore || 0,
-        wordCount: result.generationMetadata?.wordCount || 0,
-        readingTime: result.generationMetadata?.readingTime || 0,
-        sourceTopicId: request.topic.id
-      };
-
-      console.log('📝 Creating article in database...', { title: articleData.title });
-
-      const articleResult = await ArticleService.createArticle(articleData);
-      
-      if (articleResult.error || !articleResult.data) {
-        throw new Error(`Failed to create article: ${articleResult.error}`);
-      }
-
-      console.log('✅ Article created successfully:', articleResult.data.id);
-
-      // Update job with article ID
-      await generationJobsService.updateJobProgress(jobId, {
-        percentage: 98,
-        currentStep: 'Article created successfully',
-        articleId: articleResult.data.id
+        currentStep: 'Generation completed, article creation temporarily disabled for debugging'
       });
 
       // Mark job as completed with result
