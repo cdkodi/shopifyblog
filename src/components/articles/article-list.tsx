@@ -37,6 +37,7 @@ import {
   FilterIcon
 } from 'lucide-react';
 import { ArticleService } from '@/lib/supabase/articles';
+import { parseArticleKeywords } from '@/lib/utils';
 import type { Database } from '@/lib/types/database';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -419,14 +420,14 @@ export function ArticleList({
                   {/* Target Keywords */}
                   {article.target_keywords && (
                     <div className="flex flex-wrap gap-2">
-                      {JSON.parse(article.target_keywords as string).slice(0, 3).map((keyword: string, index: number) => (
+                      {parseArticleKeywords(article.target_keywords).slice(0, 3).map((keyword: string, index: number) => (
                         <Badge key={index} variant="outline" className="text-xs">
                           {keyword}
                         </Badge>
                       ))}
-                      {JSON.parse(article.target_keywords as string).length > 3 && (
+                      {parseArticleKeywords(article.target_keywords).length > 3 && (
                         <Badge variant="outline" className="text-xs">
-                          +{JSON.parse(article.target_keywords as string).length - 3} more
+                          +{parseArticleKeywords(article.target_keywords).length - 3} more
                         </Badge>
                       )}
                     </div>

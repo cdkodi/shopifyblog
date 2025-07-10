@@ -1,4 +1,5 @@
 import { supabase } from '../supabase'
+import { parseArticleKeywords } from '../utils'
 import type { Database } from '../types/database'
 
 type Article = Database['public']['Tables']['articles']['Row']
@@ -205,7 +206,7 @@ export class ArticleService {
         content: originalArticle.content,
         metaDescription: originalArticle.meta_description || undefined,
         status: 'draft', // Always create duplicates as drafts
-        targetKeywords: originalArticle.target_keywords ? JSON.parse(originalArticle.target_keywords as string) : undefined,
+        targetKeywords: parseArticleKeywords(originalArticle.target_keywords),
         seoScore: originalArticle.seo_score || undefined
       }
 

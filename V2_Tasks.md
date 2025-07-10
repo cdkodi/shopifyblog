@@ -7,7 +7,7 @@ This document provides a detailed task breakdown for implementing V2 features of
 
 ---
 
-## 🎯 **OVERALL PROGRESS: 68/150+ Tasks Completed (45%)**
+## 🎯 **OVERALL PROGRESS: 71/150+ Tasks Completed (47%)**
 
 ### **Phase 1**: 60/60 tasks completed (100%) ✅
 ### **Phase 2**: 0/45 tasks completed (0%) ⚪
@@ -395,7 +395,7 @@ This document provides a detailed task breakdown for implementing V2 features of
 
 ### **✅ COMPLETED WORK**
 
-**📊 Overall Progress: 68/150+ tasks completed (45%)**
+**📊 Overall Progress: 71/150+ tasks completed (47%)**
 
 #### **✅ Task 1: Database Schema Updates - COMPLETED** (14/14 tasks)
 - ✅ All 7 V2 article statuses implemented
@@ -453,6 +453,13 @@ This document provides a detailed task breakdown for implementing V2 features of
 - ✅ Added robust error message extraction logic in frontend components
 
 **Key Achievement**: All error messages now display as readable strings instead of "[object Object]"
+
+#### **✅ Task 4.7: 60% Stuck Issue Resolution - COMPLETED** (3/3 tasks)
+- ✅ Identified queue-based generation getting stuck at 60% during "writing" phase
+- ✅ Replaced queue-based V2 generation with direct V2 generation API
+- ✅ Removed polling mechanism and added immediate result handling with article creation
+
+**Key Achievement**: Generation no longer gets stuck at 60% - now uses reliable direct V2 API that creates articles immediately
 
 ### **⚪ PENDING WORK**
 

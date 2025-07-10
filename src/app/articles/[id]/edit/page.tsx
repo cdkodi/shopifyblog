@@ -15,6 +15,7 @@ import { ArticleService, ArticleFormData } from '@/lib/supabase/articles';
 import { ProductIntegrationManager } from '@/components/articles/product-integration-manager';
 import { ShopifyIntegration } from '@/components/shopify/shopify-integration';
 import { TopicArticleLinks } from '@/components/articles/topic-article-links';
+import { parseArticleKeywords } from '@/lib/utils';
 import type { Database } from '@/lib/types/database';
 
 type Article = Database['public']['Tables']['articles']['Row'];
@@ -70,13 +71,16 @@ export default function ArticleEditPage() {
         setError(error);
       } else if (data) {
         setArticle(data);
+        // Safely parse target_keywords using utility function
+        const targetKeywords = parseArticleKeywords(data.target_keywords);
+
         setArticleData({
           title: data.title,
           content: data.content,
           metaDescription: data.meta_description || '',
           slug: data.slug || '',
           status: data.status as any,
-          targetKeywords: data.target_keywords ? JSON.parse(data.target_keywords as string) : [],
+          targetKeywords,
           scheduledPublishDate: data.scheduled_publish_date || '',
           seoScore: data.seo_score || 0
         });

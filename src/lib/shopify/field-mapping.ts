@@ -1,5 +1,6 @@
 import { Article } from '@/lib/supabase';
 import { ShopifyArticleInput, ShopifyArticle } from './graphql-client';
+import { parseArticleKeywords } from '../utils';
 import { marked } from 'marked';
 import { optimizeContentForShopify } from './content-parser';
 
@@ -26,7 +27,7 @@ export function mapDatabaseToShopifyInput(
   if (article.target_keywords) {
     try {
       const keywords = typeof article.target_keywords === 'string' 
-        ? JSON.parse(article.target_keywords)
+        ? parseArticleKeywords(article.target_keywords)
         : article.target_keywords;
       
       if (Array.isArray(keywords)) {
@@ -251,7 +252,7 @@ export function mapCMSToShopify(cmsArticle: CMSArticle): ShopifyArticleInput {
   if (cmsArticle.target_keywords) {
     try {
       if (typeof cmsArticle.target_keywords === 'string') {
-        tags = JSON.parse(cmsArticle.target_keywords);
+        tags = parseArticleKeywords(cmsArticle.target_keywords);
       } else if (Array.isArray(cmsArticle.target_keywords)) {
         tags = cmsArticle.target_keywords;
       }

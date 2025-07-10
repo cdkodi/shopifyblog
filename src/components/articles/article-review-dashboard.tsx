@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/lib/supabase';
+import { parseArticleKeywords } from '@/lib/utils';
 import Link from 'next/link';
 
 interface Article {
@@ -332,7 +333,7 @@ export function ArticleReviewDashboard() {
                     {(() => {
                       const keywords = article.target_keywords 
                         ? (typeof article.target_keywords === 'string' 
-                            ? JSON.parse(article.target_keywords) 
+                            ? parseArticleKeywords(article.target_keywords) 
                             : article.target_keywords)
                         : [];
                       
