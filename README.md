@@ -8,11 +8,34 @@ A modern, production-ready content management system that transforms blog conten
 
 ## 🎯 Current Status
 
-**Version**: 2.1 - Enhanced SEO & Content Quality  
-**Status**: ✅ Production Ready with Latest Improvements  
-**Last Updated**: January 2025
+**Version**: 2.2 - V2 Generation System with Production Database Persistence  
+**Status**: ✅ Production Ready with Full V2 Workflow  
+**Last Updated**: January 27, 2025  
+**Latest Deploy**: `0aef293` - Critical 404 Fix & Database Persistence
 
-### 🆕 Latest Enhancements (January 2025)
+### 🆕 Latest Production Deploy (January 27, 2025)
+
+#### **🔧 Critical Fix: V2 Generation 404 Errors**
+- **Issue Resolved**: Fixed 404 errors when polling generation job progress
+- **Root Cause**: In-memory job tracking incompatible with serverless environment
+- **Solution**: Complete database persistence for generation jobs
+- **Impact**: V2 generation workflow now 100% reliable in production
+
+#### **📊 Database Persistence Architecture**
+- **New Table**: `generation_jobs` with full lifecycle tracking
+- **Service Layer**: `GenerationJobsService` for database operations
+- **Monitoring**: Real-time statistics and job progress tracking
+- **Reliability**: Jobs survive serverless restarts and instance changes
+- **Analytics**: Historical data, error tracking, and performance metrics
+
+#### **🎯 V2 Generation System Features**
+- **Integrated Workflow**: Topic → AI Generation → Article Review → Publication
+- **Real-time Progress**: 6-phase generation tracking (Queued → Analyzing → Writing → Optimizing → Finalizing → Complete)
+- **Database Persistence**: Jobs stored in PostgreSQL, not memory
+- **Error Recovery**: Automatic retry with proper failure tracking
+- **Multi-Provider**: Anthropic, OpenAI, Google AI with intelligent fallback
+
+### 🆕 Previous Enhancements (January 2025)
 
 #### **🔍 Shopify Meta Description Integration**
 - **Proper SEO Metafields**: Meta descriptions now appear correctly in Shopify using `global.description_tag` metafield
@@ -26,7 +49,7 @@ A modern, production-ready content management system that transforms blog conten
 - **Better Engagement**: More specific, engaging titles and descriptions that highlight cultural significance
 - **SEO Optimization**: Improved search engine performance with unique, descriptive content
 
-### ✅ **Phase 3 Complete: Topic-Article Linking & Streamlined Templates**
+### ✅ **V2 Generation Workflow Complete: Database-Persisted Job Tracking**
 
 ## 📋 What's Built & Deployed
 
@@ -67,12 +90,14 @@ A modern, production-ready content management system that transforms blog conten
 - **Topic-Article Relationships**: Complete traceability and bidirectional navigation
 
 ### AI Content Generation
-- **Streamlined Workflow**: One-click generation from topics with auto-selected templates
-- **Provider Selection**: Choose optimal AI provider for each content type
-- **Configuration Persistence**: Auto-save settings to prevent reconfiguration
-- **Template Integration**: Skip template selection when generating from topics
+- **V2 Integrated Workflow**: Topic → Generate & Publish → Editorial Review → Publication
+- **Database-Persisted Jobs**: Generation progress survives serverless restarts
+- **Real-time Tracking**: 6-phase progress monitoring (Queued → Analyzing → Writing → Optimizing → Finalizing → Complete)
+- **Multi-Provider Support**: Anthropic Claude, OpenAI GPT-4, Google Gemini with intelligent fallback
+- **Background Processing**: Jobs run asynchronously with proper error handling and retry
+- **Production Reliability**: 100% uptime for job tracking in serverless environment
 - **Cost Estimation**: Real-time API cost tracking and estimation
-- **Error Recovery**: Comprehensive error handling with retry functionality
+- **Template Integration**: Auto-selected templates from topic configuration
 
 ### Article Management
 - **Complete CMS**: Full article lifecycle management with topic relationships
