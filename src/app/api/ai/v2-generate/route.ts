@@ -4,6 +4,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDefaultV2Service } from '@/lib/ai';
 import { TopicGenerationRequest } from '@/lib/ai/v2-types';
 
+// Helper function to generate slug from title
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .trim();
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -57,6 +67,39 @@ export async function POST(request: NextRequest) {
       provider: result.finalProvider
     });
 
+    // Optional: Create article in database if requested
+    let createdArticle = null;
+    if (body.createArticle) {
+      try {
+        const { ArticleService } = await import('@/lib/supabase/articles');
+        
+        const articleData = {
+          title: result.parsedContent?.title || generationRequest.topic.title,
+          content: result.parsedContent?.content || result.content || '',
+          metaDescription: result.parsedContent?.metaDescription || '',
+          slug: generateSlug(result.parsedContent?.title || generationRequest.topic.title),
+          status: 'review' as const,
+          targetKeywords: result.parsedContent?.keywords || [],
+          seoScore: result.generationMetadata?.seoScore || 0,
+          wordCount: result.generationMetadata?.wordCount || 0,
+          readingTime: result.generationMetadata?.readingTime || 0,
+          sourceTopicId: generationRequest.topic.id
+        };
+
+        console.log('📝 Creating article in database...', { title: articleData.title });
+        const articleResult = await ArticleService.createArticle(articleData);
+        
+        if (articleResult.error || !articleResult.data) {
+          console.error('❌ Failed to create article:', articleResult.error);
+        } else {
+          createdArticle = articleResult.data;
+          console.log('✅ Article created successfully:', articleResult.data.id);
+        }
+      } catch (error) {
+        console.error('❌ Error creating article:', error);
+      }
+    }
+
     // Return enhanced response with V2 metadata
     return NextResponse.json({
       success: true,
@@ -91,7 +134,18 @@ export async function POST(request: NextRequest) {
           seoOptimized: generationRequest.optimizeForSEO,
           templateSpecific: !!generationRequest.topic.template,
           structureEnhanced: true
-        }
+        },
+
+        // Created article (if requested)
+        ...(createdArticle && {
+          createdArticle: {
+            id: createdArticle.id,
+            title: createdArticle.title,
+            slug: createdArticle.slug,
+            status: createdArticle.status,
+            createdAt: createdArticle.created_at
+          }
+        })
       },
       version: 'v2.1'
     });
