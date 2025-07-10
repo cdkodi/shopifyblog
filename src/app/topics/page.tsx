@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { ProtectedRoute } from '@/components/protected-route'
 import { TopicDashboard } from '../../components/topic-dashboard'
 import { TopicFormEnhanced } from '../../components/topic-form-enhanced'
 import type { Database } from '../../lib/types/database'
@@ -111,38 +112,40 @@ export default function TopicsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        {viewMode === 'dashboard' && (
-          <TopicDashboard
-            key={refreshKey}
-            onCreateTopic={handleCreateTopic}
-            onEditTopic={handleEditTopic}
-            onGenerateContent={handleGenerateContent}
-          />
-        )}
-        
-        {(viewMode === 'create' || viewMode === 'edit') && (
-          <div className="max-w-4xl mx-auto">
-            {/* Breadcrumb */}
-            <div className="mb-6">
-              <button
-                onClick={handleFormCancel}
-                className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-              >
-                ← Back to Dashboard
-              </button>
-            </div>
-            
-            <TopicFormEnhanced
-              initialData={editingTopic ? dbTopicToFormData(editingTopic) : undefined}
-              topicId={editingTopic?.id}
-              onSuccess={handleFormSuccess}
-              onCancel={handleFormCancel}
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto px-4 py-8">
+          {viewMode === 'dashboard' && (
+            <TopicDashboard
+              key={refreshKey}
+              onCreateTopic={handleCreateTopic}
+              onEditTopic={handleEditTopic}
+              onGenerateContent={handleGenerateContent}
             />
-          </div>
-        )}
+          )}
+          
+          {(viewMode === 'create' || viewMode === 'edit') && (
+            <div className="max-w-4xl mx-auto">
+              {/* Breadcrumb */}
+              <div className="mb-6">
+                <button
+                  onClick={handleFormCancel}
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                >
+                  ← Back to Dashboard
+                </button>
+              </div>
+              
+              <TopicFormEnhanced
+                initialData={editingTopic ? dbTopicToFormData(editingTopic) : undefined}
+                topicId={editingTopic?.id}
+                onSuccess={handleFormSuccess}
+                onCancel={handleFormCancel}
+              />
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </ProtectedRoute>
   )
 } 

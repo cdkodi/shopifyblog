@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { ProtectedRoute } from '@/components/protected-route';
 import { TemplateSelector, ContentTemplate } from '@/components/content-generation/template-selector';
 import { ContentConfiguration, ContentConfiguration as ContentConfigInterface } from '@/components/content-generation/content-configuration';
 import { ContentTemplateService } from '@/lib/supabase/content-templates';
@@ -237,9 +238,10 @@ function ContentGenerationInner() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
@@ -519,6 +521,7 @@ function ContentGenerationInner() {
         </div>
       </div>
     </div>
+    </ProtectedRoute>
   );
 }
 

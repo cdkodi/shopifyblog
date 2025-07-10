@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { ProtectedRoute } from '@/components/protected-route';
 import { ArticleList } from '@/components/articles/article-list';
 import { ArticleStats } from '@/components/articles/article-stats';
 import { Button } from '@/components/ui/button';
@@ -97,19 +98,20 @@ export default function ArticlesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Articles</h1>
-            <p className="text-gray-600 mt-1">Manage your content library</p>
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Articles</h1>
+              <p className="text-gray-600 mt-1">Manage your content library</p>
+            </div>
+            <Button onClick={handleCreateNew} className="flex items-center gap-2">
+              <PlusIcon className="w-4 h-4" />
+              Create New Article
+            </Button>
           </div>
-          <Button onClick={handleCreateNew} className="flex items-center gap-2">
-            <PlusIcon className="w-4 h-4" />
-            Create New Article
-          </Button>
-        </div>
 
         {/* Stats */}
         <ArticleStats stats={stats} />
@@ -180,5 +182,6 @@ export default function ArticlesPage() {
         />
       </div>
     </div>
+    </ProtectedRoute>
   );
 } 
