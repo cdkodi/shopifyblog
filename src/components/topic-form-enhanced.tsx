@@ -345,12 +345,23 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
     
     // Check if form is actually valid by checking required fields manually
     const isFormActuallyValid = watchedValues.title && watchedValues.title.trim().length >= 3
+    const hasTemplate = watchedValues.template && watchedValues.template.trim().length > 0
     
-    console.log('✅ Manual validation:', { isFormActuallyValid })
+    console.log('✅ Manual validation:', { 
+      isFormActuallyValid, 
+      hasTemplate,
+      template: watchedValues.template 
+    })
     
     if (!isValid && !isFormActuallyValid) {
-      console.log('❌ Validation failed - showing error')
-      setSubmitError('Please fill in all required fields before generating content')
+      console.log('❌ Validation failed - title issue')
+      setSubmitError('Please enter a topic title with at least 3 characters')
+      return
+    }
+    
+    if (!hasTemplate) {
+      console.log('❌ Validation failed - no template selected')
+      setSubmitError('Please select a content template before generating content')
       return
     }
 
@@ -900,6 +911,15 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
             <p className="text-sm text-red-600">{submitError}</p>
           </div>
         )}
+        
+        {/* Template Required Warning */}
+        {watchedValues.title && watchedValues.title.trim().length >= 3 && !watchedValues.template && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+            <p className="text-sm text-yellow-700">
+              📝 <strong>Template Required:</strong> Please select a content template above to enable the "Generate & Publish" feature.
+            </p>
+          </div>
+        )}
 
         {/* Debug Info - Remove in production */}
         {process.env.NODE_ENV === 'development' && (
@@ -917,11 +937,14 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
           {(() => {
             // More robust validation check
             const isFormActuallyValid = watchedValues.title && watchedValues.title.trim().length >= 3
-            const shouldDisable = !isValid && !isFormActuallyValid
+            const hasTemplate = watchedValues.template && watchedValues.template.trim().length > 0
+            const shouldDisable = (!isValid && !isFormActuallyValid) || !hasTemplate
             
             console.log('🔍 Button state check:', {
               isValid,
               isFormActuallyValid,
+              hasTemplate,
+              template: watchedValues.template,
               shouldDisable,
               isSubmitting,
               isGenerating,
