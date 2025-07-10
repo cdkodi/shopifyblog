@@ -284,59 +284,72 @@ Please provide the optimized version:`;
   // Private helper methods
 
   private async processGenerationJob(jobId: string, request: TopicGenerationRequest): Promise<void> {
+    console.log('🚀 Starting background generation job:', jobId);
+    
     try {
-      // Update progress through phases
+      // Phase 1: Analyzing
       await generationJobsService.updateJobProgress(jobId, {
         phase: 'analyzing',
-        percentage: 10,
+        percentage: 20,
         currentStep: 'Analyzing topic and requirements'
       });
 
-      await this.sleep(1000); // Simulate processing time
-
-      await generationJobsService.updateJobProgress(jobId, {
-        phase: 'structuring',
-        percentage: 30,
-        currentStep: 'Building content structure'
-      });
-
-      await this.sleep(2000);
-
+      // Phase 2: Generating (use the working direct generation)
       await generationJobsService.updateJobProgress(jobId, {
         phase: 'writing',
         percentage: 60,
         currentStep: 'Generating article content'
       });
 
-      // Perform actual generation with timeout handling
-      const result = await Promise.race([
-        this.generateFromTopic(request),
-        new Promise<never>((_, reject) => {
-          setTimeout(() => {
-            reject(new Error('Content generation timed out after 2 minutes. Please try again with a shorter article or simpler requirements.'));
-          }, 120000); // 2 minute timeout
-        })
-      ]);
+      console.log('📝 Calling direct generation for job:', jobId);
+      const result = await this.generateFromTopic(request);
+      console.log('✅ Direct generation completed for job:', jobId);
 
-      await generationJobsService.updateJobProgress(jobId, {
-        phase: 'optimizing',
-        percentage: 85,
-        currentStep: 'Optimizing content for SEO'
-      });
-
-      await this.sleep(1000);
-
-      // TODO: Add article creation back after verifying generation works
+      // Phase 3: Article Creation
       await generationJobsService.updateJobProgress(jobId, {
         phase: 'finalizing',
-        percentage: 95,
-        currentStep: 'Generation completed, article creation temporarily disabled for debugging'
+        percentage: 90,
+        currentStep: 'Creating article in database'
+      });
+
+      // Import ArticleService and create article
+      const { ArticleService } = await import('@/lib/supabase/articles');
+
+      const articleData = {
+        title: result.parsedContent?.title || request.topic.title,
+        content: result.parsedContent?.content || result.content || '',
+        metaDescription: result.parsedContent?.metaDescription || '',
+        slug: this.generateSlugFromTitle(result.parsedContent?.title || request.topic.title),
+        status: 'review' as const,
+        targetKeywords: result.parsedContent?.keywords || this.promptBuilder.extractKeywords(request.topic),
+        seoScore: result.generationMetadata?.seoScore || 0,
+        wordCount: result.generationMetadata?.wordCount || 0,
+        readingTime: result.generationMetadata?.readingTime || 0,
+        sourceTopicId: request.topic.id
+      };
+
+      console.log('📝 Creating article in database for job:', jobId, { title: articleData.title });
+      const articleResult = await ArticleService.createArticle(articleData);
+      
+      if (articleResult.error || !articleResult.data) {
+        throw new Error(`Failed to create article: ${articleResult.error}`);
+      }
+
+      console.log('✅ Article created successfully for job:', jobId, 'Article ID:', articleResult.data.id);
+
+      // Phase 4: Completion
+      await generationJobsService.updateJobProgress(jobId, {
+        percentage: 100,
+        currentStep: 'Article created successfully',
+        articleId: articleResult.data.id
       });
 
       // Mark job as completed with result
       await generationJobsService.completeJob(jobId, result);
+      console.log('🎉 Job completed successfully:', jobId);
 
     } catch (error) {
+      console.error('❌ Background generation job failed:', jobId, error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       await generationJobsService.failJob(jobId, errorMessage);
     }
