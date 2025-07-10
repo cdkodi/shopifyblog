@@ -271,9 +271,30 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
             setIsGenerating(false)
             setSubmitError(result.data.currentStep || 'Generation failed')
           }
+        } else {
+          // Handle API error objects properly
+          let errorMessage = 'Failed to check progress';
+          if (result.error) {
+            if (typeof result.error === 'string') {
+              errorMessage = result.error;
+            } else if (result.error.message) {
+              errorMessage = result.error.message;
+            }
+          }
+          console.error('Progress polling failed:', errorMessage);
         }
       } catch (error) {
         console.error('Failed to poll generation progress:', error)
+        // Only set error if we're still generating to avoid overriding other errors
+        if (isGenerating) {
+          let errorMessage = 'Failed to check progress';
+          if (error instanceof Error) {
+            errorMessage = error.message;
+          } else if (typeof error === 'string') {
+            errorMessage = error;
+          }
+          setSubmitError(errorMessage);
+        }
       }
     }
 
@@ -370,7 +391,16 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to queue generation')
+        // Handle API error objects properly
+        let errorMessage = 'Failed to queue generation';
+        if (result.error) {
+          if (typeof result.error === 'string') {
+            errorMessage = result.error;
+          } else if (result.error.message) {
+            errorMessage = result.error.message;
+          }
+        }
+        throw new Error(errorMessage)
       }
 
       setGenerationProgress({
@@ -383,7 +413,14 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
 
     } catch (error) {
       console.error('Generation failed:', error)
-      setSubmitError(error instanceof Error ? error.message : 'Failed to start generation')
+      // Ensure error message is always a string
+      let errorMessage = 'Failed to start generation';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      setSubmitError(errorMessage)
       setIsGenerating(false)
     }
   }

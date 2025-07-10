@@ -99,14 +99,12 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ V2 Generation error:', error);
     
+    const errorMessage = error instanceof Error ? error.message : 'Generation failed';
+    
     return NextResponse.json(
       {
         success: false,
-        error: {
-          message: error instanceof Error ? error.message : 'Generation failed',
-          type: 'generation_error',
-          code: 'V2_GENERATION_FAILED'
-        },
+        error: errorMessage,
         version: 'v2.1'
       },
       { status: 500 }

@@ -117,13 +117,12 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ Queue operation failed:', error);
     
+    const errorMessage = error instanceof Error ? error.message : 'Queue operation failed';
+    
     return NextResponse.json(
       {
         success: false,
-        error: {
-          message: error instanceof Error ? error.message : 'Queue operation failed',
-          type: 'queue_error'
-        }
+        error: errorMessage
       },
       { status: 500 }
     );
@@ -226,13 +225,12 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('❌ Queue status check failed:', error);
     
+    const errorMessage = error instanceof Error ? error.message : 'Queue status check failed';
+    
     return NextResponse.json(
       {
         success: false,
-        error: {
-          message: error instanceof Error ? error.message : 'Queue status check failed',
-          type: 'queue_status_error'
-        }
+        error: errorMessage
       },
       { status: 500 }
     );
@@ -275,13 +273,12 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error('❌ Job cancellation failed:', error);
     
+    const errorMessage = error instanceof Error ? error.message : 'Job cancellation failed';
+    
     return NextResponse.json(
       {
         success: false,
-        error: {
-          message: error instanceof Error ? error.message : 'Job cancellation failed',
-          type: 'cancellation_error'
-        }
+        error: errorMessage
       },
       { status: 500 }
     );

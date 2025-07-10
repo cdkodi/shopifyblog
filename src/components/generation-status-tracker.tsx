@@ -110,7 +110,16 @@ export function GenerationStatusTracker({
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to fetch progress')
+        // Handle API error objects properly
+        let errorMessage = 'Failed to fetch progress';
+        if (result.error) {
+          if (typeof result.error === 'string') {
+            errorMessage = result.error;
+          } else if (result.error.message) {
+            errorMessage = result.error.message;
+          }
+        }
+        throw new Error(errorMessage)
       }
 
       if (result.success && result.data) {
@@ -126,7 +135,14 @@ export function GenerationStatusTracker({
       }
     } catch (err) {
       console.error('Failed to fetch generation progress:', err)
-      setError(err instanceof Error ? err.message : 'Failed to fetch progress')
+      // Ensure error message is always a string
+      let errorMessage = 'Failed to fetch progress';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }
