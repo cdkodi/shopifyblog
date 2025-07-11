@@ -81,6 +81,56 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     console.log('✅ Articles debug completed successfully');
 
+    // Test article creation (to debug why V2 generation articles aren't being created)
+    let articleCreationTest = null;
+    try {
+      console.log('🧪 Testing article creation...');
+      const testArticleData = {
+        title: 'Debug Test Article',
+        content: 'This is a test article to debug creation issues.',
+        metaDescription: 'Test meta description',
+        slug: 'debug-test-article-' + Date.now(),
+        status: 'draft' as const,
+        targetKeywords: ['test', 'debug'],
+        seoScore: 50,
+        wordCount: 10,
+        readingTime: 1
+      };
+
+      // Import ArticleService dynamically to test
+      const { ArticleService } = await import('@/lib/supabase/articles');
+      const createResult = await ArticleService.createArticle(testArticleData);
+      
+      if (createResult.error) {
+        console.error('❌ Test article creation failed:', createResult.error);
+        articleCreationTest = {
+          success: false,
+          error: createResult.error,
+          testData: testArticleData
+        };
+      } else {
+        console.log('✅ Test article created successfully:', createResult.data?.id);
+        articleCreationTest = {
+          success: true,
+          articleId: createResult.data?.id,
+          articleTitle: createResult.data?.title
+        };
+        
+        // Clean up test article
+        if (createResult.data?.id) {
+          await ArticleService.deleteArticle(createResult.data.id);
+          console.log('🧹 Test article cleaned up');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Article creation test failed:', error);
+      articleCreationTest = {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        type: 'exception'
+      };
+    }
+
     return NextResponse.json({
       success: true,
       debug: {
@@ -109,7 +159,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           healthCheck: 'passed',
           recentArticles: 'passed',
           fullQuery: 'passed'
-        }
+        },
+        articleCreationTest
       }
     });
 

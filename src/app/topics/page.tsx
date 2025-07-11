@@ -188,20 +188,35 @@ export default function TopicsPage() {
       });
 
       console.log('🎯 Direct generation completed successfully!');
+      console.log('📊 Full API response structure:', JSON.stringify(result, null, 2));
       
       // Navigate to article or show success
-      if (result.data?.articleCreation?.article?.id) {
+      if (result.data?.articleCreation?.success && result.data?.articleCreation?.article?.id) {
+        const articleId = result.data.articleCreation.article.id;
+        console.log('✅ Article created successfully, navigating to:', articleId);
+        
         setTimeout(() => {
           setIsGenerating(false);
           setGenerationProgress(null);
-          router.push(`/articles/${result.data.articleCreation.article.id}/edit`);
+          router.push(`/articles/${articleId}/edit`);
         }, 2000);
       } else {
+        // Handle failed article creation
+        console.log('⚠️ Article creation failed or missing article ID');
+        console.log('📊 Article creation data:', result.data?.articleCreation);
+        
+        let errorMsg = 'Content generated successfully, but failed to create article record.';
+        if (result.data?.articleCreation?.error) {
+          errorMsg += ` Error: ${result.data.articleCreation.error}`;
+        }
+        
+        setGenerationError(errorMsg);
+        
         setTimeout(() => {
           setIsGenerating(false);
           setGenerationProgress(null);
           setRefreshKey(prev => prev + 1); // Refresh dashboard
-        }, 2000);
+        }, 3000);
       }
 
     } catch (error) {
