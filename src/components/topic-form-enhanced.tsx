@@ -408,11 +408,13 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
 
       console.log('🎯 Direct generation completed successfully!')
       
-      // Set generation result and stop generating state
+      // Set generation result and stop generating state - FIXED to extract from correct V2 API response structure
       setGenerationResult({
-        content: result.content,
-        article: result.article,
-        seoScore: result.seoScore,
+        content: result.data?.content || result.content,
+        article: result.data?.articleCreation?.article || result.article,
+        articleId: result.data?.articleCreation?.article?.id,
+        wordCount: result.data?.qualityMetrics?.wordCount || result.data?.generationMetadata?.wordCount,
+        seoScore: result.data?.qualityMetrics?.seoScore || result.data?.generationMetadata?.seoScore,
         phase: 'completed'
       })
       
