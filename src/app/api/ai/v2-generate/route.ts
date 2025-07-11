@@ -15,6 +15,12 @@ function generateSlug(title: string): string {
     .trim();
 }
 
+// Helper function to validate UUID format
+function isValidUUID(uuid: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[4][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -30,8 +36,17 @@ export async function POST(request: NextRequest) {
     console.log('🚀 V2 AI Generation request:', {
       title: body.topic.title,
       template: body.topic.template,
-      optimizeForSEO: body.optimizeForSEO
+      optimizeForSEO: body.optimizeForSEO,
+      topicId: body.topic.id,
+      topicIdValid: body.topic.id ? isValidUUID(body.topic.id) : 'N/A'
     });
+
+    // Validate topic ID if provided
+    if (body.topic.id && !isValidUUID(body.topic.id)) {
+      console.warn('⚠️ Invalid topic ID format provided:', body.topic.id);
+      // Set to null instead of using invalid ID
+      body.topic.id = null;
+    }
 
     // Build V2 generation request
     const generationRequest: TopicGenerationRequest = {
@@ -67,6 +82,19 @@ export async function POST(request: NextRequest) {
       processingTime: `${processingTime}ms`,
       provider: result.finalProvider
     });
+
+    // Check if generation was successful
+    if (!result.success) {
+      console.error('❌ V2 Generation failed:', result.error);
+      return NextResponse.json(
+        {
+          success: false,
+          error: result.error || 'Generation failed',
+          version: 'v2.1'
+        },
+        { status: 500 }
+      );
+    }
 
     // Check if fallback was used
     const fallbackUsed = result.attempts && result.attempts.length > 1;
@@ -107,7 +135,8 @@ export async function POST(request: NextRequest) {
           seoScore: result.generationMetadata?.seoScore || 0,
           wordCount: result.generationMetadata?.wordCount || 0,
           readingTime: result.generationMetadata?.readingTime || 0,
-          sourceTopicId: generationRequest.topic.id
+          // Only include sourceTopicId if it's a valid UUID
+          sourceTopicId: (generationRequest.topic.id && isValidUUID(generationRequest.topic.id)) ? generationRequest.topic.id : null
         };
 
         console.log('📝 Creating article in database...', { 
@@ -117,7 +146,8 @@ export async function POST(request: NextRequest) {
           seoScore: articleData.seoScore,
           hasContent: !!articleData.content,
           contentLength: articleData.content.length,
-          contentPreview: articleData.content.substring(0, 100) || 'No content'
+          sourceTopicId: articleData.sourceTopicId,
+          sourceTopicIdValid: articleData.sourceTopicId ? isValidUUID(articleData.sourceTopicId) : 'N/A'
         });
         
         const articleResult = await ArticleService.createArticle(articleData);
@@ -130,7 +160,8 @@ export async function POST(request: NextRequest) {
         
         if (articleResult.error || !articleResult.data) {
           console.error('❌ Failed to create article:', articleResult.error);
-          throw new Error(`Article creation failed: ${articleResult.error}`);
+          articleCreationError = articleResult.error;
+          // Don't throw - let the generation response succeed even if article creation fails
         } else {
           createdArticle = articleResult.data;
           console.log('✅ Article created successfully:', {
@@ -152,7 +183,6 @@ export async function POST(request: NextRequest) {
         console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
         articleCreationError = error instanceof Error ? error.message : String(error);
         // Don't throw here - let the generation response still work
-        // but include the error in the response
       }
     }
 

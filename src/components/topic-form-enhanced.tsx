@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Palette, FileText, Layout, Sparkles, Target, Clock, Zap, Eye, CheckCircle, AlertCircle } from 'lucide-react'
+import { Palette, FileText, Layout, Sparkles, Target, Clock, Zap, Eye, CheckCircle, AlertCircle, Info } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
@@ -397,17 +397,6 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
         throw new Error(errorMessage)
       }
 
-      // Update progress to completion
-      setGenerationProgress({
-        jobId: `direct_${Date.now()}`,
-        phase: 'completed',
-        percentage: 100,
-        currentStep: result.article ? 'Article created successfully!' : 'Content generated successfully!',
-        estimatedTimeRemaining: 0
-      })
-
-      console.log('🎯 Direct generation completed successfully!')
-      
       // Set generation result and stop generating state - FIXED to extract from correct V2 API response structure
       setGenerationResult({
         content: result.data?.content || result.content,
@@ -415,8 +404,38 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
         articleId: result.data?.articleCreation?.article?.id,
         wordCount: result.data?.qualityMetrics?.wordCount || result.data?.generationMetadata?.wordCount,
         seoScore: result.data?.qualityMetrics?.seoScore || result.data?.generationMetadata?.seoScore,
-        phase: 'completed'
+        phase: 'completed',
+        // Include article creation status
+        articleCreated: result.data?.articleCreation?.success || false,
+        articleCreationError: result.data?.articleCreation?.error || null
       })
+      
+      // Show success message even if article creation failed
+      if (result.data?.articleCreation?.success) {
+        setGenerationProgress({
+          jobId: `direct_${Date.now()}`,
+          phase: 'completed',
+          percentage: 100,
+          currentStep: 'Article created successfully!',
+          estimatedTimeRemaining: 0
+        })
+      } else if (result.data?.articleCreation?.error) {
+        setGenerationProgress({
+          jobId: `direct_${Date.now()}`,
+          phase: 'completed',
+          percentage: 100,
+          currentStep: 'Content generated! Article creation failed - you can still review the content.',
+          estimatedTimeRemaining: 0
+        })
+      } else {
+        setGenerationProgress({
+          jobId: `direct_${Date.now()}`,
+          phase: 'completed',
+          percentage: 100,
+          currentStep: 'Content generated successfully!',
+          estimatedTimeRemaining: 0
+        })
+      }
       
       // Stop generating after a brief delay to show completion
       setTimeout(() => {
@@ -568,11 +587,41 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
               <span className="ml-2 font-medium">{generationResult.seoScore || 'N/A'}/100</span>
             </div>
           </div>
+          
+          {/* Article Creation Status */}
+          {generationResult.articleCreated ? (
+            <div className="mt-3 p-2 bg-green-100 border border-green-200 rounded">
+              <div className="flex items-center gap-2 text-sm text-green-800">
+                <CheckCircle className="h-4 w-4" />
+                <span>Article successfully saved to database</span>
+              </div>
+            </div>
+          ) : generationResult.articleCreationError ? (
+            <div className="mt-3 p-2 bg-amber-100 border border-amber-200 rounded">
+              <div className="flex items-center gap-2 text-sm text-amber-800">
+                <AlertCircle className="h-4 w-4" />
+                <span>Article creation failed: {generationResult.articleCreationError}</span>
+              </div>
+              <div className="text-xs text-amber-700 mt-1">
+                Content was generated successfully, but couldn't be saved to database. You can copy the content manually.
+              </div>
+            </div>
+          ) : (
+            <div className="mt-3 p-2 bg-blue-100 border border-blue-200 rounded">
+              <div className="flex items-center gap-2 text-sm text-blue-800">
+                <Info className="h-4 w-4" />
+                <span>Content generated without database save</span>
+              </div>
+            </div>
+          )}
+          
           <div className="mt-3 flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => window.open(`/articles/${generationResult.articleId}/edit`, '_blank')}>
-              <Eye className="h-4 w-4 mr-1" />
-              Review Article
-            </Button>
+            {generationResult.articleCreated && generationResult.articleId && (
+              <Button size="sm" variant="outline" onClick={() => window.open(`/articles/${generationResult.articleId}/edit`, '_blank')}>
+                <Eye className="h-4 w-4 mr-1" />
+                Review Article
+              </Button>
+            )}
             <Button size="sm" variant="outline" onClick={() => setGenerationResult(null)}>
               Dismiss
             </Button>
