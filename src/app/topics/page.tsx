@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { CheckCircle, Clock, AlertCircle, FileText, Sparkles, Target, Layout, Eye } from 'lucide-react'
+import { CheckCircle, Clock, AlertCircle, FileText, Sparkles, Target, Layout, Eye, RefreshCw } from 'lucide-react'
 import type { Database } from '../../lib/types/database'
 import { dbTopicToFormData } from '../../lib/types/database'
 
@@ -80,10 +80,23 @@ export default function TopicsPage() {
   const handleGenerateContent = (topic: TopicWithStatus) => {
     console.log('🚀 Generate clicked for topic:', topic);
     console.log('📊 Style preferences:', topic.style_preferences);
+    console.log('🔍 Topic structure:', {
+      id: topic.id,
+      idType: typeof topic.id,
+      title: topic.topic_title,
+      hasStylePrefs: !!topic.style_preferences
+    });
     
     // Check if topic has required data
     if (!topic.topic_title) {
       alert('Topic must have a title to generate content');
+      return;
+    }
+
+    // Enhanced debugging for Safari issues
+    if (!topic.id) {
+      console.error('❌ SAFARI DEBUG: Topic has no ID!', topic);
+      alert('Topic is missing an ID. Please refresh the page and try again.');
       return;
     }
 
@@ -99,8 +112,20 @@ export default function TopicsPage() {
       return;
     }
 
+    console.log('✅ SAFARI DEBUG: Topic validation passed', {
+      id: topic.id,
+      template: template,
+      title: topic.topic_title
+    });
+
     setSelectedTopicForGeneration(topic);
     setShowGenerationDialog(true);
+  }
+
+  // Add force refresh function
+  const forceRefreshTopics = () => {
+    console.log('🔄 Force refreshing topics data...');
+    setRefreshKey(prev => prev + 1);
   }
 
   const confirmGeneration = async () => {
@@ -343,12 +368,30 @@ export default function TopicsPage() {
           )}
 
           {viewMode === 'dashboard' && (
-            <TopicDashboard
-              key={refreshKey}
-              onCreateTopic={handleCreateTopic}
-              onEditTopic={handleEditTopic}
-              onGenerateContent={handleGenerateContent}
-            />
+            <>
+              {/* Page Header with Refresh Button */}
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">Topics Dashboard</h1>
+                  <p className="text-gray-600">Manage and generate articles from your topics</p>
+                </div>
+                <button
+                  onClick={forceRefreshTopics}
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  title="Force refresh topics data (helpful if you see caching issues)"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  <span>Refresh</span>
+                </button>
+              </div>
+              
+              <TopicDashboard
+                key={refreshKey}
+                onCreateTopic={handleCreateTopic}
+                onEditTopic={handleEditTopic}
+                onGenerateContent={handleGenerateContent}
+              />
+            </>
           )}
           
           {(viewMode === 'create' || viewMode === 'edit') && (
