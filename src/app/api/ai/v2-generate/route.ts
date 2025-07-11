@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     // Check if fallback was used
     const fallbackUsed = result.attempts && result.attempts.length > 1;
     const primaryProvider = result.attempts?.[0]?.provider || 'unknown';
-    if (fallbackUsed) {
+    if (fallbackUsed && result.attempts) {
       console.log('🔄 Provider fallback occurred:', {
         primaryProvider,
         primaryError: result.attempts[0]?.error,
@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
           provider: result.finalProvider,
           processingTimeMs: processingTime,
           cost: result.cost,
-          ...(fallbackUsed && {
+          ...(fallbackUsed && result.attempts && {
             fallback: {
               occurred: true,
               primaryProvider,
