@@ -18,16 +18,16 @@ export default function HomePage() {
           </div>
 
           {/* Feature Cards */}
-          <div className="grid md:grid-cols-3 gap-8 mb-16">
+          <div className="grid md:grid-cols-2 gap-8 mb-16">
             {/* Topics Card */}
             <div className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100">
               <div className="p-8">
                 <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center mb-6 group-hover:bg-blue-200 transition-colors">
                   <Target className="w-7 h-7 text-blue-600" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Topic Research</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Topic Research & Generation</h3>
                 <p className="text-gray-600 mb-6 leading-relaxed">
-                  Discover trending topics, analyze keywords, and plan your content strategy with data-driven insights.
+                  Research trending topics, analyze keywords, and generate complete articles with one click using our streamlined AI workflow.
                 </p>
                 <div className="space-y-3 mb-8">
                   <div className="flex items-center text-sm text-gray-500">
@@ -36,11 +36,11 @@ export default function HomePage() {
                   </div>
                   <div className="flex items-center text-sm text-gray-500">
                     <div className="w-2 h-2 bg-blue-400 rounded-full mr-3"></div>
-                    Trend identification
+                    One-click AI content generation
                   </div>
                   <div className="flex items-center text-sm text-gray-500">
                     <div className="w-2 h-2 bg-blue-400 rounded-full mr-3"></div>
-                    Content planning
+                    SEO-optimized articles
                   </div>
                 </div>
                 <Link 
@@ -48,12 +48,13 @@ export default function HomePage() {
                   className="inline-flex items-center justify-center w-full px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
                 >
                   <Target className="w-4 h-4 mr-2" />
-                  Manage Topics
+                  Start with Topics
                 </Link>
               </div>
             </div>
 
-            {/* Content Generation Card */}
+            {/* Content Generation Card - Temporarily Hidden */}
+            {/*
             <div className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100">
               <div className="p-8">
                 <div className="w-14 h-14 bg-emerald-100 rounded-xl flex items-center justify-center mb-6 group-hover:bg-emerald-200 transition-colors">
@@ -86,6 +87,7 @@ export default function HomePage() {
                 </Link>
               </div>
             </div>
+            */}
 
             {/* Articles Card */}
             <div className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100">
@@ -125,9 +127,9 @@ export default function HomePage() {
           {/* Stats Section */}
           <div className="bg-white rounded-2xl shadow-lg p-8 mb-12 border border-gray-100">
             <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Streamline Your Content Workflow</h2>
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">Streamlined Content Workflow</h2>
               <p className="text-gray-600 max-w-2xl mx-auto">
-                From initial research to published articles, manage your entire content creation process in one place.
+                From research to published articles, manage your entire content creation process with our simplified Topics-first approach.
               </p>
             </div>
             <div className="grid md:grid-cols-3 gap-8">
@@ -143,7 +145,7 @@ export default function HomePage() {
                   <PenTool className="w-6 h-6 text-emerald-600" />
                 </div>
                 <h3 className="font-semibold text-gray-900 mb-2">Generate & Edit</h3>
-                <p className="text-sm text-gray-600">Create high-quality content with AI assistance</p>
+                <p className="text-sm text-gray-600">Create high-quality content with one-click AI generation</p>
               </div>
               <div className="text-center">
                 <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-4">
@@ -160,8 +162,8 @@ export default function HomePage() {
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white">
               <h2 className="text-3xl font-bold mb-4">Ready to Create Amazing Content?</h2>
               <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
-                Start with topic research or jump straight into content creation. 
-                Your next great article is just a click away.
+                Start with topic research and generate complete articles with one click. 
+                Your next great article is just a topic away.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link 
@@ -172,11 +174,11 @@ export default function HomePage() {
                   Start with Topics
                 </Link>
                 <Link 
-                  href="/content-generation" 
+                  href="/articles" 
                   className="inline-flex items-center justify-center px-8 py-3 bg-blue-500 bg-opacity-20 text-white rounded-xl hover:bg-opacity-30 transition-colors font-medium border border-blue-300"
                 >
-                  <PenTool className="w-4 h-4 mr-2" />
-                  Create Content Now
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  View Articles
                 </Link>
               </div>
             </div>

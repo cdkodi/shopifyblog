@@ -38,6 +38,9 @@ export function Navigation() {
                   <Target className="w-4 h-4 mr-2" />
                   Topics
                 </Link>
+                
+                {/* Temporarily hidden - use Topics Generate button instead */}
+                {/*
                 <Link
                   href="/content-generation"
                   className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
@@ -45,6 +48,8 @@ export function Navigation() {
                   <FileText className="w-4 h-4 mr-2" />
                   Content Generation
                 </Link>
+                */}
+                
                 <Link
                   href="/articles"
                   className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"

@@ -5,6 +5,11 @@ import { useRouter } from 'next/navigation'
 import { ProtectedRoute } from '@/components/protected-route'
 import { TopicDashboard } from '../../components/topic-dashboard'
 import { TopicFormEnhanced } from '../../components/topic-form-enhanced'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
+import { CheckCircle, Clock, AlertCircle, FileText, Sparkles, Target, Layout, Eye } from 'lucide-react'
 import type { Database } from '../../lib/types/database'
 import { dbTopicToFormData } from '../../lib/types/database'
 
@@ -13,11 +18,27 @@ type TopicWithStatus = Database['public']['Views']['topics_with_article_status']
 
 type ViewMode = 'dashboard' | 'create' | 'edit'
 
+interface GenerationProgress {
+  jobId: string
+  phase: 'queued' | 'analyzing' | 'structuring' | 'writing' | 'optimizing' | 'finalizing' | 'completed' | 'error'
+  percentage: number
+  currentStep: string
+  estimatedTimeRemaining?: number
+  articleId?: string
+}
+
 export default function TopicsPage() {
   const router = useRouter()
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard')
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  
+  // Generation state
+  const [showGenerationDialog, setShowGenerationDialog] = useState(false)
+  const [selectedTopicForGeneration, setSelectedTopicForGeneration] = useState<TopicWithStatus | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generationProgress, setGenerationProgress] = useState<GenerationProgress | null>(null)
+  const [generationError, setGenerationError] = useState<string | null>(null)
 
   const handleCreateTopic = () => {
     setEditingTopic(null)
@@ -60,61 +81,226 @@ export default function TopicsPage() {
     console.log('🚀 Generate clicked for topic:', topic);
     console.log('📊 Style preferences:', topic.style_preferences);
     
-    // Navigate to content generation page with topic data
-    const params = new URLSearchParams()
-    
-    // Add topic ID for linking
-    if (topic.id) {
-      params.set('topicId', topic.id)
+    // Check if topic has required data
+    if (!topic.topic_title) {
+      alert('Topic must have a title to generate content');
+      return;
     }
-    
-    // Add topic title
-    if (topic.topic_title) {
-      params.set('topic', topic.topic_title)
-    }
-    
-    // Add keywords
-    if (topic.keywords) {
-      const keywordsStr = Array.isArray(topic.keywords) 
-        ? topic.keywords.join(', ')
-        : typeof topic.keywords === 'string' 
-          ? topic.keywords 
-          : ''
-      if (keywordsStr) {
-        params.set('keywords', keywordsStr)
-      }
-    }
-    
-    // Add style preferences
+
+    // Extract template from style preferences
+    let template = 'article'; // default
     if (topic.style_preferences) {
-      const prefs = topic.style_preferences as any
-      console.log('🎨 Processing style preferences:', prefs);
-      console.log('🎨 Template value:', prefs.template, typeof prefs.template);
-      
-      if (prefs.tone) params.set('tone', prefs.tone)
-      if (prefs.length) params.set('length', prefs.length)
-      if (prefs.template_type || prefs.template) {
-        const template = prefs.template_type || prefs.template;
-        params.set('template', template)
-        console.log('✅ Added template to URL:', template);
-      } else {
-        console.log('❌ Template is empty/null. Available fields:', Object.keys(prefs));
-      }
-    } else {
-      console.log('❌ No style_preferences found on topic');
+      const prefs = topic.style_preferences as any;
+      template = prefs.template_type || prefs.template || 'article';
     }
-    
-    const finalUrl = `/content-generation?${params.toString()}`;
-    console.log('🔗 Final URL:', finalUrl);
-    
-    // Navigate to content generation with pre-filled data
-    router.push(finalUrl)
+
+    if (!template || template === 'article') {
+      alert('Topic must have a content template selected to generate content. Please edit the topic and select a template.');
+      return;
+    }
+
+    setSelectedTopicForGeneration(topic);
+    setShowGenerationDialog(true);
   }
+
+  const confirmGeneration = async () => {
+    if (!selectedTopicForGeneration) return;
+
+    console.log('🎬 confirmGeneration started for topic:', selectedTopicForGeneration.topic_title);
+    setShowGenerationDialog(false);
+    setIsGenerating(true);
+    setGenerationError(null);
+
+    try {
+      const topic = selectedTopicForGeneration;
+      
+      // Extract data from topic
+      const prefs = topic.style_preferences as any || {};
+      const template = prefs.template_type || prefs.template || 'article';
+      const tone = prefs.tone || 'professional';
+      const length = prefs.length || 'medium';
+      
+      // Handle keywords
+      let keywordsStr = '';
+      if (topic.keywords) {
+        if (Array.isArray(topic.keywords)) {
+          keywordsStr = topic.keywords.join(', ');
+        } else if (typeof topic.keywords === 'string') {
+          keywordsStr = topic.keywords;
+        }
+      }
+
+      // Build request body for V2 API
+      const requestBody = {
+        topic: {
+          id: topic.id,
+          title: topic.topic_title,
+          keywords: keywordsStr,
+          tone: tone,
+          length: length,
+          template: template
+        },
+        optimizeForSEO: true,
+        targetWordCount: 800, // default
+        createArticle: true // Create article immediately
+      };
+
+      console.log('📋 Sending direct V2 generation request:', requestBody);
+
+      // Show immediate progress for direct generation
+      setGenerationProgress({
+        jobId: `direct_${Date.now()}`,
+        phase: 'writing',
+        percentage: 10,
+        currentStep: 'Starting content generation...',
+        estimatedTimeRemaining: 120
+      });
+
+      const response = await fetch('/api/ai/v2-generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      console.log('📡 Direct generation response status:', response.status);
+
+      const result = await response.json();
+      console.log('📦 Direct generation response data:', result);
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to generate content';
+        if (result.error) {
+          errorMessage = typeof result.error === 'string' ? result.error : result.error.message || errorMessage;
+        }
+        console.log('❌ Direct generation failed:', errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      // Update progress to completion
+      setGenerationProgress({
+        jobId: `direct_${Date.now()}`,
+        phase: 'completed',
+        percentage: 100,
+        currentStep: result.data?.articleCreation?.article ? 'Article created successfully!' : 'Content generated successfully!',
+        estimatedTimeRemaining: 0
+      });
+
+      console.log('🎯 Direct generation completed successfully!');
+      
+      // Navigate to article or show success
+      if (result.data?.articleCreation?.article?.id) {
+        setTimeout(() => {
+          setIsGenerating(false);
+          setGenerationProgress(null);
+          router.push(`/articles/${result.data.articleCreation.article.id}/edit`);
+        }, 2000);
+      } else {
+        setTimeout(() => {
+          setIsGenerating(false);
+          setGenerationProgress(null);
+          setRefreshKey(prev => prev + 1); // Refresh dashboard
+        }, 2000);
+      }
+
+    } catch (error) {
+      console.error('💥 Direct generation failed:', error);
+      
+      // Update progress to show error
+      setGenerationProgress({
+        jobId: `direct_${Date.now()}`,
+        phase: 'error',
+        percentage: 0,
+        currentStep: 'Generation failed',
+        estimatedTimeRemaining: 0
+      });
+      
+      let errorMessage = 'Failed to generate content';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      setGenerationError(errorMessage);
+      
+      setTimeout(() => {
+        setIsGenerating(false);
+        setGenerationProgress(null);
+      }, 3000);
+    }
+  };
+
+  const getPhaseIcon = (phase: string) => {
+    switch (phase) {
+      case 'queued': return <Clock className="h-4 w-4" />
+      case 'analyzing': return <Eye className="h-4 w-4" />
+      case 'structuring': return <Layout className="h-4 w-4" />
+      case 'writing': return <FileText className="h-4 w-4" />
+      case 'optimizing': return <Sparkles className="h-4 w-4" />
+      case 'finalizing': return <Target className="h-4 w-4" />
+      case 'completed': return <CheckCircle className="h-4 w-4" />
+      case 'error': return <AlertCircle className="h-4 w-4" />
+      default: return <Clock className="h-4 w-4" />
+    }
+  };
+
+  const getPhaseColor = (phase: string) => {
+    switch (phase) {
+      case 'queued': return 'text-gray-500'
+      case 'analyzing': return 'text-blue-500'
+      case 'structuring': return 'text-purple-500'
+      case 'writing': return 'text-green-500'
+      case 'optimizing': return 'text-yellow-500'
+      case 'finalizing': return 'text-orange-500'
+      case 'completed': return 'text-green-600'
+      case 'error': return 'text-red-500'
+      default: return 'text-gray-500'
+    }
+  };
 
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-50">
         <div className="container mx-auto px-4 py-8">
+          {/* Generation Progress Display */}
+          {isGenerating && generationProgress && (
+            <Card className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className={`${getPhaseColor(generationProgress.phase)}`}>
+                      {getPhaseIcon(generationProgress.phase)}
+                    </div>
+                    <h3 className="font-semibold text-gray-900">
+                      {generationProgress.phase === 'completed' ? 'Generation Complete!' : 'Generating Content...'}
+                    </h3>
+                  </div>
+                  <span className="text-sm font-medium text-gray-600">
+                    {generationProgress.percentage}%
+                  </span>
+                </div>
+
+                <Progress value={generationProgress.percentage} className="h-2" />
+
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">{generationProgress.currentStep}</span>
+                  {generationProgress.estimatedTimeRemaining && generationProgress.estimatedTimeRemaining > 0 && (
+                    <span className="text-gray-500">
+                      ~{Math.ceil(generationProgress.estimatedTimeRemaining / 60)} min remaining
+                    </span>
+                  )}
+                </div>
+
+                {generationError && (
+                  <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                    {generationError}
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
           {viewMode === 'dashboard' && (
             <TopicDashboard
               key={refreshKey}
@@ -146,6 +332,44 @@ export default function TopicsPage() {
           )}
         </div>
       </div>
+
+      {/* Generation Confirmation Dialog */}
+      <AlertDialog open={showGenerationDialog} onOpenChange={setShowGenerationDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Generate Article from Topic</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedTopicForGeneration && (
+                <>
+                  This will use AI to generate a complete article based on "{selectedTopicForGeneration.topic_title}". The process will:
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    <li>Create SEO-optimized content using the configured template</li>
+                    <li>Target approximately 800 words</li>
+                    <li>Use the configured tone and include keywords</li>
+                    <li>Generate meta descriptions and optimize for search engines</li>
+                  </ul>
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">Estimated Cost:</span>
+                      <span className="text-blue-600">$0.015</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">Processing Time:</span>
+                      <span className="text-blue-600">2-3 minutes</span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmGeneration}>
+              Generate Article
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ProtectedRoute>
   )
 } 
