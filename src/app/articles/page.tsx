@@ -39,14 +39,21 @@ export default function ArticlesPage() {
       const { data, error } = await ArticleService.getArticles(filters);
       
       if (error) {
-        setError(error);
+        // Ensure error is always a string
+        const errorMessage = typeof error === 'string' ? error : 
+                            (error && typeof error === 'object' && 'message' in error) ? 
+                            String((error as any).message) : 
+                            'Failed to load articles';
+        setError(errorMessage);
       } else {
         setArticles(data || []);
         setError(null);
       }
     } catch (err) {
       console.error('Error loading articles:', err);
-      setError('Failed to load articles');
+      // Ensure error is always a string
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load articles';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

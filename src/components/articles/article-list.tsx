@@ -259,11 +259,16 @@ export function ArticleList({
   }
 
   if (error) {
+    const errorMessage = typeof error === 'string' ? error : 
+                        (error && typeof error === 'object' && 'message' in error) ? 
+                        String((error as any).message) : 
+                        'An unknown error occurred';
+    
     return (
       <Card>
         <CardContent className="p-6">
           <div className="text-center space-y-4">
-            <p className="text-red-600">Error: {error}</p>
+            <p className="text-red-600">Error: {errorMessage}</p>
             <Button onClick={onRetry} variant="outline">
               Try Again
             </Button>

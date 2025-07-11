@@ -71,35 +71,63 @@ export class ArticleService {
   // Get all articles with optional filtering
   static async getArticles(filters?: ArticleFilterData): Promise<{ data: Article[] | null; error: string | null }> {
     try {
+      console.log('🔍 getArticles called with filters:', filters);
+      
       let query = supabase
         .from('articles')
         .select('*')
 
       // Apply search filter
       if (filters?.search) {
+        console.log('🔍 Applying search filter:', filters.search);
         query = query.or(`title.ilike.%${filters.search}%,content.ilike.%${filters.search}%`)
       }
 
       // Apply status filter
       if (filters?.status) {
+        console.log('🔍 Applying status filter:', filters.status);
         query = query.eq('status', filters.status as any)
       }
 
       // Apply ordering
       const orderBy = filters?.orderBy || 'updated_at'
       const orderDirection = filters?.orderDirection || 'desc'
+      console.log('🔍 Applying order:', orderBy, orderDirection);
       query = query.order(orderBy, { ascending: orderDirection === 'asc' })
 
+      console.log('🔍 Executing articles query...');
       const { data: articles, error } = await query
 
       if (error) {
-        console.error('Error fetching articles:', error)
+        console.error('❌ Supabase error fetching articles:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+          filters
+        });
         return { data: null, error: error.message }
       }
 
+      console.log('✅ Articles fetched successfully:', {
+        count: articles?.length || 0,
+        firstArticle: articles?.[0] ? {
+          id: articles[0].id,
+          title: articles[0].title,
+          status: articles[0].status,
+          created_at: articles[0].created_at
+        } : null
+      });
+
       return { data: articles, error: null }
     } catch (err) {
-      console.error('Unexpected error fetching articles:', err)
+      console.error('❌ Unexpected error fetching articles:', err);
+      console.error('❌ Error details:', {
+        name: err instanceof Error ? err.name : 'Unknown',
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+        filters
+      });
       return { data: null, error: 'Failed to fetch articles' }
     }
   }
