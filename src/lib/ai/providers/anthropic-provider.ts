@@ -58,13 +58,28 @@ export class AnthropicProvider extends BaseAIProvider {
       // Check for content policy refusals
       const content = response.content[0]?.text || '';
       
-      // Log all Anthropic responses for debugging
+      // ENHANCED: Log ALL Anthropic responses for debugging
       console.log('🔍 Anthropic response preview:', {
         contentLength: content.length,
         firstLine: content.split('\n')[0]?.substring(0, 100) || 'Empty content',
         isRefusal: this.isContentPolicyRefusal(content),
         responseId: response.id
       });
+      
+      // CRITICAL: Log ALL short responses that might be refusals
+      if (content.length < 500) {
+        console.warn('🚨 FULL ANTHROPIC RESPONSE (potential refusal):', {
+          '*** FULL CONTENT ***': content,
+          contentLength: content.length,
+          detectedAsRefusal: this.isContentPolicyRefusal(content),
+          containsSorry: content.toLowerCase().includes('sorry'),
+          containsCant: content.toLowerCase().includes("can't"),
+          containsRefuse: content.toLowerCase().includes('refuse'),
+          containsUnable: content.toLowerCase().includes('unable'),
+          startsWithSorry: content.toLowerCase().startsWith("i'm sorry"),
+          responseId: response.id
+        });
+      }
       
       // Log potential refusal patterns for debugging
       if (content.length < 200 && (content.toLowerCase().includes('sorry') || content.toLowerCase().includes("can't"))) {
