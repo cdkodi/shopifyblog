@@ -20,7 +20,23 @@ export const supabase = createSupabaseClient<Database>(supabaseUrl, supabaseAnon
   }
 })
 
-// Export createClient function for server-side usage
+// Server-side client for API routes - bypasses RLS when needed
+export function createServerClient() {
+  return createSupabaseClient<Database>(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false
+    },
+    global: {
+      headers: {
+        'x-server-side': 'true'
+      }
+    }
+  });
+}
+
+// Export createClient function for server-side usage (backward compatibility)
 export function createClient() {
   return supabase;
 }

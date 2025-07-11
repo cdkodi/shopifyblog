@@ -1,4 +1,4 @@
-import { supabase } from '../supabase'
+import { supabase, createServerClient } from '../supabase'
 import { parseArticleKeywords } from '../utils'
 import type { Database } from '../types/database'
 
@@ -29,10 +29,26 @@ export interface ArticleFilterData {
   orderDirection?: 'asc' | 'desc'
 }
 
+// Helper to determine if we're in a server environment
+function isServerEnvironment(): boolean {
+  return typeof window === 'undefined';
+}
+
+// Get appropriate client based on environment
+function getSupabaseClient() {
+  if (isServerEnvironment()) {
+    console.log('🔧 Using server-side Supabase client for ArticleService');
+    return createServerClient();
+  }
+  return supabase;
+}
+
 export class ArticleService {
   // Create a new article
   static async createArticle(data: ArticleFormData): Promise<{ data: Article | null; error: string | null }> {
     try {
+      const client = getSupabaseClient();
+      
       const articleData: ArticleInsert = {
         title: data.title,
         content: data.content,
@@ -50,20 +66,40 @@ export class ArticleService {
         updated_at: new Date().toISOString()
       }
 
-      const { data: article, error } = await supabase
+      console.log('🚀 ArticleService.createArticle called with data:', {
+        title: articleData.title,
+        slug: articleData.slug,
+        status: articleData.status,
+        hasContent: !!articleData.content,
+        contentLength: articleData.content?.length || 0,
+        isServerEnv: isServerEnvironment()
+      });
+
+      const { data: article, error } = await client
         .from('articles')
         .insert(articleData)
         .select()
         .single()
 
       if (error) {
-        console.error('Error creating article:', error)
+        console.error('❌ Error creating article:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
         return { data: null, error: error.message }
       }
 
+      console.log('✅ Article created successfully:', {
+        id: article.id,
+        title: article.title,
+        status: article.status
+      });
+
       return { data: article, error: null }
     } catch (err) {
-      console.error('Unexpected error creating article:', err)
+      console.error('❌ Unexpected error creating article:', err)
       return { data: null, error: 'Failed to create article' }
     }
   }
@@ -71,9 +107,10 @@ export class ArticleService {
   // Get all articles with optional filtering
   static async getArticles(filters?: ArticleFilterData): Promise<{ data: Article[] | null; error: string | null }> {
     try {
+      const client = getSupabaseClient();
       console.log('🔍 getArticles called with filters:', filters);
       
-      let query = supabase
+      let query = client
         .from('articles')
         .select('*')
 
