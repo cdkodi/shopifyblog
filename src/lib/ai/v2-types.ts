@@ -25,6 +25,17 @@ export interface V2GenerationResult {
     message: string;
     code?: string;
   };
+  // Include generation attempts for provider fallback information
+  attempts?: Array<{
+    provider: string;
+    success: boolean;
+    error?: string;
+    tokensUsed?: number;
+    cost?: number;
+    responseTime: number;
+  }>;
+  totalCost?: number;
+  totalTokens?: number;
   generationMetadata?: {
     topicId: string;
     promptVersion: string;
