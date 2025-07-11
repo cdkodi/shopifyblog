@@ -28,6 +28,20 @@ function V2GenerationWrapper({ configuration, initialConfigData, onComplete, onE
   useEffect(() => {
     const startGeneration = async () => {
       try {
+        // Validate and clean topicId
+        const isValidUUID = (str: string) => {
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+          return uuidRegex.test(str);
+        };
+
+        const cleanTopicId = initialConfigData?.topicId && 
+                           initialConfigData.topicId !== 'undefined' && 
+                           isValidUUID(initialConfigData.topicId) 
+                           ? initialConfigData.topicId 
+                           : crypto.randomUUID();
+
+        console.log('🚀 Starting V2 generation with cleaned topicId:', cleanTopicId);
+
         // Use the V2 generation API
         const response = await fetch('/api/ai/v2-generate', {
           method: 'POST',
@@ -36,7 +50,7 @@ function V2GenerationWrapper({ configuration, initialConfigData, onComplete, onE
           },
           body: JSON.stringify({
             topic: {
-              id: initialConfigData?.topicId || crypto.randomUUID(),
+              id: cleanTopicId,
               title: configuration.topic,
               keywords: [configuration.targetKeyword, ...configuration.relatedKeywords],
               tone: configuration.tone,
@@ -63,18 +77,20 @@ function V2GenerationWrapper({ configuration, initialConfigData, onComplete, onE
         });
 
         const result = await response.json();
+        console.log('📋 V2 generation response:', result);
 
         if (!response.ok) {
           throw new Error(result.error || 'Failed to start generation');
         }
 
         if (result.success && result.jobId) {
+          console.log('✅ V2 generation started successfully, jobId:', result.jobId);
           setJobId(result.jobId);
         } else {
           throw new Error('Failed to get job ID from generation response');
         }
       } catch (error) {
-        console.error('Failed to start V2 generation:', error);
+        console.error('❌ Failed to start V2 generation:', error);
         onError(error instanceof Error ? error.message : 'Failed to start generation');
       } finally {
         setIsStarting(false);
@@ -187,8 +203,14 @@ function ContentGenerationInner() {
     const template = searchParams.get('template');
 
     if (topic || keywords || tone || length || template || topicId) {
+      // Validate UUID
+      const isValidUUID = (str: string) => {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        return str && str !== 'undefined' && uuidRegex.test(str);
+      };
+
       const initialData = {
-        topicId: topicId || undefined,
+        topicId: isValidUUID(topicId || '') ? topicId : undefined,
         topic: topic || '',
         targetKeyword: keywords ? keywords.split(',')[0]?.trim() : '',
         relatedKeywords: keywords ? keywords.split(',').slice(1).map(k => k.trim()).filter(Boolean) : [],
@@ -197,7 +219,7 @@ function ContentGenerationInner() {
         suggestedTemplate: template
       };
       
-      console.log('📥 URL params parsed:', { topicId, topic, keywords, tone, length, template });
+      console.log('📥 URL params parsed:', { topicId: initialData.topicId, topic, keywords, tone, length, template });
       setInitialConfigData(initialData);
       
       // If coming from Topics with template, set flag for auto-selection
