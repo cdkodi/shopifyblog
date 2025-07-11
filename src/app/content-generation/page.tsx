@@ -6,13 +6,117 @@ import { ProtectedRoute } from '@/components/protected-route';
 import { TemplateSelector, ContentTemplate } from '@/components/content-generation/template-selector';
 import { ContentConfiguration, ContentConfiguration as ContentConfigInterface } from '@/components/content-generation/content-configuration';
 import { ContentTemplateService } from '@/lib/supabase/content-templates';
-import { ContentGenerator, GeneratedContent } from '@/components/content-generation/content-generator';
 import { ContentEditor, PublishedContent } from '@/components/content-generation/content-editor';
 import { GenerationConfig, EnhancedContentConfig } from '@/components/content-generation/generation-config';
 import { ProductSelector } from '@/components/content-generation/product-selector';
 import { ContentPreview } from '@/components/content-generation/content-preview';
 import { ProductForContentGeneration } from '@/lib/supabase/shopify-products';
 import { Button } from '@/components/ui/button';
+import { GenerationStatusTracker } from '@/components/generation-status-tracker';
+
+interface V2GenerationWrapperProps {
+  configuration: ContentConfigInterface;
+  initialConfigData: any;
+  onComplete: (articleId: string) => void;
+  onError: (error: string) => void;
+}
+
+function V2GenerationWrapper({ configuration, initialConfigData, onComplete, onError }: V2GenerationWrapperProps) {
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [isStarting, setIsStarting] = useState(true);
+
+  useEffect(() => {
+    const startGeneration = async () => {
+      try {
+        // Use the V2 generation API
+        const response = await fetch('/api/ai/v2-generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            topic: {
+              id: initialConfigData?.topicId || crypto.randomUUID(),
+              title: configuration.topic,
+              keywords: [configuration.targetKeyword, ...configuration.relatedKeywords],
+              tone: configuration.tone,
+              wordCount: configuration.wordCount,
+              template: configuration.template.id
+            },
+            template: {
+              id: configuration.template.id,
+              name: configuration.template.name,
+              icon: configuration.template.icon,
+              targetLength: configuration.wordCount,
+              difficulty: configuration.template.difficulty,
+              estimatedCost: configuration.template.estimatedCost,
+              recommendedProvider: configuration.template.recommendedProvider
+            },
+            aiProvider: configuration.aiProvider === 'auto' ? 'anthropic' : configuration.aiProvider,
+            includeProducts: false,
+            productSelectionCriteria: null,
+            createArticle: true,
+            targetAudience: configuration.targetAudience || '',
+            seoData: configuration.seoData,
+            customInstructions: `Generate a ${configuration.template.name} about ${configuration.topic}. Target keyword: ${configuration.targetKeyword}. Tone: ${configuration.tone}. Word count: ${configuration.wordCount}.`
+          })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to start generation');
+        }
+
+        if (result.success && result.jobId) {
+          setJobId(result.jobId);
+        } else {
+          throw new Error('Failed to get job ID from generation response');
+        }
+      } catch (error) {
+        console.error('Failed to start V2 generation:', error);
+        onError(error instanceof Error ? error.message : 'Failed to start generation');
+      } finally {
+        setIsStarting(false);
+      }
+    };
+
+    startGeneration();
+  }, []);
+
+  if (isStarting) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Starting generation...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!jobId) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-600">Failed to start generation. Please try again.</p>
+      </div>
+    );
+  }
+
+  return (
+    <GenerationStatusTracker
+      jobId={jobId}
+      onComplete={(result) => {
+        if (result.articleId) {
+          onComplete(result.articleId);
+        } else {
+          onError('Generation completed but no article was created');
+        }
+      }}
+      onError={onError}
+    />
+  );
+}
 
 function ContentGenerationInner() {
   const searchParams = useSearchParams();
@@ -20,7 +124,6 @@ function ContentGenerationInner() {
   const [configuration, setConfiguration] = useState<ContentConfigInterface | undefined>();
   const [enhancedConfig, setEnhancedConfig] = useState<EnhancedContentConfig | undefined>();
   const [selectedProducts, setSelectedProducts] = useState<ProductForContentGeneration[]>([]);
-  const [generatedContent, setGeneratedContent] = useState<GeneratedContent | undefined>();
   const [publishedContent, setPublishedContent] = useState<PublishedContent | undefined>();
   const [currentStep, setCurrentStep] = useState(1);
   const [initialConfigData, setInitialConfigData] = useState<any>(null);
@@ -218,11 +321,6 @@ function ContentGenerationInner() {
     setSelectedProducts(products);
   };
 
-  const handleGenerationComplete = (content: GeneratedContent) => {
-    setGeneratedContent(content);
-    setCurrentStep(4);
-  };
-
   const handlePublish = (content: PublishedContent) => {
     setPublishedContent(content);
     // Here you would integrate with your blog platform
@@ -233,8 +331,7 @@ function ContentGenerationInner() {
   const steps = [
     { number: 1, name: 'Template', description: 'Choose content type' },
     { number: 2, name: 'Configure', description: 'Set parameters' },
-    { number: 3, name: 'Generate', description: 'Create content' },
-    { number: 4, name: 'Edit', description: 'Review & refine' }
+    { number: 3, name: 'Generate', description: 'Create content' }
   ];
 
   return (
@@ -490,24 +587,70 @@ function ContentGenerationInner() {
         )}
 
         {currentStep === 3 && configuration && (
-          <ContentGenerator
-            configuration={configuration}
-            onGenerationComplete={handleGenerationComplete}
-            onBack={() => setCurrentStep(2)}
-          />
-        )}
+          <div className="space-y-6">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Generating Your Content</h2>
+              <p className="text-gray-600">Please wait while AI creates your optimized content...</p>
+            </div>
 
-        {currentStep === 4 && generatedContent && (
-          <ContentEditor
-            generatedContent={generatedContent}
-            onPublish={handlePublish}
-            onBack={() => setCurrentStep(3)}
-          />
+            <V2GenerationWrapper
+              configuration={configuration}
+              initialConfigData={initialConfigData}
+              onComplete={(articleId) => {
+                console.log('✅ V2 Generation completed, article created:', articleId);
+                // Navigate to edit the created article
+                window.location.href = `/articles/${articleId}/edit`;
+              }}
+              onError={(error) => {
+                console.error('❌ V2 Generation failed:', error);
+                alert(`Generation failed: ${error}`);
+                setCurrentStep(2); // Go back to configuration
+              }}
+            />
+
+            <div className="flex justify-center pt-6">
+              <button
+                onClick={() => setCurrentStep(2)}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+              >
+                ← Back to Configuration
+              </button>
+            </div>
+
+            {/* Generation Details */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-500">Template:</span>
+                  <p className="font-medium">{configuration.template.name}</p>
+                </div>
+                <div>
+                  <span className="text-gray-500">AI Provider:</span>
+                  <p className="font-medium">
+                    {(() => {
+                      const provider = configuration.aiProvider === 'auto' ? configuration.template.recommendedProvider : configuration.aiProvider;
+                      return provider === 'anthropic' ? 'Claude' :
+                             provider === 'openai' ? 'GPT-4' : 
+                             provider === 'google' ? 'Gemini' : 'Auto';
+                    })()}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-gray-500">Target Length:</span>
+                  <p className="font-medium">{configuration.wordCount.toLocaleString()} words</p>
+                </div>
+                <div>
+                  <span className="text-gray-500">Topic:</span>
+                  <p className="font-medium">{configuration.topic}</p>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
 
       {/* Footer */}
-      <div className="bg-white border-t mt-16">
+        <div className="bg-white border-t mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-center text-sm text-gray-500">
             <div>
