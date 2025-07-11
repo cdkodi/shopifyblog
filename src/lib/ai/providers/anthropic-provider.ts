@@ -55,10 +55,25 @@ export class AnthropicProvider extends BaseAIProvider {
       const tokensUsed = response.usage.input_tokens + response.usage.output_tokens;
       const cost = this.calculateCost(tokensUsed);
 
+      // Check for content policy refusals
+      const content = response.content[0]?.text || '';
+      if (this.isContentPolicyRefusal(content)) {
+        console.warn('🚫 Anthropic content policy refusal detected:', {
+          refusalMessage: content.substring(0, 100) + '...',
+          promptLength: request.prompt.length,
+          promptPreview: request.prompt.substring(0, 200) + '...'
+        });
+        this.trackFailure();
+        throw this.createError(
+          AI_ERROR_CODES.VALIDATION_ERROR, 
+          'Content blocked by Anthropic safety filters - triggering fallback to alternate provider'
+        );
+      }
+
       this.trackSuccess();
 
       return {
-        content: response.content[0].text,
+        content,
         provider: this.name,
         model: this.model,
         tokensUsed,
@@ -152,6 +167,10 @@ export class AnthropicProvider extends BaseAIProvider {
       return this.createError(AI_ERROR_CODES.MODEL_OVERLOADED, 'Anthropic model is overloaded');
     }
     
+    if (message.includes('safety filters') || message.includes('content blocked') || message.includes('content policy')) {
+      return this.createError(AI_ERROR_CODES.VALIDATION_ERROR, 'Content blocked by Anthropic safety filters');
+    }
+    
     return this.createError(AI_ERROR_CODES.UNKNOWN_ERROR, `Anthropic API error: ${error.message}`, error);
   }
 
@@ -168,6 +187,23 @@ export class AnthropicProvider extends BaseAIProvider {
       default:
         return this.createError(AI_ERROR_CODES.UNKNOWN_ERROR, `Anthropic API error: ${message}`);
     }
+  }
+
+  private isContentPolicyRefusal(content: string): boolean {
+    const refusalPhrases = [
+      "i'm sorry, but i can't fulfill this request",
+      "i can't help with that",
+      "i'm not able to",
+      "i cannot provide",
+      "i'm unable to",
+      "i can't assist with",
+      "this request goes against",
+      "i'm not comfortable",
+      "i'd prefer not to"
+    ];
+    
+    const normalizedContent = content.toLowerCase().trim();
+    return refusalPhrases.some(phrase => normalizedContent.includes(phrase));
   }
 
   async validateConfig(): Promise<boolean> {

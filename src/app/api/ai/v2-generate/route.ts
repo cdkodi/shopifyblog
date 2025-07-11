@@ -68,6 +68,18 @@ export async function POST(request: NextRequest) {
       provider: result.finalProvider
     });
 
+    // Check if fallback was used
+    const fallbackUsed = result.attempts && result.attempts.length > 1;
+    const primaryProvider = result.attempts?.[0]?.provider || 'unknown';
+    if (fallbackUsed) {
+      console.log('🔄 Provider fallback occurred:', {
+        primaryProvider,
+        primaryError: result.attempts[0]?.error,
+        finalProvider: result.finalProvider,
+        totalAttempts: result.attempts.length
+      });
+    }
+
     // Optional: Create article in database if requested
     let createdArticle = null;
     let articleCreationError = null;
@@ -151,7 +163,16 @@ export async function POST(request: NextRequest) {
         generationDetails: {
           provider: result.finalProvider,
           processingTimeMs: processingTime,
-          cost: result.cost
+          cost: result.cost,
+          ...(fallbackUsed && {
+            fallback: {
+              occurred: true,
+              primaryProvider,
+              primaryError: result.attempts[0]?.error,
+              totalAttempts: result.attempts.length,
+              reason: result.attempts[0]?.error?.includes('safety filters') ? 'content_policy' : 'other'
+            }
+          })
         },
         
         // V2 enhancements
