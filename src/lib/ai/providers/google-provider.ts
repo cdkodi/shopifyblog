@@ -66,9 +66,48 @@ export class GoogleProvider extends BaseAIProvider {
       const tokensUsed = response.usageMetadata.totalTokenCount;
       const cost = this.calculateCost(tokensUsed);
 
-      this.trackSuccess();
-
       const content = response.candidates[0]?.content?.parts[0]?.text || '';
+
+      // Check for content policy refusals
+      // ENHANCED: Log ALL Google responses for debugging
+      console.log('🔍 Google response preview:', {
+        contentLength: content.length,
+        firstLine: content.split('\n')[0]?.substring(0, 100) || 'Empty content',
+        isRefusal: this.isContentPolicyRefusal(content),
+        finishReason: response.candidates[0]?.finishReason
+      });
+      
+      // CRITICAL: Log ALL short responses that might be refusals
+      if (content.length < 500) {
+        console.warn('🚨 FULL GOOGLE RESPONSE (potential refusal):', {
+          '*** FULL CONTENT ***': content,
+          contentLength: content.length,
+          detectedAsRefusal: this.isContentPolicyRefusal(content),
+          containsSorry: content.toLowerCase().includes('sorry'),
+          containsCant: content.toLowerCase().includes("can't"),
+          containsRefuse: content.toLowerCase().includes('refuse'),
+          containsUnable: content.toLowerCase().includes('unable'),
+          startsWithSorry: content.toLowerCase().startsWith("i'm sorry"),
+          finishReason: response.candidates[0]?.finishReason,
+          safetyRatings: response.candidates[0]?.safetyRatings
+        });
+      }
+      
+      if (this.isContentPolicyRefusal(content)) {
+        console.warn('🚫 Google content policy refusal detected:', {
+          fullRefusalMessage: content,
+          refusalPreview: content.substring(0, 200) + (content.length > 200 ? '...' : ''),
+          promptLength: request.prompt.length,
+          promptPreview: request.prompt.substring(0, 200) + '...'
+        });
+        this.trackFailure();
+        throw this.createError(
+          AI_ERROR_CODES.VALIDATION_ERROR, 
+          'Content blocked by Google safety filters - triggering fallback to alternate provider'
+        );
+      }
+
+      this.trackSuccess();
 
       return {
         content,
@@ -190,6 +229,72 @@ export class GoogleProvider extends BaseAIProvider {
       default:
         return this.createError(AI_ERROR_CODES.UNKNOWN_ERROR, `Google API error: ${message}`);
     }
+  }
+
+  private isContentPolicyRefusal(content: string): boolean {
+    const refusalPhrases = [
+      // Standard apology patterns
+      "i'm sorry, but i can't fulfill this request",
+      "i'm sorry, but i can't",
+      "i'm sorry, i can't",
+      "sorry, but i can't",
+      "sorry, i can't",
+      
+      // Inability patterns
+      "i can't help with that",
+      "i can't help with",
+      "i'm not able to",
+      "i cannot provide",
+      "i'm unable to",
+      "i can't assist with",
+      "i can't create",
+      "i can't generate",
+      "i can't write",
+      
+      // Policy/guideline patterns
+      "this request goes against",
+      "against my guidelines",
+      "violates my guidelines",
+      "my guidelines don't allow",
+      "not something i can help with",
+      "not something i can do",
+      
+      // Comfort/preference patterns
+      "i'm not comfortable",
+      "i'd prefer not to",
+      "i don't feel comfortable",
+      
+      // Direct refusal patterns
+      "i won't be able to",
+      "i cannot fulfill",
+      "i'm not going to",
+      "this isn't something",
+      
+      // Content-specific refusals
+      "inappropriate content",
+      "harmful content",
+      "offensive content",
+      
+      // Google-specific patterns
+      "i can't generate content that",
+      "i'm designed to be helpful",
+      "i'm not able to create content",
+      "i can't assist with requests"
+    ];
+    
+    const normalizedContent = content.toLowerCase().trim();
+    
+    // Check for exact phrase matches
+    const hasRefusalPhrase = refusalPhrases.some(phrase => normalizedContent.includes(phrase));
+    
+    // Additional checks for short responses that are likely refusals
+    const isVeryShort = content.length < 100;
+    const startsWithApology = normalizedContent.startsWith("i'm sorry") || normalizedContent.startsWith("sorry");
+    const containsCant = normalizedContent.includes("can't") || normalizedContent.includes("cannot");
+    
+    const isLikelyRefusal = isVeryShort && startsWithApology && containsCant;
+    
+    return hasRefusalPhrase || isLikelyRefusal;
   }
 
   async validateConfig(): Promise<boolean> {
