@@ -240,12 +240,10 @@ export class GoogleProvider extends BaseAIProvider {
       "sorry, but i can't",
       "sorry, i can't",
       
-      // Inability patterns
+      // Inability patterns - be more specific to avoid false positives
       "i can't help with that",
       "i can't help with",
-      "i'm not able to",
       "i cannot provide",
-      "i'm unable to",
       "i can't assist with",
       "i can't create",
       "i can't generate",
@@ -286,6 +284,40 @@ export class GoogleProvider extends BaseAIProvider {
     
     // Check for exact phrase matches
     const hasRefusalPhrase = refusalPhrases.some(phrase => normalizedContent.includes(phrase));
+    
+    // Enhanced logic: Check if there's substantial content despite disclaimers
+    if (hasRefusalPhrase) {
+      // Look for article structure markers that indicate actual content
+      const hasArticleStructure = [
+        'title:',
+        'meta_description:',
+        'content:',
+        '**title**',
+        '**meta_description**',
+        '**content**',
+        '**introduction**',
+        '**conclusion**'
+      ].some(marker => normalizedContent.includes(marker));
+      
+      // Check content length - substantial content suggests it's not a refusal
+      const isSubstantialContent = content.length > 1000;
+      
+      // Check for structured content with multiple sections
+      const hasMultipleSections = (content.match(/\*\*[^*]+\*\*/g) || []).length > 3;
+      
+      // If we have article structure, substantial content, or multiple sections,
+      // it's likely a disclaimer followed by actual content, not a refusal
+      if (hasArticleStructure || (isSubstantialContent && hasMultipleSections)) {
+        console.log('🔍 Google: Detected disclaimer but found substantial content - not treating as refusal:', {
+          hasArticleStructure,
+          isSubstantialContent,
+          hasMultipleSections,
+          contentLength: content.length,
+          refusalPhraseFound: refusalPhrases.find(phrase => normalizedContent.includes(phrase))
+        });
+        return false;
+      }
+    }
     
     // Additional checks for short responses that are likely refusals
     const isVeryShort = content.length < 100;
