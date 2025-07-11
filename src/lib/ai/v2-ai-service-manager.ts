@@ -328,25 +328,46 @@ Please provide the optimized version:`;
         sourceTopicId: request.topic.id
       };
 
-      console.log('📝 Creating article in database for job:', jobId, { title: articleData.title });
+      console.log('📝 Creating article in database for job:', jobId, { 
+        title: articleData.title,
+        slug: articleData.slug,
+        hasContent: !!articleData.content,
+        contentLength: articleData.content.length,
+        wordCount: articleData.wordCount,
+        seoScore: articleData.seoScore
+      });
       const articleResult = await ArticleService.createArticle(articleData);
       
+      console.log('📊 Article creation result for job:', jobId, { 
+        success: !articleResult.error, 
+        error: articleResult.error,
+        hasData: !!articleResult.data,
+        dataKeys: articleResult.data ? Object.keys(articleResult.data) : []
+      });
+      
       if (articleResult.error || !articleResult.data) {
+        console.error('❌ Failed to create article for job:', jobId, 'Error:', articleResult.error);
         throw new Error(`Failed to create article: ${articleResult.error}`);
       }
 
       console.log('✅ Article created successfully for job:', jobId, 'Article ID:', articleResult.data.id);
 
-      // Phase 4: Completion
+      // Phase 4: Completion with article linking
       await generationJobsService.updateJobProgress(jobId, {
         percentage: 100,
         currentStep: 'Article created successfully',
         articleId: articleResult.data.id
       });
 
-      // Mark job as completed with result
+      // Mark job as completed with result AND update article_id field
       await generationJobsService.completeJob(jobId, result);
-      console.log('🎉 Job completed successfully:', jobId);
+      
+      // Ensure article_id is set in the generation job
+      await generationJobsService.updateJobProgress(jobId, {
+        articleId: articleResult.data.id
+      });
+      
+      console.log('🎉 Job completed successfully:', jobId, 'with article:', articleResult.data.id);
 
     } catch (error) {
       console.error('❌ Background generation job failed:', jobId, error);

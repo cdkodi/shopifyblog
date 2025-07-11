@@ -92,14 +92,17 @@ export async function POST(request: NextRequest) {
           title: articleData.title,
           slug: articleData.slug,
           wordCount: articleData.wordCount,
-          seoScore: articleData.seoScore 
+          seoScore: articleData.seoScore,
+          hasContent: !!articleData.content,
+          contentLength: articleData.content.length
         });
         
         const articleResult = await ArticleService.createArticle(articleData);
         console.log('📊 Article creation result:', { 
           success: !articleResult.error, 
           error: articleResult.error,
-          hasData: !!articleResult.data 
+          hasData: !!articleResult.data,
+          dataKeys: articleResult.data ? Object.keys(articleResult.data) : []
         });
         
         if (articleResult.error || !articleResult.data) {
@@ -110,15 +113,17 @@ export async function POST(request: NextRequest) {
           console.log('✅ Article created successfully:', {
             id: articleResult.data.id,
             title: articleResult.data.title,
-            status: articleResult.data.status
+            status: articleResult.data.status,
+            slug: articleResult.data.slug
           });
         }
-              } catch (error) {
-          console.error('❌ Error creating article:', error);
-          articleCreationError = error instanceof Error ? error.message : String(error);
-          // Don't throw here - let the generation response still work
-          // but include the error in the response
-        }
+      } catch (error) {
+        console.error('❌ Error creating article:', error);
+        console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+        articleCreationError = error instanceof Error ? error.message : String(error);
+        // Don't throw here - let the generation response still work
+        // but include the error in the response
+      }
     }
 
     // Return enhanced response with V2 metadata
