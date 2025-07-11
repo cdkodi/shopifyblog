@@ -87,6 +87,16 @@ export async function POST(request: NextRequest) {
       try {
         console.log('🚀 Article creation requested, preparing data...');
         
+        // Debug the result structure first
+        console.log('🔍 Generation result structure:', {
+          hasContent: !!result.content,
+          contentLength: result.content?.length || 0,
+          contentPreview: result.content?.substring(0, 100) || 'No content',
+          hasParsedContent: !!result.parsedContent,
+          parsedContentKeys: result.parsedContent ? Object.keys(result.parsedContent) : [],
+          parsedContentLength: result.parsedContent?.content?.length || 0
+        });
+
         const articleData = {
           title: result.parsedContent?.title || generationRequest.topic.title,
           content: result.parsedContent?.content || result.content || '',
@@ -106,7 +116,8 @@ export async function POST(request: NextRequest) {
           wordCount: articleData.wordCount,
           seoScore: articleData.seoScore,
           hasContent: !!articleData.content,
-          contentLength: articleData.content.length
+          contentLength: articleData.content.length,
+          contentPreview: articleData.content.substring(0, 100) || 'No content'
         });
         
         const articleResult = await ArticleService.createArticle(articleData);
@@ -127,6 +138,13 @@ export async function POST(request: NextRequest) {
             title: articleResult.data.title,
             status: articleResult.data.status,
             slug: articleResult.data.slug
+          });
+          
+          // Verify the article was saved with content
+          console.log('🔍 Verifying saved article content:', {
+            hasContent: !!articleResult.data.content,
+            contentLength: articleResult.data.content?.length || 0,
+            contentPreview: articleResult.data.content?.substring(0, 100) || 'No content saved'
           });
         }
       } catch (error) {

@@ -57,9 +57,28 @@ export class AnthropicProvider extends BaseAIProvider {
 
       // Check for content policy refusals
       const content = response.content[0]?.text || '';
+      
+      // Log all Anthropic responses for debugging
+      console.log('🔍 Anthropic response preview:', {
+        contentLength: content.length,
+        firstLine: content.split('\n')[0]?.substring(0, 100) || 'Empty content',
+        isRefusal: this.isContentPolicyRefusal(content),
+        responseId: response.id
+      });
+      
+      // Log potential refusal patterns for debugging
+      if (content.length < 200 && (content.toLowerCase().includes('sorry') || content.toLowerCase().includes("can't"))) {
+        console.warn('⚠️ Potential refusal detected (short response with apology):', {
+          fullContent: content,
+          length: content.length,
+          detectedAsRefusal: this.isContentPolicyRefusal(content)
+        });
+      }
+      
       if (this.isContentPolicyRefusal(content)) {
         console.warn('🚫 Anthropic content policy refusal detected:', {
-          refusalMessage: content.substring(0, 100) + '...',
+          fullRefusalMessage: content, // Log the full message for debugging
+          refusalPreview: content.substring(0, 200) + (content.length > 200 ? '...' : ''),
           promptLength: request.prompt.length,
           promptPreview: request.prompt.substring(0, 200) + '...'
         });
@@ -191,19 +210,62 @@ export class AnthropicProvider extends BaseAIProvider {
 
   private isContentPolicyRefusal(content: string): boolean {
     const refusalPhrases = [
+      // Standard apology patterns
       "i'm sorry, but i can't fulfill this request",
+      "i'm sorry, but i can't",
+      "i'm sorry, i can't",
+      "sorry, but i can't",
+      "sorry, i can't",
+      
+      // Inability patterns
       "i can't help with that",
+      "i can't help with",
       "i'm not able to",
       "i cannot provide",
       "i'm unable to",
       "i can't assist with",
+      "i can't create",
+      "i can't generate",
+      "i can't write",
+      
+      // Policy/guideline patterns
       "this request goes against",
+      "against my guidelines",
+      "violates my guidelines",
+      "my guidelines don't allow",
+      "not something i can help with",
+      "not something i can do",
+      
+      // Comfort/preference patterns
       "i'm not comfortable",
-      "i'd prefer not to"
+      "i'd prefer not to",
+      "i don't feel comfortable",
+      
+      // Direct refusal patterns
+      "i won't be able to",
+      "i cannot fulfill",
+      "i'm not going to",
+      "this isn't something",
+      
+      // Content-specific refusals
+      "inappropriate content",
+      "harmful content",
+      "offensive content"
     ];
     
     const normalizedContent = content.toLowerCase().trim();
-    return refusalPhrases.some(phrase => normalizedContent.includes(phrase));
+    
+    // Check for exact phrase matches
+    const hasRefusalPhrase = refusalPhrases.some(phrase => normalizedContent.includes(phrase));
+    
+    // Additional checks for short responses that are likely refusals
+    const isVeryShort = content.length < 100;
+    const startsWithApology = normalizedContent.startsWith("i'm sorry") || normalizedContent.startsWith("sorry");
+    const containsCant = normalizedContent.includes("can't") || normalizedContent.includes("cannot");
+    
+    const isLikelyRefusal = isVeryShort && startsWithApology && containsCant;
+    
+    return hasRefusalPhrase || isLikelyRefusal;
   }
 
   async validateConfig(): Promise<boolean> {
