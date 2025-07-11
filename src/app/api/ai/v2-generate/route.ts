@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
           wordCount: result.generationMetadata?.wordCount || 0,
           readingTime: result.generationMetadata?.readingTime || 0,
           // Only include sourceTopicId if it's a valid UUID
-          sourceTopicId: (generationRequest.topic.id && isValidUUID(generationRequest.topic.id)) ? generationRequest.topic.id : null
+          sourceTopicId: (generationRequest.topic.id && isValidUUID(generationRequest.topic.id)) ? generationRequest.topic.id : undefined
         };
 
         console.log('📝 Creating article in database...', { 

@@ -123,7 +123,7 @@ export class V2AIServiceManager extends AIServiceManager implements IV2AIService
       
       // Enhanced error handling with proper serialization
       let errorMessage = 'Generation failed';
-      let errorCode = V2_ERROR_CODES.TEMPLATE_NOT_SUPPORTED;
+      let errorCode: string = V2_ERROR_CODES.TEMPLATE_NOT_SUPPORTED;
       
       if (error instanceof Error) {
         // Handle standard Error objects
