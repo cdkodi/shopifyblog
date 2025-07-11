@@ -120,10 +120,70 @@ export class V2AIServiceManager extends AIServiceManager implements IV2AIService
 
     } catch (error) {
       console.error('❌ V2 Generation failed:', error);
-      throw error instanceof Error ? error : this.createV2Error(
-        V2_ERROR_CODES.TEMPLATE_NOT_SUPPORTED, 
-        `Generation failed: ${error}`
-      );
+      
+      // Enhanced error handling with proper serialization
+      let errorMessage = 'Generation failed';
+      let errorCode = V2_ERROR_CODES.TEMPLATE_NOT_SUPPORTED;
+      
+      if (error instanceof Error) {
+        // Handle standard Error objects
+        errorMessage = error.message;
+        console.error('❌ Error details:', { message: error.message, stack: error.stack });
+      } else if (typeof error === 'object' && error !== null) {
+        // Handle ProviderError or other error objects
+        const errorObj = error as any;
+        if (errorObj.message) {
+          errorMessage = errorObj.message;
+        } else if (errorObj.error) {
+          errorMessage = errorObj.error;
+        } else {
+          // Last resort - serialize the error object
+          errorMessage = JSON.stringify(error);
+        }
+        
+        // Extract error code if available
+        if (errorObj.code) {
+          errorCode = errorObj.code;
+        }
+        
+        console.error('❌ Error object details:', {
+          message: errorObj.message,
+          code: errorObj.code,
+          provider: errorObj.provider,
+          retryable: errorObj.retryable,
+          originalError: errorObj.originalError
+        });
+      } else {
+        // Handle primitive types
+        errorMessage = String(error);
+        console.error('❌ Primitive error:', error);
+      }
+      
+      // Provide more specific error messages based on common patterns
+      if (errorMessage.includes('safety filters') || errorMessage.includes('content policy')) {
+        errorMessage = 'Content generation blocked by AI safety filters. Please try a different topic or adjust your content requirements.';
+        errorCode = V2_ERROR_CODES.VALIDATION_ERROR;
+      } else if (errorMessage.includes('rate limit')) {
+        errorMessage = 'AI service rate limit exceeded. Please try again in a few minutes.';
+        errorCode = V2_ERROR_CODES.RATE_LIMIT_EXCEEDED;
+      } else if (errorMessage.includes('API key') || errorMessage.includes('unauthorized')) {
+        errorMessage = 'AI service authentication failed. Please check your API configuration.';
+        errorCode = V2_ERROR_CODES.API_KEY_INVALID;
+      } else if (errorMessage.includes('quota') || errorMessage.includes('insufficient')) {
+        errorMessage = 'AI service quota exceeded. Please check your subscription limits.';
+        errorCode = V2_ERROR_CODES.INSUFFICIENT_QUOTA;
+      } else if (errorMessage.includes('timeout') || errorMessage.includes('network')) {
+        errorMessage = 'Network timeout connecting to AI service. Please try again.';
+        errorCode = V2_ERROR_CODES.NETWORK_ERROR;
+      } else if (errorMessage.includes('overloaded') || errorMessage.includes('503') || errorMessage.includes('502')) {
+        errorMessage = 'AI service is temporarily overloaded. Please try again in a few minutes.';
+        errorCode = V2_ERROR_CODES.MODEL_OVERLOADED;
+      } else if (errorMessage.includes('All providers failed')) {
+        errorMessage = 'All AI providers failed to generate content. This may be due to content policy restrictions or temporary service issues. Please try again with a different topic or contact support.';
+        errorCode = V2_ERROR_CODES.UNKNOWN_ERROR;
+      }
+      
+      throw this.createV2Error(errorCode, errorMessage);
     }
   }
 
