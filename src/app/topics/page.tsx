@@ -104,16 +104,41 @@ export default function TopicsPage() {
   }
 
   const confirmGeneration = async () => {
-    if (!selectedTopicForGeneration) return;
+    if (!selectedTopicForGeneration) {
+      alert('No topic selected for generation');
+      return;
+    }
 
-    console.log('🎬 confirmGeneration started for topic:', selectedTopicForGeneration.topic_title);
+    const topic = selectedTopicForGeneration;
+    
+    // Enhanced validation with debugging
+    console.log('🎬 confirmGeneration started for topic:', topic.topic_title);
+    console.log('📊 Full topic object:', topic);
+    console.log('🔍 Topic ID:', topic.id, 'Type:', typeof topic.id);
+    
+    // Validate topic ID exists and is a valid UUID format
+    if (!topic.id) {
+      alert('Topic ID is missing. Please refresh the page and try again.');
+      setShowGenerationDialog(false);
+      return;
+    }
+    
+    // Basic UUID format validation (should be 36 characters with hyphens)
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidPattern.test(topic.id)) {
+      console.error('❌ Invalid topic ID format:', topic.id);
+      alert(`Invalid topic ID format: ${topic.id}. Please refresh the page and try again.`);
+      setShowGenerationDialog(false);
+      return;
+    }
+
+    console.log('✅ Topic ID validation passed:', topic.id);
+
     setShowGenerationDialog(false);
     setIsGenerating(true);
     setGenerationError(null);
 
     try {
-      const topic = selectedTopicForGeneration;
-      
       // Extract data from topic
       const prefs = topic.style_preferences as any || {};
       const template = prefs.template_type || prefs.template || 'article';
@@ -130,10 +155,10 @@ export default function TopicsPage() {
         }
       }
 
-      // Build request body for V2 API
+      // Build request body for V2 API with validated data
       const requestBody = {
         topic: {
-          id: topic.id,
+          id: topic.id, // Now validated to be a proper UUID
           title: topic.topic_title,
           keywords: keywordsStr,
           tone: tone,
@@ -146,6 +171,7 @@ export default function TopicsPage() {
       };
 
       console.log('📋 Sending direct V2 generation request:', requestBody);
+      console.log('🔍 Request body topic ID:', requestBody.topic.id);
 
       // Show immediate progress for direct generation
       setGenerationProgress({
