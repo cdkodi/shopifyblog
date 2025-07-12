@@ -145,12 +145,25 @@ export class AIServiceManager {
 
     // All providers failed
     const lastError = attempts[attempts.length - 1]?.error;
+    
+    // Extract proper error message from lastError
+    let errorMessage = 'Unknown error';
+    if (lastError) {
+      if (typeof lastError === 'string') {
+        errorMessage = lastError;
+      } else if (typeof lastError === 'object' && lastError.message) {
+        errorMessage = lastError.message;
+      } else {
+        errorMessage = String(lastError);
+      }
+    }
+    
     return {
       success: false,
       attempts,
       totalCost,
       totalTokens,
-      error: lastError ? this.createError(AI_ERROR_CODES.UNKNOWN_ERROR, `All providers failed: ${lastError}`) : undefined
+      error: lastError ? this.createError(AI_ERROR_CODES.UNKNOWN_ERROR, `All providers failed: ${errorMessage}`) : undefined
     };
   }
 

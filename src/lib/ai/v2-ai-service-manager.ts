@@ -67,9 +67,21 @@ export class V2AIServiceManager extends AIServiceManager implements IV2AIService
       const baseResult = await this.generateContent(aiRequest, optimalProvider as any);
 
       if (!baseResult.success || !baseResult.content) {
+        // Extract proper error message from baseResult.error
+        let errorMessage = 'Unknown error';
+        if (baseResult.error) {
+          if (typeof baseResult.error === 'object') {
+            errorMessage = baseResult.error.message || baseResult.error.toString();
+          } else if (typeof baseResult.error === 'string') {
+            errorMessage = baseResult.error;
+          } else {
+            errorMessage = String(baseResult.error);
+          }
+        }
+        
         throw this.createV2Error(
-          V2_ERROR_CODES.TEMPLATE_NOT_SUPPORTED, 
-          `Content generation failed: ${baseResult.error?.message || 'Unknown error'}`
+          V2_ERROR_CODES.PROVIDER_ERROR, 
+          `Content generation failed: ${errorMessage}`
         );
       }
 
@@ -180,7 +192,7 @@ export class V2AIServiceManager extends AIServiceManager implements IV2AIService
         errorCode = V2_ERROR_CODES.MODEL_OVERLOADED;
       } else if (errorMessage.includes('All providers failed')) {
         errorMessage = 'All AI providers failed to generate content. This may be due to content policy restrictions or temporary service issues. Please try again with a different topic or contact support.';
-        errorCode = V2_ERROR_CODES.UNKNOWN_ERROR;
+        errorCode = V2_ERROR_CODES.PROVIDER_ERROR;
       }
       
       throw this.createV2Error(errorCode, errorMessage);

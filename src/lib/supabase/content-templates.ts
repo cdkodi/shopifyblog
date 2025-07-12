@@ -102,14 +102,14 @@ export class ContentTemplateService {
       description: `Professional ${name.toLowerCase()} content optimized for SEO and engagement.`,
       icon: this.getIconForTemplate(name),
       recommendedProvider: this.getProviderForTemplate(name),
-      estimatedCost: 0.015,
-      targetLength: 1800,
+      estimatedCost: this.getEstimatedCostForTemplate(name),
+      targetLength: this.getTargetLengthForTemplate(name),
       seoAdvantages: ['SEO optimized', 'Engagement focused', 'Professional quality'],
       exampleTitles: [
         `Sample ${name} Title 1`,
         `Example ${name} Article 2`
       ],
-      difficulty: 'medium' as const
+      difficulty: this.getDifficultyForTemplate(name)
     };
 
     return defaults;
@@ -153,6 +153,66 @@ export class ContentTemplateService {
     };
 
     return providerMap[name] || 'anthropic';
+  }
+
+  // Get target length for template
+  private static getTargetLengthForTemplate(name: string): number {
+    const lengthMap: Record<string, number> = {
+      'How-To Guide': 2000,
+      'Product Showcase': 1500,
+      'Industry Trends': 1800,
+      'Buying Guide': 2500,
+      'Case Study': 2200,
+      'News & Updates': 1000,
+      'Tutorial': 2800,
+      'Review': 1600,
+      'Comparison': 2100,
+      'Interview': 1900,
+      'Analysis': 2400,
+      'Announcement': 1200
+    };
+
+    return lengthMap[name] || 1500;
+  }
+
+  // Get estimated cost for template
+  private static getEstimatedCostForTemplate(name: string): number {
+    const costMap: Record<string, number> = {
+      'How-To Guide': 0.015,
+      'Product Showcase': 0.03,
+      'Industry Trends': 0.005,
+      'Buying Guide': 0.02,
+      'Case Study': 0.025,
+      'News & Updates': 0.008,
+      'Tutorial': 0.018,
+      'Review': 0.022,
+      'Comparison': 0.025,
+      'Interview': 0.02,
+      'Analysis': 0.028,
+      'Announcement': 0.012
+    };
+
+    return costMap[name] || 0.015;
+  }
+
+  // Get difficulty for template
+  private static getDifficultyForTemplate(name: string): 'easy' | 'medium' | 'hard' {
+    const difficultyMap: Record<string, 'easy' | 'medium' | 'hard'> = {
+      'How-To Guide': 'easy',
+      'Product Showcase': 'medium',
+      'Industry Trends': 'medium',
+      'Buying Guide': 'hard',
+      'Case Study': 'hard',
+      'News & Updates': 'easy',
+      'Tutorial': 'hard',
+      'Review': 'medium',
+      'Comparison': 'hard',
+      'Interview': 'medium',
+      'Analysis': 'hard',
+      'Announcement': 'easy'
+    };
+
+    return difficultyMap[name] || 'medium';
   }
 
   // Default templates as fallback

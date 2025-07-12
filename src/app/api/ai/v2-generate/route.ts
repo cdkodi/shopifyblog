@@ -66,6 +66,13 @@ export async function POST(request: NextRequest) {
       }
     };
 
+    // Log the target word count for debugging
+    console.log('🎯 Target word count:', {
+      bodyTargetWordCount: body.targetWordCount,
+      requestTargetWordCount: generationRequest.targetWordCount,
+      template: body.topic.template
+    });
+
     // Get V2 service and generate content
     const v2Service = getDefaultV2Service();
     const startTime = Date.now();
@@ -86,10 +93,27 @@ export async function POST(request: NextRequest) {
     // Check if generation was successful
     if (!result.success) {
       console.error('❌ V2 Generation failed:', result.error);
+      
+      // Extract proper error message from error object
+      let errorMessage = 'Generation failed';
+      let errorCode = 'UNKNOWN_ERROR';
+      
+      if (result.error) {
+        if (typeof result.error === 'object') {
+          errorMessage = result.error.message || 'Generation failed';
+          errorCode = result.error.code || 'UNKNOWN_ERROR';
+        } else if (typeof result.error === 'string') {
+          errorMessage = result.error;
+        }
+      }
+      
+      console.error('❌ Error details:', { message: errorMessage, code: errorCode });
+      
       return NextResponse.json(
         {
           success: false,
-          error: result.error || 'Generation failed',
+          error: errorMessage,
+          errorCode: errorCode,
           version: 'v2.1'
         },
         { status: 500 }
@@ -100,9 +124,15 @@ export async function POST(request: NextRequest) {
     const fallbackUsed = result.attempts && result.attempts.length > 1;
     const primaryProvider = result.attempts?.[0]?.provider || 'unknown';
     if (fallbackUsed && result.attempts) {
+      // Extract proper error message for logging
+      const primaryError = result.attempts[0]?.error;
+      const primaryErrorMessage = typeof primaryError === 'string' ? primaryError : 
+                                  typeof primaryError === 'object' && primaryError?.message ? primaryError.message : 
+                                  String(primaryError || 'Unknown error');
+      
       console.log('🔄 Provider fallback occurred:', {
         primaryProvider,
-        primaryError: result.attempts[0]?.error,
+        primaryError: primaryErrorMessage,
         finalProvider: result.finalProvider,
         totalAttempts: result.attempts.length
       });
@@ -216,9 +246,24 @@ export async function POST(request: NextRequest) {
             fallback: {
               occurred: true,
               primaryProvider,
-              primaryError: result.attempts[0]?.error,
+              primaryError: (() => {
+                const primaryError = result.attempts[0]?.error;
+                if (typeof primaryError === 'string') {
+                  return primaryError;
+                } else if (typeof primaryError === 'object' && primaryError?.message) {
+                  return primaryError.message;
+                } else {
+                  return String(primaryError || 'Unknown error');
+                }
+              })(),
               totalAttempts: result.attempts.length,
-              reason: result.attempts[0]?.error?.includes('safety filters') ? 'content_policy' : 'other'
+              reason: (() => {
+                const primaryError = result.attempts[0]?.error;
+                const errorStr = typeof primaryError === 'string' ? primaryError : 
+                                typeof primaryError === 'object' && primaryError?.message ? primaryError.message : 
+                                String(primaryError || '');
+                return errorStr.includes('safety filters') ? 'content_policy' : 'other';
+              })()
             }
           })
         },
