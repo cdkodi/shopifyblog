@@ -151,8 +151,14 @@ export class AIServiceManager {
     if (lastError) {
       if (typeof lastError === 'string') {
         errorMessage = lastError;
-      } else if (typeof lastError === 'object' && lastError.message) {
-        errorMessage = lastError.message;
+      } else if (typeof lastError === 'object' && lastError !== null) {
+        // Type guard for objects with message property
+        const errorObj = lastError as any;
+        if (errorObj.message && typeof errorObj.message === 'string') {
+          errorMessage = errorObj.message;
+        } else {
+          errorMessage = String(lastError);
+        }
       } else {
         errorMessage = String(lastError);
       }
