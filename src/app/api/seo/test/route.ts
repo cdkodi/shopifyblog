@@ -94,8 +94,8 @@ async function handleKeywordTest() {
         suggestionsCount: suggestions.length,
         sampleSuggestions: suggestions.slice(0, 3).map(s => ({
           keyword: s.keyword,
-          searchVolume: s.search_volume,
-          competition: s.competition_level
+          competition: s.competition_level,
+          relevance: s.relevance_score
         }))
       }
     });
@@ -127,7 +127,6 @@ async function handleResearchTest() {
         testTopic,
         primaryKeyword: {
           keyword: research.primary_keyword.keyword,
-          searchVolume: research.primary_keyword.search_volume,
           intent: research.primary_keyword.search_intent
         },
         relatedKeywordsCount: research.related_keywords.length,

@@ -136,7 +136,7 @@ export class SEOServiceManager {
       
       const seoEnhancement = `
 SEO Context:
-- Primary keyword: "${research.primary_keyword.keyword}" (${research.primary_keyword.search_volume} monthly searches)
+- Primary keyword: "${research.primary_keyword.keyword}"
 - Target keywords to include: ${research.related_keywords.slice(0, 5).map(k => k.keyword).join(', ')}
 - Content intent: ${research.primary_keyword.search_intent}
 - Recommended length: ${research.content_recommendations.target_length} words
@@ -198,13 +198,6 @@ export function getCompetitionColor(level: 'low' | 'medium' | 'high'): string {
     case 'high': return 'text-red-600';
     default: return 'text-gray-600';
   }
-}
-
-export function getDifficultyLabel(difficulty: number): string {
-  if (difficulty < 30) return 'Easy';
-  if (difficulty < 60) return 'Medium';
-  if (difficulty < 80) return 'Hard';
-  return 'Very Hard';
 }
 
 // Re-export types for convenience

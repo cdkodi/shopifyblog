@@ -21,14 +21,9 @@ function generateFallbackKeywords(keyword: string): any {
 
   return {
     keyword,
-    search_volume: Math.floor(Math.random() * 1000) + 100,
-    competition: Math.random() * 0.8 + 0.1,
-    cpc: Math.random() * 2 + 0.5,
-    difficulty: Math.floor(Math.random() * 50) + 20,
     search_intent: 'informational',
     keywords: baseKeywords.map((kw, index) => ({
       keyword: kw,
-      search_volume: Math.floor(Math.random() * 500) + 50,
       competition_level: index % 3 === 0 ? 'low' : index % 3 === 1 ? 'medium' : 'high',
       relevance_score: Math.floor(Math.random() * 30) + 70
     }))

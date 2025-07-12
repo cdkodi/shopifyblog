@@ -48,21 +48,12 @@ export class DataForSEOService {
   }
 
   /**
-   * Get detailed keyword analysis including difficulty and search intent
+   * Get detailed keyword analysis including search intent (simplified)
    */
   async getKeywordAnalysis(keyword: string): Promise<KeywordData> {
     try {
-      const [volumeData, difficultyData] = await Promise.all([
-        this.getSearchVolume(keyword),
-        this.getKeywordDifficulty(keyword)
-      ]);
-
       return {
         keyword,
-        search_volume: volumeData.search_volume,
-        competition: volumeData.competition,
-        cpc: volumeData.cpc,
-        difficulty: difficultyData.difficulty,
         search_intent: this.inferSearchIntent(keyword)
       };
     } catch (error) {
@@ -156,43 +147,6 @@ export class DataForSEOService {
 
 
 
-  private async getSearchVolume(keyword: string): Promise<{ search_volume: number; competition: number; cpc: number }> {
-    try {
-      // Use Live API for immediate results
-      const response = await this.makeRequest('/keywords_data/google_ads/search_volume/live', {
-        keywords: [keyword],
-        location_code: this.config.locationId,
-        language_code: this.config.languageId
-      });
-      
-      const data = response.tasks?.[0]?.result?.[0]?.items?.[0] || {};
-      return {
-        search_volume: data.search_volume || 0,
-        competition: data.competition || 0,
-        cpc: data.cpc || 0
-      };
-    } catch (error) {
-      // Return default values if API fails
-      return {
-        search_volume: 0,
-        competition: 0,
-        cpc: 0
-      };
-    }
-  }
-
-  private async getKeywordDifficulty(keyword: string): Promise<{ difficulty: number }> {
-    const response = await this.makeRequest('/keywords_data/google_ads/keyword_difficulty/task_post', {
-      keywords: [keyword],
-      location_code: this.config.locationId || 2840,
-      language_code: this.config.languageId || 'en'
-    });
-
-    return {
-      difficulty: response[0]?.keyword_difficulty || 0
-    };
-  }
-
   private async getSERPFeatures(keyword: string): Promise<SERPFeature[]> {
     // This would be implemented with SERP API endpoints
     // For now, return empty array
@@ -210,7 +164,6 @@ export class DataForSEOService {
 
     return items.map((item: any) => ({
       keyword: item.keyword || '',
-      search_volume: item.search_volume || 0,
       competition_level: this.mapCompetitionLevel(item.competition || 0),
       relevance_score: this.calculateRelevanceScore(item)
     }));
@@ -227,7 +180,6 @@ export class DataForSEOService {
 
     return items.map((item: any) => ({
       keyword: item.keyword || '',
-      search_volume: item.keyword_info?.search_volume || 0,
       competition_level: this.mapCompetitionLevel(item.keyword_info?.competition || 0),
       relevance_score: this.calculateRelevanceScore(item)
     }));
@@ -240,10 +192,10 @@ export class DataForSEOService {
   }
 
   private calculateRelevanceScore(item: any): number {
-    // Simple relevance scoring based on search volume and competition
-    const volume = item.keyword_info?.search_volume || item.search_volume || 0;
-    const competition = item.keyword_info?.competition || item.competition || 1;
-    return Math.min(100, (volume / competition) * 0.1);
+    // Simple relevance scoring based on competition level
+    const competition = item.keyword_info?.competition || item.competition || 0.5;
+    // Lower competition = higher relevance score
+    return Math.round((1 - competition) * 100);
   }
 
   private inferSearchIntent(keyword: string): KeywordData['search_intent'] {
@@ -279,7 +231,7 @@ export class DataForSEOService {
   }
 
   private calculateTargetLength(keyword: KeywordData): number {
-    // Base length on search intent and competition
+    // Base length on search intent only
     if (keyword.search_intent === 'commercial') return 1500;
     if (keyword.search_intent === 'informational') return 2000;
     return 1200;

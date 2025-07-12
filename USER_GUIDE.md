@@ -26,9 +26,10 @@
 
 **🔗 Topic-Article Linking System**: Complete traceability from topic planning to published articles
 - **Automatic Status Tracking**: Topics move from Available → Generated → Published
-- **Sectioned Dashboard**: Clear separation of available vs published topics
+- **Sectioned Dashboard**: Clear separation of available vs published topics with dedicated tabs
 - **Relationship Navigation**: Easy movement between topics and their articles
 - **Progress Tracking**: Visual indicators showing topic usage and article counts
+- **Published Topics Tab**: Dedicated section for topics that have generated published articles
 
 **⚡ Streamlined Template Selection**: Simplified content creation workflow
 - **Direct Template Choice**: Select templates during topic creation
@@ -43,6 +44,43 @@
 **Start with Topics** → **Research Keywords** → **Generate Content** → **Review & Edit** → **Publish**
 
 **🎯 Optimized Keyword Flow** (New): Keywords researched in Topics automatically carry over to Content Generation, eliminating duplicate research and preserving your selections.
+
+### Topic Status Workflow
+
+**📊 Complete Topic Lifecycle**: Topics automatically progress through three main states based on their article generation and publication status:
+
+**1. 📋 Available Topics**:
+- **Status**: Ready for content generation
+- **Characteristics**: No articles generated yet, or articles generated but not published
+- **Actions Available**: Generate content, edit topic details, delete topic
+- **Visual Indicators**: "Available" badge, "Generate" button visible
+- **Location**: "Available Topics" tab in dashboard
+
+**2. 📝 Generated Topics**:
+- **Status**: Have generated articles, but none published yet
+- **Characteristics**: Articles exist in the CMS but haven't been published to Shopify
+- **Actions Available**: Edit articles, publish to Shopify, generate more articles
+- **Visual Indicators**: "Generated" badge, article count shown
+- **Location**: "Available Topics" tab (since not yet published)
+
+**3. ✅ Published Topics**:
+- **Status**: Have at least one article published to Shopify
+- **Characteristics**: Successfully completed the full content pipeline
+- **Actions Available**: Edit topic, generate more articles, view published articles
+- **Visual Indicators**: "Published" badge, last published date, article count
+- **Location**: "Published Topics" tab in dashboard
+
+**🔄 Automatic Status Transitions**:
+- **Available → Generated**: Happens when AI generates first article from topic
+- **Generated → Published**: Happens when any article is published to Shopify
+- **Real-time Updates**: Status changes reflect immediately in dashboard
+- **Persistent Tracking**: Topic status maintained across browser sessions
+
+**📈 Status-Based Analytics**:
+- **Success Rate**: Percentage of topics that reach "Published" status
+- **Pipeline Health**: Monitor topics stuck in "Generated" state
+- **Performance Metrics**: Track time from creation to publication
+- **Content Planning**: Identify successful topic patterns for future content
 
 #### Step 1: Topic Management (`/topics`)
 
@@ -130,6 +168,56 @@ The topic dashboard now features a **sectioned interface** that organizes your c
 - **Publication Dates**: When articles were last published
 - **Article Links**: Direct navigation to published articles
 - **Performance Metrics**: Article count and publishing success
+
+**How Published Topics Work**:
+
+**🔄 Automatic Status Tracking**: Topics automatically move to the "Published" section when any of their generated articles are published to Shopify. This happens through:
+
+1. **Database View Integration**: Uses the `topics_with_article_status` database view that tracks article publication status
+2. **Shopify Synchronization**: When articles are published to Shopify (via the Shopify Integration panel), topics are automatically marked as "published"
+3. **Real-time Updates**: Topic status updates reflect immediately in the dashboard
+4. **Bidirectional Linking**: Articles retain their connection to source topics, enabling complete traceability
+
+**🎯 Published Topic Features**:
+
+**Visual Indicators**:
+- **✅ Published Badge**: Clear green badge showing "Published" status
+- **📅 Last Published Date**: Shows when the most recent article was published
+- **📊 Article Count**: Displays how many articles have been generated from this topic
+- **🔗 Topic-Article Links**: Direct navigation to all articles generated from the topic
+
+**Functionality Differences**:
+- **No Generate Button**: Published topics don't show the "Generate" button (since they've already been used)
+- **Edit Topic**: You can still edit topic details and generate additional articles
+- **View Articles**: Access all articles generated from this topic
+- **Performance Tracking**: See publishing success metrics
+
+**📈 Analytics & Insights**:
+- **Success Rate**: Track which topics result in published content
+- **Publication Timeline**: Monitor when topics move through the pipeline
+- **Content Performance**: Analyze which topic types perform best
+- **Workflow Efficiency**: Measure time from topic creation to publication
+
+**🔧 Managing Published Topics**:
+
+**Editing Published Topics**:
+- **Still Editable**: You can modify topic details even after publication
+- **Generate More**: Create additional articles from the same topic
+- **Update Strategy**: Refine keywords and templates based on performance
+- **Archive Option**: Remove topics from active dashboard when no longer needed
+
+**Content Series Management**:
+- **Multiple Articles**: Generate several articles from one successful topic
+- **Template Variation**: Try different templates for the same topic
+- **Keyword Expansion**: Add new keywords to explore related angles
+- **Performance Optimization**: Refine based on publishing success
+
+**🎉 Benefits of Published Topics Tracking**:
+- ✅ **Complete Visibility**: Always know which topics have resulted in published content
+- ✅ **Success Metrics**: Track content creation ROI from topic to publication
+- ✅ **Workflow Optimization**: Identify successful topic patterns
+- ✅ **Content Planning**: Build on successful topics for future content
+- ✅ **Performance Analysis**: Measure effectiveness of your content strategy
 
 **🔗 Topic-Article Navigation**:
 - **View Articles**: See all articles generated from a topic

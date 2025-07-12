@@ -1,15 +1,10 @@
 export interface KeywordData {
   keyword: string;
-  search_volume: number;
-  competition: number;
-  cpc: number;
-  difficulty: number;
   search_intent: 'informational' | 'commercial' | 'navigational' | 'transactional';
 }
 
 export interface KeywordSuggestion {
   keyword: string;
-  search_volume: number;
   competition_level: 'low' | 'medium' | 'high';
   relevance_score: number;
 }

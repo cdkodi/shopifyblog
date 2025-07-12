@@ -198,10 +198,26 @@ SELECT
     ELSE t.status
   END as topic_status
 FROM topics t
-LEFT JOIN articles a ON a.source_topic_id = t.id
+LEFT JOIN articles a ON t.id = a.source_topic_id
 GROUP BY t.id, t.topic_title, t.keywords, t.content_template, t.style_preferences, 
-         t.competition_score, t.created_at, t.industry, t.market_segment, 
-         t.priority_score, t.search_volume, t.status, t.used_at;
+         t.status, t.created_at, t.updated_at;
+
+-- Published Topics Feature Implementation
+-- This view powers the Published Topics dashboard feature that automatically
+-- tracks topic publication status and provides real-time updates
+
+-- Key Fields:
+-- - has_published_articles: Boolean indicating if topic has published articles
+-- - published_article_count: Count of published articles from this topic
+-- - last_published_at: Timestamp of most recent publication
+-- - topic_status: Computed status (available/generated/published)
+
+-- Frontend Integration:
+-- The TopicDashboard component uses this view to:
+-- 1. Separate topics into "Available" and "Published" tabs
+-- 2. Show publication metrics and success indicators
+-- 3. Track complete topic lifecycle from creation to publication
+-- 4. Provide real-time status updates without page refresh
 
 CREATE OR REPLACE VIEW articles_with_shopify_status AS
 SELECT 
@@ -259,7 +275,98 @@ CREATE POLICY "Enable authenticated access" ON articles FOR ALL TO authenticated
 CREATE POLICY "Enable authenticated access" ON seo_keywords FOR ALL TO authenticated;
 ```
 
-## Topic-Article Linking System (New)
+## Published Topics Feature (Latest)
+
+### Overview
+
+**Purpose**: Automatic tracking and visualization of topic publication success through dedicated dashboard sections.
+
+**Key Features**:
+- **Automatic Status Tracking**: Topics automatically move to "Published" status when articles are published to Shopify
+- **Dashboard Segregation**: Dedicated tabs for "Available Topics" vs "Published Topics"
+- **Real-time Updates**: Status changes reflect immediately without page refresh
+- **Performance Metrics**: Publication success rates, article counts, and timeline tracking
+
+### Database Implementation
+
+**Core View**: `topics_with_article_status`
+```sql
+-- This view powers the published topics feature
+SELECT 
+  t.*,
+  COUNT(a.id) as article_count,
+  COUNT(CASE WHEN a.shopify_article_id IS NOT NULL THEN 1 END) as published_article_count,
+  CASE 
+    WHEN COUNT(CASE WHEN a.shopify_article_id IS NOT NULL THEN 1 END) > 0 THEN true 
+    ELSE false 
+  END as has_published_articles,
+  MAX(a.published_at) as last_published_at,
+  CASE 
+    WHEN COUNT(CASE WHEN a.shopify_article_id IS NOT NULL THEN 1 END) > 0 THEN 'published'
+    WHEN COUNT(a.id) > 0 THEN 'generated'
+    ELSE t.status
+  END as topic_status
+FROM topics t
+LEFT JOIN articles a ON t.id = a.source_topic_id
+GROUP BY t.id, ...;
+```
+
+**Key Status Logic**:
+- **Available**: No articles generated yet (topic_status = original status)
+- **Generated**: Articles created but none published (topic_status = 'generated')
+- **Published**: At least one article published to Shopify (topic_status = 'published')
+
+### Frontend Architecture
+
+**Component**: `TopicDashboard` (`src/components/topic-dashboard.tsx`)
+
+**State Management**:
+```typescript
+const [activeTab, setActiveTab] = useState<'available' | 'published'>('available');
+
+// Topic separation logic
+const availableTopics = topics.filter(topic => !topic.has_published_articles);
+const publishedTopics = topics.filter(topic => topic.has_published_articles);
+```
+
+**UI Features**:
+- **Tab Navigation**: Seamless switching between available and published topics
+- **Statistics Cards**: Real-time counts for available/published topics and total articles
+- **Visual Indicators**: Status badges, publication dates, article counts
+- **Conditional Actions**: Generate button only shown for available topics
+
+### Automatic Status Transitions
+
+**Trigger Events**:
+1. **Article Creation**: Topic moves from "Available" to "Generated"
+2. **Shopify Publication**: Topic moves from "Generated" to "Published"
+3. **Database Updates**: Real-time view refresh ensures immediate status updates
+
+**Technical Flow**:
+```typescript
+// When article is published to Shopify
+const publishArticle = async (articleId: string) => {
+  // Shopify API call sets shopify_article_id
+  await shopifyAPI.publishArticle(articleData);
+  
+  // Database view automatically recalculates topic status
+  // Frontend refetches topics data
+  // UI immediately reflects new "Published" status
+};
+```
+
+### Performance Optimizations
+
+**Database Indexes**:
+```sql
+CREATE INDEX idx_articles_source_topic_id ON articles(source_topic_id);
+CREATE INDEX idx_articles_shopify_article_id ON articles(shopify_article_id);
+CREATE INDEX idx_topics_status ON topics(status);
+```
+
+**Query Optimization**: Single view query provides all topic metadata, eliminating N+1 queries for article counts.
+
+## Topic-Article Linking System
 
 ### Architecture Overview
 
