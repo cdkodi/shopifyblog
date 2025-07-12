@@ -278,6 +278,25 @@ export class OpenAIProvider extends BaseAIProvider {
     
     // Enhanced logic: Check if there's substantial content despite disclaimers
     if (hasRefusalPhrase) {
+      // Special handling for word count concerns
+      if (normalizedContent.includes('word article') || normalizedContent.includes('word count')) {
+        console.log('🔍 Detected word count concern in OpenAI response, checking for actual content...');
+        
+        // If OpenAI mentions word count but still provides content, it's likely not a refusal
+        const hasSubstantialContent = content.length > 1000 && (
+          normalizedContent.includes('title:') ||
+          normalizedContent.includes('meta_description:') ||
+          normalizedContent.includes('content:') ||
+          normalizedContent.includes('introduction') ||
+          normalizedContent.includes('conclusion')
+        );
+        
+        if (hasSubstantialContent) {
+          console.log('✅ OpenAI provided substantial content despite word count disclaimer - treating as valid response');
+          return false; // Not a refusal
+        }
+      }
+      
       // Look for article structure markers that indicate actual content
       const hasArticleStructure = [
         'title:',

@@ -23,13 +23,13 @@ export class V2TopicPromptBuilder {
     const contentStructure = 'standard';
     const template = 'standard'; // Use string directly instead of V2_CONTENT_TEMPLATES.STANDARD
 
-    return `Create a comprehensive ${estimatedWords}-word article about "${topic.title}" following the V2 enhanced content structure.
+    return `Create a comprehensive article about "${topic.title}" following the V2 enhanced content structure.
 
 **Content Requirements:**
 - Topic: ${topic.title}
 - Target Keywords: ${keywords.join(', ')}
 - Tone: ${topic.tone || 'professional'}
-- Word Count: ${estimatedWords} words
+- Target Length: Approximately ${estimatedWords} words (flexible based on content needs)
 - Content Structure: ${contentStructure} (standard sections)
 - Template Style: ${topic.template || 'article'}
 
@@ -46,7 +46,7 @@ TITLE: [Create an engaging, SEO-optimized title (30-60 characters) that includes
 META_DESCRIPTION: [Write a compelling meta description (150-160 characters) that summarizes the article's value and includes the primary keyword]
 
 CONTENT:
-[Write the main article content here - exactly ${estimatedWords} words]
+[Write comprehensive article content - aim for around ${estimatedWords} words but prioritize quality and completeness over exact word count]
 
 **Writing Guidelines:**
 - Include target keywords naturally with optimal density (0.5-2.5%)

@@ -15,6 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { topicSchema, type TopicFormData } from '../lib/validations/topic'
 import { TopicService } from '../lib/supabase/topics'
 import { ContentTemplateService, ContentTemplate } from '../lib/supabase/content-templates'
+import { parseWordCountFromLength } from '../lib/utils'
 
 interface TopicFormProps {
   initialData?: Partial<TopicFormData>
@@ -349,6 +350,13 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
         console.log('✅ Topic created with ID:', savedTopicId)
       }
 
+      const userSelectedWordCount = parseWordCountFromLength(topicData.length || '');
+      console.log('🎯 User selected word count:', {
+        lengthString: topicData.length,
+        parsedWordCount: userSelectedWordCount,
+        templateTargetLength: selectedTemplate?.targetLength
+      });
+
       // Use direct V2 generation instead of queue (which gets stuck at 60%)
       const requestBody = {
         topic: {
@@ -360,7 +368,7 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
           template: topicData.template
         },
         optimizeForSEO: true,
-        targetWordCount: selectedTemplate?.targetLength || 800,
+        targetWordCount: userSelectedWordCount, // Use user's selection, not template default
         createArticle: true // Create article immediately
       }
 
@@ -1043,7 +1051,7 @@ export function TopicFormEnhanced({ initialData, topicId, onSuccess, onCancel }:
               This will use AI to generate a complete article based on your topic configuration. The process will:
               <ul className="list-disc list-inside mt-2 space-y-1">
                 <li>Create SEO-optimized content using the "{watchedValues.template}" template</li>
-                <li>Target approximately {selectedTemplate?.targetLength || 800} words</li>
+                <li>Target approximately {parseWordCountFromLength(watchedValues.length || '')} words</li>
                 <li>Use "{watchedValues.tone}" tone and include your keywords</li>
                 <li>Generate meta descriptions and optimize for search engines</li>
               </ul>

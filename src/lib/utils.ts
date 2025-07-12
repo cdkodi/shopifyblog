@@ -76,4 +76,58 @@ export function safeJsonParse<T = any>(
  */
 export function parseArticleKeywords(keywords: any): string[] {
   return safeJsonParse<string[]>(keywords, []);
+}
+
+/**
+ * Parse word count from article length strings like "Short (500-800 words)"
+ * Returns the middle of the range or the single number if only one is provided
+ */
+export function parseWordCountFromLength(lengthString: string): number {
+  if (!lengthString) return 800; // Default
+  
+  // Extract numbers from strings like "Short (500-800 words)"
+  const match = lengthString.match(/\((\d+)(?:-(\d+))?\s*words?\)/i);
+  if (match) {
+    const minWords = parseInt(match[1]);
+    const maxWords = match[2] ? parseInt(match[2]) : minWords;
+    // Use the middle of the range
+    return Math.floor((minWords + maxWords) / 2);
+  }
+  
+  // Fallback parsing for other formats
+  const numbers = lengthString.match(/\d+/g);
+  if (numbers && numbers.length > 0) {
+    return parseInt(numbers[0]);
+  }
+  
+  return 800; // Default fallback
+}
+
+/**
+ * Get word count range from article length strings
+ * Returns an object with min and max values
+ */
+export function getWordCountRange(lengthString: string): { min: number; max: number; target: number } {
+  if (!lengthString) return { min: 600, max: 1000, target: 800 };
+  
+  // Extract numbers from strings like "Short (500-800 words)"
+  const match = lengthString.match(/\((\d+)(?:-(\d+))?\s*words?\)/i);
+  if (match) {
+    const minWords = parseInt(match[1]);
+    const maxWords = match[2] ? parseInt(match[2]) : minWords;
+    return { 
+      min: minWords, 
+      max: maxWords, 
+      target: Math.floor((minWords + maxWords) / 2) 
+    };
+  }
+  
+  // Fallback parsing for other formats
+  const numbers = lengthString.match(/\d+/g);
+  if (numbers && numbers.length > 0) {
+    const target = parseInt(numbers[0]);
+    return { min: target - 200, max: target + 200, target };
+  }
+  
+  return { min: 600, max: 1000, target: 800 };
 } 
